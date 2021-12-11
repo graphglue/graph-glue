@@ -4,6 +4,8 @@ import com.expediagroup.graphql.generator.SchemaGeneratorConfig
 import com.expediagroup.graphql.generator.hooks.SchemaGeneratorHooks
 import com.nkcoding.graphglue.graphql.redirect.REDIRECT_DIRECTIVE_NAME
 import com.nkcoding.graphglue.graphql.redirect.rewireFieldType
+import com.nkcoding.testing.model.Filter
+import com.nkcoding.testing.model.RedirectedLeaf
 import com.nkcoding.testing.model.Root
 import graphql.Scalars
 import graphql.schema.*
@@ -36,17 +38,10 @@ class GraphglueGraphQLConfiguration {
             }
 
             override fun willGenerateGraphQLType(type: KType): GraphQLType? {
-                return if (type.jvmErasure == Root::class) {
-                    GraphQLObjectType.newObject()
-                        .name("Root")
-                        .field {
-                            it.name("lol")
-                            it.type(Scalars.GraphQLInt)
-                        }
-                        .build()
-                } else {
-                    null
+                if (type.jvmErasure == RedirectedLeaf::class) {
+                    println(type)
                 }
+                return super.willGenerateGraphQLType(type)
             }
         }
     }

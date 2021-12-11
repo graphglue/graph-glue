@@ -10,7 +10,7 @@ class Tree {
 
     val id = "Hello world"
 
-    val redirect: RedirectedLeaf = RedirectedLeaf()
+    val redirect: RedirectedLeaf<String> = RedirectedLeaf()
 
     fun leafs(input: TestInput): List<Leaf> {
         return emptyList()
@@ -24,7 +24,11 @@ class Tree {
 }
 
 @RedirectPropertyClass
-class RedirectedLeaf {
+class RedirectedLeaf<T> {
     @RedirectPropertyFunction
-    fun newType(test: String): Int = 42
+    fun newType(test: Filter<T>): Int = 42
+}
+
+class Filter<T> {
+    val x: Int = 101
 }

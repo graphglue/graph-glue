@@ -15,12 +15,8 @@ class Query : Query {
         return VerySpecialLeaf()
     }
 
-    fun root(): Root {
-        return Root()
-    }
-
-    fun root2(): Root {
-        return Root()
+    fun tree(): Tree {
+        return Tree()
     }
 
     /*

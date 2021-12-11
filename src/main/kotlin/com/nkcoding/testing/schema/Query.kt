@@ -1,12 +1,10 @@
 package com.nkcoding.testing.schema
 
-import com.expediagroup.graphql.generator.annotations.GraphQLDescription
 import com.expediagroup.graphql.server.operations.Query
-import com.nkcoding.testing.model.*
-import com.nkcoding.testing.schema.input.TestInput
-import graphql.schema.DataFetchingEnvironment
+import com.nkcoding.testing.model.Root
+import com.nkcoding.testing.model.Tree
+import com.nkcoding.testing.model.VerySpecialLeaf
 import org.springframework.stereotype.Component
-import kotlin.reflect.full.memberProperties
 
 @Component
 class Query : Query {
@@ -17,6 +15,10 @@ class Query : Query {
 
     fun tree(): Tree {
         return Tree()
+    }
+
+    fun root(): Root {
+        return Root()
     }
 
     /*

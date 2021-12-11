@@ -1,6 +1,5 @@
 package com.nkcoding.testing.model
 
-import com.expediagroup.graphql.generator.annotations.GraphQLType
 import com.nkcoding.graphglue.graphql.redirect.RedirectPropertyClass
 import com.nkcoding.graphglue.graphql.redirect.RedirectPropertyFunction
 import com.nkcoding.testing.schema.input.TestInput

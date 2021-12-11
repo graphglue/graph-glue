@@ -11,7 +11,11 @@ import graphql.schema.*
  * @param codeRegistry used to get and set data fetching environments
  * @return the new field definition
  */
-fun rewireFieldType(fieldDefinition: GraphQLFieldDefinition, coordinates: FieldCoordinates?, codeRegistry: GraphQLCodeRegistry.Builder): GraphQLFieldDefinition {
+fun rewireFieldType(
+    fieldDefinition: GraphQLFieldDefinition,
+    coordinates: FieldCoordinates?,
+    codeRegistry: GraphQLCodeRegistry.Builder
+): GraphQLFieldDefinition {
     val fieldType = fieldDefinition.type
     if (fieldType is GraphQLNonNull) {
         val originalType = fieldType.wrappedType

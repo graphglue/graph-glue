@@ -25,7 +25,7 @@ fun main(args: Array<String>) {
 fun getSchema(config: SchemaGeneratorConfig): GraphQLSchema {
     val generator = SchemaGenerator(config)
     return generator.generateSchema(
-    queries = listOf(TopLevelObject(Query::class)),
+        queries = listOf(TopLevelObject(Query::class)),
         additionalTypes = setOf(Root::class.createType())
     )
 }

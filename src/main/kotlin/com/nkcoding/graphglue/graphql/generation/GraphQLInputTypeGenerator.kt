@@ -6,7 +6,6 @@ import graphql.schema.GraphQLInputType
 
 interface GraphQLInputTypeGenerator {
     fun toGraphQLType(
-        objectTypeCache: GraphQLTypeCache<GraphQLInputObjectType>,
-        codeRegistry: GraphQLCodeRegistry.Builder
+        objectTypeCache: MutableMap<String, GraphQLInputObjectType>
     ): GraphQLInputType
 }

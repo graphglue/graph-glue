@@ -19,18 +19,25 @@ fun rewireFieldType(
     val fieldType = fieldDefinition.type
     if (fieldType is GraphQLNonNull) {
         val originalType = fieldType.wrappedType
-        if (originalType is GraphQLObjectType && originalType.hasDirective(REDIRECT_DIRECTIVE_NAME)) {
-            val redirectedFunction = originalType.fields.first { it.hasDirective(REDIRECT_DIRECTIVE_NAME) }
-            val redirectedField = fieldDefinition.transform {
-                it.type(redirectedFunction.type)
-                it.replaceArguments(redirectedFunction.arguments)
+        if (originalType is GraphQLObjectType) {
+            if (originalType.hasDirective(REDIRECT_DIRECTIVE_NAME) || originalType.hasDirective(
+                    REDIRECT_DIRECTIVE_NAME_ALTERNATIVE
+                )
+            ) {
+                val redirectedFunction = originalType.fields.first {
+                    it.hasDirective(REDIRECT_DIRECTIVE_NAME) || it.hasDirective(REDIRECT_DIRECTIVE_NAME_ALTERNATIVE)
+                }
+                val redirectedField = fieldDefinition.transform {
+                    it.type(redirectedFunction.type)
+                    it.replaceArguments(redirectedFunction.arguments)
+                }
+                val functionDataFetcher = codeRegistry.getDataFetcher(originalType, redirectedFunction)
+                val propertyDataFetcher = codeRegistry.getDataFetcher(coordinates, fieldDefinition)
+                codeRegistry.dataFetcher(coordinates, DataFetcher {
+                    functionDataFetcher.get(RedirectDataFetchingEnvironment(it, propertyDataFetcher))
+                })
+                return redirectedField
             }
-            val functionDataFetcher = codeRegistry.getDataFetcher(originalType, redirectedFunction)
-            val propertyDataFetcher = codeRegistry.getDataFetcher(coordinates, fieldDefinition)
-            codeRegistry.dataFetcher(coordinates, DataFetcher {
-                functionDataFetcher.get(RedirectDataFetchingEnvironment(it, propertyDataFetcher))
-            })
-            return redirectedField
         }
     }
     return fieldDefinition
@@ -44,8 +51,8 @@ private class RedirectDataFetchingEnvironment(
     private val parent: DataFetchingEnvironment,
     private val parentDataFetcher: DataFetcher<*>
 ) : DataFetchingEnvironment by parent {
-    @Suppress("UNCHECKED_CAST")
     override fun <T : Any?> getSource(): T {
+        @Suppress("UNCHECKED_CAST")
         return parentDataFetcher.get(parent) as T
     }
 }

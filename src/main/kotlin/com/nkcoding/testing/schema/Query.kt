@@ -1,6 +1,7 @@
 package com.nkcoding.testing.schema
 
 import com.expediagroup.graphql.server.operations.Query
+import com.nkcoding.graphglue.model.Node
 import com.nkcoding.testing.model.Root
 import com.nkcoding.testing.model.Tree
 import com.nkcoding.testing.model.VerySpecialLeaf

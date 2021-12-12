@@ -1,32 +1,31 @@
-package com.nkcoding.graphglue.graphql.filter
+package com.nkcoding.graphglue.graphql.connection.filter.definition
 
+import com.nkcoding.graphglue.graphql.connection.filter.model.Filter
 import com.nkcoding.graphglue.graphql.extensions.getSimpleName
 import com.nkcoding.graphglue.graphql.generation.GraphQLInputTypeGenerator
-import com.nkcoding.graphglue.graphql.generation.GraphQLTypeCache
 import com.nkcoding.graphglue.model.Node
 import graphql.schema.*
 import kotlin.reflect.KClass
 
-class FilterDefinition<T : Node>(val entryType: KClass<T>, val entries: List<FilterDefinitionEntry>) :
+class FilterDefinition<T : Node>(val entryType: KClass<T>, val entries: List<FilterEntryDefinition>) :
     GraphQLInputTypeGenerator {
 
-    fun toFilter(): Filter<T> {
+    fun parseFilter(value: Any): Filter {
         TODO()
     }
 
     override fun toGraphQLType(
-        objectTypeCache: GraphQLTypeCache<GraphQLInputObjectType>,
-        codeRegistry: GraphQLCodeRegistry.Builder
+        objectTypeCache: MutableMap<String, GraphQLInputObjectType>
     ): GraphQLInputType {
         val filterName = "${entryType.getSimpleName()}FilterInput"
         val nodeFilterName = "${entryType.getSimpleName()}NodeFilterInput"
 
-        val nodeFilter = objectTypeCache.buildIfNotInCache(nodeFilterName) {
+        val nodeFilter = objectTypeCache.computeIfAbsent(nodeFilterName) {
             val builder = GraphQLInputObjectType.newInputObject()
             builder.name(nodeFilterName)
             for (entry in entries) {
                 builder.field {
-                    it.name(entry.name).type(entry.toGraphQLType(objectTypeCache, codeRegistry))
+                    it.name(entry.name).type(entry.toGraphQLType(objectTypeCache))
                 }
             }
             builder.build()
@@ -35,7 +34,7 @@ class FilterDefinition<T : Node>(val entryType: KClass<T>, val entries: List<Fil
         val subFilter = GraphQLTypeReference(filterName)
         val nonNullSubFilterList = GraphQLList(GraphQLNonNull(subFilter))
 
-        return objectTypeCache.buildIfNotInCache(filterName) {
+        return objectTypeCache.computeIfAbsent(filterName) {
             GraphQLInputObjectType.newInputObject()
                 .name(filterName)
                 .field {

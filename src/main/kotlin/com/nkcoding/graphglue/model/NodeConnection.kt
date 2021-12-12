@@ -1,8 +1,7 @@
 package com.nkcoding.graphglue.model
 
 import com.expediagroup.graphql.generator.annotations.GraphQLDescription
-import com.nkcoding.graphglue.graphql.filter.Filter
-import com.nkcoding.graphglue.graphql.filter.Order
+import com.nkcoding.graphglue.graphql.connection.filter.model.Filter
 import com.nkcoding.graphglue.graphql.redirect.RedirectPropertyClass
 
 @RedirectPropertyClass
@@ -10,7 +9,7 @@ class NodeConnection<T : Node> : List<T> {
 
     fun getFromGraphQL(
         @GraphQLDescription("Filter for specific items in the connection")
-        filter: Filter<T>?,
+        filter: Filter?,
         @GraphQLDescription("Order in which the items are sorted")
         //order: Order<T>?,
         //@GraphQLDescription("Get only items after the cursor")

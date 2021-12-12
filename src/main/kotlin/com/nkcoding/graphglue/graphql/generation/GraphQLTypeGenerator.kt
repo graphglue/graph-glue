@@ -6,7 +6,7 @@ import graphql.schema.GraphQLType
 
 interface GraphQLTypeGenerator {
     fun toGraphQLType(
-        objectTypeCache: GraphQLTypeCache<GraphQLObjectType>,
+        objectTypeCache: HashMap<String, GraphQLObjectType>,
         codeRegistry: GraphQLCodeRegistry.Builder
     ): GraphQLType
 }

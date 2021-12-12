@@ -1,4 +1,4 @@
-package com.nkcoding.graphglue.graphql.filter
+package com.nkcoding.graphglue.graphql.connection.order
 
 import com.nkcoding.graphglue.model.Node
 

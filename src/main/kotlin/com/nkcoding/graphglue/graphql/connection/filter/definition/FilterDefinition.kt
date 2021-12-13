@@ -23,9 +23,10 @@ class FilterDefinition<T : Node>(val entryType: KClass<T>, val entries: List<Fil
         val nodeFilter = objectTypeCache.computeIfAbsent(nodeFilterName) {
             val builder = GraphQLInputObjectType.newInputObject()
             builder.name(nodeFilterName)
+            builder.description("Filter used to filter ${entryType.getSimpleName()}")
             for (entry in entries) {
                 builder.field {
-                    it.name(entry.name).type(entry.toGraphQLType(objectTypeCache))
+                    it.name(entry.name).description(entry.description).type(entry.toGraphQLType(objectTypeCache))
                 }
             }
             builder.build()
@@ -35,20 +36,25 @@ class FilterDefinition<T : Node>(val entryType: KClass<T>, val entries: List<Fil
         val nonNullSubFilterList = GraphQLList(GraphQLNonNull(subFilter))
 
         return objectTypeCache.computeIfAbsent(filterName) {
-            GraphQLInputObjectType.newInputObject()
-                .name(filterName)
+            GraphQLInputObjectType.newInputObject().name(filterName)
+                .description("Used to build propositional formula consisting of ${nodeFilterName}. Exactly one if its fields has to be provided")
                 .field {
-                    it.name("and").type(nonNullSubFilterList)
+                    it.name("and")
+                        .description("Connects all subformulas via and")
+                        .type(nonNullSubFilterList)
                 }.field {
-                    it.name("or").type(nonNullSubFilterList)
-                }
-                .field {
-                    it.name("not").type(subFilter)
-                }
-                .field {
-                    it.name("node").type(nodeFilter)
-                }
-                .build()
+                    it.name("or")
+                        .description("Connects all subformulas via or")
+                        .type(nonNullSubFilterList)
+                }.field {
+                    it.name("not")
+                        .description("Negates the subformula")
+                        .type(subFilter)
+                }.field {
+                    it.name("node")
+                        .description("Wrapper around $nodeFilterName")
+                        .type(nodeFilter)
+                }.build()
         }
     }
 }

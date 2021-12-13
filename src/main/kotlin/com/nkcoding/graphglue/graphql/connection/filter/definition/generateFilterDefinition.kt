@@ -1,7 +1,6 @@
-package com.nkcoding.graphglue.graphql.connection.filter
+package com.nkcoding.graphglue.graphql.connection.filter.definition
 
-import com.nkcoding.graphglue.graphql.connection.filter.definition.FilterDefinition
-import com.nkcoding.graphglue.graphql.connection.filter.definition.SubFilterGenerator
+import com.nkcoding.graphglue.graphql.connection.filter.FilterProperty
 import com.nkcoding.graphglue.model.Node
 import kotlin.reflect.KClass
 import kotlin.reflect.full.hasAnnotation

@@ -2,7 +2,7 @@ package com.nkcoding.testing.model
 
 import com.expediagroup.graphql.generator.annotations.GraphQLDescription
 import com.expediagroup.graphql.generator.annotations.GraphQLIgnore
-import com.nkcoding.graphglue.model.NodeConnection
+import com.nkcoding.graphglue.model.NodeList
 import graphql.schema.GraphQLSchema
 import org.springframework.beans.factory.annotation.Autowired
 
@@ -17,5 +17,5 @@ class Root {
     }
 
     @GraphQLDescription("All the leafs")
-    val leafs = NodeConnection<Leaf>()
+    val leafs = NodeList<Leaf>()
 }

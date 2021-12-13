@@ -1,22 +1,30 @@
 package com.nkcoding.graphglue.graphql
 
+import com.expediagroup.graphql.generator.SchemaGenerator
 import com.expediagroup.graphql.generator.SchemaGeneratorConfig
 import com.expediagroup.graphql.generator.TopLevelNames
 import com.expediagroup.graphql.generator.execution.KotlinDataFetcherFactoryProvider
+import com.expediagroup.graphql.generator.extensions.print
 import com.expediagroup.graphql.generator.hooks.NoopSchemaGeneratorHooks
 import com.expediagroup.graphql.generator.hooks.SchemaGeneratorHooks
+import com.expediagroup.graphql.server.operations.Mutation
+import com.expediagroup.graphql.server.operations.Query
+import com.expediagroup.graphql.server.operations.Subscription
 import com.expediagroup.graphql.server.spring.GraphQLConfigurationProperties
+import com.nkcoding.graphglue.graphql.connection.ConnectionWrapperGraphQLTypeFactory
 import com.nkcoding.graphglue.graphql.connection.filter.GraphglueGraphQLFilterConfiguration
 import com.nkcoding.graphglue.graphql.connection.filter.TypeFilterDefinitionEntry
 import com.nkcoding.graphglue.graphql.connection.filter.definition.FilterDefinition
 import com.nkcoding.graphglue.graphql.connection.filter.definition.FilterDefinitionCache
 import com.nkcoding.graphglue.graphql.connection.filter.definition.FilterDefinitionCollection
 import com.nkcoding.graphglue.graphql.connection.filter.definition.SubFilterGenerator
-import com.nkcoding.graphglue.graphql.connection.generateWrapperGraphQLType
+import com.nkcoding.graphglue.graphql.extensions.toTopLevelObjects
 import com.nkcoding.graphglue.graphql.redirect.rewireFieldType
 import com.nkcoding.graphglue.model.Node
-import com.nkcoding.graphglue.model.NodeConnection
+import com.nkcoding.graphglue.model.NodeList
+import com.nkcoding.graphglue.model.PageInfo
 import graphql.schema.*
+import org.slf4j.LoggerFactory
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
@@ -25,6 +33,7 @@ import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.reflect.KClass
 import kotlin.reflect.KType
+import kotlin.reflect.full.createType
 import kotlin.reflect.jvm.jvmErasure
 
 /**
@@ -34,22 +43,36 @@ import kotlin.reflect.jvm.jvmErasure
 @Import(GraphglueGraphQLFilterConfiguration::class)
 class GraphglueGraphQLConfiguration {
 
+    private val logger = LoggerFactory.getLogger(GraphglueGraphQLConfiguration::class.java)
+
     private val inputTypeCache = ConcurrentHashMap<String, GraphQLInputObjectType>()
     private val outputTypeCache = ConcurrentHashMap<String, GraphQLObjectType>()
-    private val filterDefinitions: FilterDefinitionCache = ConcurrentHashMap<KClass<out Node>, FilterDefinition<out Node>>()
+    private val filterDefinitions: FilterDefinitionCache =
+        ConcurrentHashMap<KClass<out Node>, FilterDefinition<out Node>>()
+
+    /**
+     * Code registry used as a temporary cache before its DataFetchers are added to the
+     * real code registry
+     * must only be used to
+     */
+    private val tempCodeRegistry: GraphQLCodeRegistry.Builder = GraphQLCodeRegistry.newCodeRegistry()
 
     /**
      * Provides the [SchemaGeneratorHooks] for the [SchemaGeneratorConfig]
      */
     @Bean
     @ConditionalOnMissingBean
-    fun schemaGeneratorHooks(filters: List<TypeFilterDefinitionEntry>): SchemaGeneratorHooks {
+    fun schemaGeneratorHooks(
+        filters: List<TypeFilterDefinitionEntry>, dataFetcherFactoryProvider: KotlinDataFetcherFactoryProvider
+    ): SchemaGeneratorHooks {
         return object : SchemaGeneratorHooks {
             override fun onRewireGraphQLType(
                 generatedType: GraphQLSchemaElement,
                 coordinates: FieldCoordinates?,
                 codeRegistry: GraphQLCodeRegistry.Builder
             ): GraphQLSchemaElement {
+                codeRegistry.dataFetchers(tempCodeRegistry.build())
+                tempCodeRegistry.clearDataFetchers()
                 val rewiredType = super.onRewireGraphQLType(generatedType, coordinates, codeRegistry)
                 return if (rewiredType is GraphQLFieldDefinition) {
                     rewireFieldType(rewiredType, coordinates, codeRegistry)
@@ -59,9 +82,15 @@ class GraphglueGraphQLConfiguration {
             }
 
             override fun willGenerateGraphQLType(type: KType): GraphQLType? {
-                return if (type.jvmErasure == NodeConnection::class) {
-                    generateWrapperGraphQLType(type, outputTypeCache, inputTypeCache,
-                        SubFilterGenerator(filters, filterDefinitions))
+                return if (type.jvmErasure == NodeList::class) {
+                    val factory = ConnectionWrapperGraphQLTypeFactory(
+                        outputTypeCache,
+                        inputTypeCache,
+                        SubFilterGenerator(filters, filterDefinitions),
+                        tempCodeRegistry,
+                        dataFetcherFactoryProvider
+                    )
+                    factory.generateWrapperGraphQLType(type)
                 } else {
                     super.willGenerateGraphQLType(type)
                 }
@@ -89,7 +118,29 @@ class GraphglueGraphQLConfiguration {
             topLevelNames = topLevelNames.orElse(TopLevelNames()),
             hooks = generatorHooks,
             dataFetcherFactoryProvider = dataFetcherFactoryProvider,
-            introspectionEnabled = config.introspection.enabled
+            introspectionEnabled = config.introspection.enabled,
         )
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    fun schema(
+        queries: Optional<List<Query>>,
+        mutations: Optional<List<Mutation>>,
+        subscriptions: Optional<List<Subscription>>,
+        schemaConfig: SchemaGeneratorConfig
+    ): GraphQLSchema {
+        val generator = SchemaGenerator(schemaConfig)
+        val schema = generator.use {
+            it.generateSchema(
+                queries.orElse(emptyList()).toTopLevelObjects(),
+                mutations.orElse(emptyList()).toTopLevelObjects(),
+                subscriptions.orElse(emptyList()).toTopLevelObjects(),
+                additionalTypes = setOf(Node::class.createType(), PageInfo::class.createType())
+            )
+        }
+
+        logger.info("\n${schema.print()}")
+        return schema
     }
 }

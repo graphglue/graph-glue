@@ -5,7 +5,7 @@ import com.nkcoding.graphglue.graphql.connection.filter.model.Filter
 import com.nkcoding.graphglue.graphql.redirect.RedirectPropertyClass
 
 @RedirectPropertyClass
-class NodeConnection<T : Node> : List<T> {
+class NodeList<T : Node> : List<T> {
 
     fun getFromGraphQL(
         @GraphQLDescription("Filter for specific items in the connection")

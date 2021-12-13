@@ -5,9 +5,10 @@ import graphql.schema.GraphQLInputType
 
 abstract class SimpleObjectFilterDefinitionEntry(
     name: String,
+    description:  String,
     val typeName: String,
     val fields: List<FilterEntryDefinition>
-) : FilterEntryDefinition(name) {
+) : FilterEntryDefinition(name, description) {
     override fun toGraphQLType(
         objectTypeCache: MutableMap<String, GraphQLInputObjectType>
     ): GraphQLInputType {

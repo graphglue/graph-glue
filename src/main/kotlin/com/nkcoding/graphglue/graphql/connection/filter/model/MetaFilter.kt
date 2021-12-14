@@ -4,12 +4,10 @@ import com.nkcoding.graphglue.neo4j.CypherConditionGenerator
 
 abstract class MetaFilter : CypherConditionGenerator
 
-abstract class ListMetaFilter(val subMetaFilters: List<MetaFilter>)
+data class AndMetaFilter(val subMetaFilters: List<MetaFilter>) : MetaFilter()
 
-class AndMetaFilter(subMetaFilters: List<MetaFilter>) : ListMetaFilter(subMetaFilters)
+data class OrMetaFilter(val subMetaFilters: List<MetaFilter>) : MetaFilter()
 
-class OrMetaFilter(subMetaFilters: List<MetaFilter>) : ListMetaFilter(subMetaFilters)
+data class NotMetaFilter(val subMetaFilter: MetaFilter) : MetaFilter()
 
-class NotMetaFilter(val subMetaFilter: MetaFilter) : MetaFilter()
-
-class NodeMetaFilter(val nodeFilter: NodeFilter) : MetaFilter()
+data class NodeMetaFilter(val nodeFilter: NodeFilter) : MetaFilter()

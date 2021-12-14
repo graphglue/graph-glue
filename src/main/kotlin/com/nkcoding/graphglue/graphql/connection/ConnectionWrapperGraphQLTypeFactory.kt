@@ -1,6 +1,7 @@
 package com.nkcoding.graphglue.graphql.connection
 
 import com.expediagroup.graphql.generator.execution.KotlinDataFetcherFactoryProvider
+import com.fasterxml.jackson.databind.ObjectMapper
 import com.nkcoding.graphglue.graphql.connection.filter.definition.SubFilterGenerator
 import com.nkcoding.graphglue.graphql.connection.filter.definition.generateFilterDefinition
 import com.nkcoding.graphglue.graphql.extensions.getSimpleName
@@ -10,6 +11,7 @@ import com.nkcoding.graphglue.model.Edge
 import com.nkcoding.graphglue.model.Node
 import graphql.Scalars
 import graphql.schema.*
+import org.springframework.context.ApplicationContext
 import kotlin.reflect.KClass
 import kotlin.reflect.KType
 import kotlin.reflect.full.memberFunctions
@@ -21,13 +23,16 @@ class ConnectionWrapperGraphQLTypeFactory(
     private val inputTypeCache: MutableMap<String, GraphQLInputObjectType>,
     private val subFilterGenerator: SubFilterGenerator,
     private val codeRegistry: GraphQLCodeRegistry.Builder,
-    private val dataFetcherFactoryProvider: KotlinDataFetcherFactoryProvider
+    private val dataFetcherFactoryProvider: KotlinDataFetcherFactoryProvider,
+    private val applicationContext: ApplicationContext,
+    private val objectMapper: ObjectMapper
 ) {
 
 
     fun generateWrapperGraphQLType(connectionType: KType): GraphQLType {
         val returnNodeName = connectionType.arguments[0].type!!.jvmErasure.getSimpleName()
         val name = "${returnNodeName}ListWrapper"
+        val functionName = "getFromGraphQL"
         return outputTypeCache.computeIfAbsent(name) {
             @Suppress("UNCHECKED_CAST") val filter = generateFilterDefinition(
                 connectionType.arguments[0].type?.jvmErasure as KClass<out Node>, subFilterGenerator
@@ -35,7 +40,7 @@ class ConnectionWrapperGraphQLTypeFactory(
 
             val type = GraphQLObjectType.newObject().name(name).withDirective(REDIRECT_PROPERTY_DIRECTIVE)
                 .field { fieldBuilder ->
-                    fieldBuilder.name("getFromGraphQL").withDirective(REDIRECT_PROPERTY_DIRECTIVE).argument {
+                    fieldBuilder.name(functionName).withDirective(REDIRECT_PROPERTY_DIRECTIVE).argument {
                         it.name("filter").type(filter.toGraphQLType(inputTypeCache))
                     }.argument {
                         it.name("after").type(Scalars.GraphQLString)
@@ -47,6 +52,10 @@ class ConnectionWrapperGraphQLTypeFactory(
                         it.name("last").type(Scalars.GraphQLInt)
                     }.type(GraphQLNonNull(generateConnectionGraphQLType(returnNodeName)))
                 }.build()
+
+            val function = connectionType.jvmErasure.memberFunctions.first { it.name == functionName }
+            val dataFetcher = ConnectionWrapperDataFetcher(null, function, objectMapper, applicationContext, filter)
+            registerDataFetcher(type, functionName) { dataFetcher }
 
             type
         }

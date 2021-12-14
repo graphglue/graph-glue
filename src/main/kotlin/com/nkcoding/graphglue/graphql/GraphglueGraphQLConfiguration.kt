@@ -11,6 +11,7 @@ import com.expediagroup.graphql.server.operations.Mutation
 import com.expediagroup.graphql.server.operations.Query
 import com.expediagroup.graphql.server.operations.Subscription
 import com.expediagroup.graphql.server.spring.GraphQLConfigurationProperties
+import com.fasterxml.jackson.databind.ObjectMapper
 import com.nkcoding.graphglue.graphql.connection.ConnectionWrapperGraphQLTypeFactory
 import com.nkcoding.graphglue.graphql.connection.filter.GraphglueGraphQLFilterConfiguration
 import com.nkcoding.graphglue.graphql.connection.filter.TypeFilterDefinitionEntry
@@ -26,6 +27,7 @@ import com.nkcoding.graphglue.model.PageInfo
 import graphql.schema.*
 import org.slf4j.LoggerFactory
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
+import org.springframework.context.ApplicationContext
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.context.annotation.Import
@@ -63,7 +65,10 @@ class GraphglueGraphQLConfiguration {
     @Bean
     @ConditionalOnMissingBean
     fun schemaGeneratorHooks(
-        filters: List<TypeFilterDefinitionEntry>, dataFetcherFactoryProvider: KotlinDataFetcherFactoryProvider
+        filters: List<TypeFilterDefinitionEntry>,
+        dataFetcherFactoryProvider: KotlinDataFetcherFactoryProvider,
+        applicationContext: ApplicationContext,
+        objectMapper: ObjectMapper
     ): SchemaGeneratorHooks {
         return object : SchemaGeneratorHooks {
             override fun onRewireGraphQLType(
@@ -88,7 +93,9 @@ class GraphglueGraphQLConfiguration {
                         inputTypeCache,
                         SubFilterGenerator(filters, filterDefinitions),
                         tempCodeRegistry,
-                        dataFetcherFactoryProvider
+                        dataFetcherFactoryProvider,
+                        applicationContext,
+                        objectMapper
                     )
                     factory.generateWrapperGraphQLType(type)
                 } else {

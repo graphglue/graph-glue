@@ -13,7 +13,7 @@ abstract class SimpleObjectFilterDefinitionEntry<T : FilterEntryDefinition>(
     val fields = fields.associateBy { it.name }
 
     override fun toGraphQLType(
-        objectTypeCache: MutableMap<String, GraphQLInputObjectType>
+        objectTypeCache: MutableMap<String, GraphQLInputType>
     ): GraphQLInputType {
         return objectTypeCache.computeIfAbsent(typeName) {
             val builder = GraphQLInputObjectType.newInputObject()

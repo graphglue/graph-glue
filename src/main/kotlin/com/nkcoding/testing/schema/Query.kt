@@ -11,7 +11,7 @@ import org.springframework.stereotype.Component
 class Query : Query {
 
     fun node(id: String): Node {
-        return VerySpecialLeaf()
+        return VerySpecialLeaf("lol")
     }
 
     fun tree(): Tree {

@@ -7,7 +7,7 @@ import com.nkcoding.graphglue.model.Node
 import graphql.schema.*
 import kotlin.reflect.KClass
 
-class FilterDefinition<T : Node>(val entryType: KClass<T>, entries: List<FilterEntryDefinition>) :
+class FilterDefinition<T : Node>(private val entryType: KClass<T>, entries: List<FilterEntryDefinition>) :
     GraphQLInputTypeGenerator {
 
     private val entries = entries.associateBy { it.name }
@@ -48,7 +48,7 @@ class FilterDefinition<T : Node>(val entryType: KClass<T>, entries: List<FilterE
     }
 
     override fun toGraphQLType(
-        objectTypeCache: MutableMap<String, GraphQLInputObjectType>
+        objectTypeCache: MutableMap<String, GraphQLInputType>
     ): GraphQLInputType {
         val filterName = "${entryType.getSimpleName()}FilterInput"
         val nodeFilterName = "${entryType.getSimpleName()}NodeFilterInput"

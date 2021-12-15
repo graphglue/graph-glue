@@ -1,29 +1,21 @@
 package com.nkcoding.graphglue.model
 
-import com.expediagroup.graphql.generator.annotations.GraphQLDescription
 import com.nkcoding.graphglue.graphql.connection.filter.model.Filter
+import com.nkcoding.graphglue.graphql.connection.order.Order
 import com.nkcoding.graphglue.graphql.redirect.RedirectPropertyClass
 
 @RedirectPropertyClass
 class NodeList<T : Node> : List<T> {
 
     fun getFromGraphQL(
-        @GraphQLDescription("Filter for specific items in the connection")
         filter: Filter? = null,
-        @GraphQLDescription("Order in which the items are sorted")
-        //order: Order<T>? = null,
-        //@GraphQLDescription("Get only items after the cursor")
+        orderBy: Order<T>? = null,
         after: String? = null,
-        @GraphQLDescription("Get only items before the cursor")
         before: String? = null,
-        @GraphQLDescription("Get the first n items. Must not be used if before is specified")
         first: Int? = null,
-        @GraphQLDescription("Get the last n items. Must not be used if after is specified")
         last: Int? = null
     ): List<T> {
-        println(filter)
         TODO("Implement, add correct types, ...")
-        TODO("Order")
     }
 
     //region list implementation

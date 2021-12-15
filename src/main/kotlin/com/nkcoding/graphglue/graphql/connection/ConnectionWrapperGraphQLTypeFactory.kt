@@ -4,12 +4,15 @@ import com.expediagroup.graphql.generator.execution.KotlinDataFetcherFactoryProv
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.nkcoding.graphglue.graphql.connection.filter.definition.SubFilterGenerator
 import com.nkcoding.graphglue.graphql.connection.filter.definition.generateFilterDefinition
+import com.nkcoding.graphglue.graphql.connection.order.OrderField
+import com.nkcoding.graphglue.graphql.connection.order.generateOrders
 import com.nkcoding.graphglue.graphql.extensions.getSimpleName
 import com.nkcoding.graphglue.graphql.redirect.REDIRECT_PROPERTY_DIRECTIVE
 import com.nkcoding.graphglue.model.Connection
 import com.nkcoding.graphglue.model.Edge
 import com.nkcoding.graphglue.model.Node
 import graphql.Scalars
+import graphql.language.EnumValue
 import graphql.schema.*
 import org.springframework.context.ApplicationContext
 import kotlin.reflect.KClass
@@ -19,8 +22,8 @@ import kotlin.reflect.full.memberProperties
 import kotlin.reflect.jvm.jvmErasure
 
 class ConnectionWrapperGraphQLTypeFactory(
-    private val outputTypeCache: MutableMap<String, GraphQLObjectType>,
-    private val inputTypeCache: MutableMap<String, GraphQLInputObjectType>,
+    private val outputTypeCache: MutableMap<String, GraphQLOutputType>,
+    private val inputTypeCache: MutableMap<String, GraphQLInputType>,
     private val subFilterGenerator: SubFilterGenerator,
     private val codeRegistry: GraphQLCodeRegistry.Builder,
     private val dataFetcherFactoryProvider: KotlinDataFetcherFactoryProvider,
@@ -30,31 +33,40 @@ class ConnectionWrapperGraphQLTypeFactory(
 
 
     fun generateWrapperGraphQLType(connectionType: KType): GraphQLType {
-        val returnNodeName = connectionType.arguments[0].type!!.jvmErasure.getSimpleName()
+        @Suppress("UNCHECKED_CAST") val returnNodeType =
+            connectionType.arguments[0].type!!.jvmErasure as KClass<out Node>
+        val returnNodeName = returnNodeType.getSimpleName()
         val name = "${returnNodeName}ListWrapper"
         val functionName = "getFromGraphQL"
         return outputTypeCache.computeIfAbsent(name) {
-            @Suppress("UNCHECKED_CAST") val filter = generateFilterDefinition(
-                connectionType.arguments[0].type?.jvmErasure as KClass<out Node>, subFilterGenerator
-            )
+            val filter = generateFilterDefinition(returnNodeType, subFilterGenerator)
+
+            val orders = generateOrders(returnNodeType)
 
             val type = GraphQLObjectType.newObject().name(name).withDirective(REDIRECT_PROPERTY_DIRECTIVE)
                 .field { fieldBuilder ->
                     fieldBuilder.name(functionName).withDirective(REDIRECT_PROPERTY_DIRECTIVE).argument {
-                        it.name("filter").type(filter.toGraphQLType(inputTypeCache))
+                        it.name("filter").description("Filter for specific items in the connection")
+                            .type(filter.toGraphQLType(inputTypeCache))
                     }.argument {
-                        it.name("after").type(Scalars.GraphQLString)
+                        it.name("orderBy").description("Order in which the items are sorted")
+                            .type(generateOrderGraphQLType(returnNodeName, orders))
                     }.argument {
-                        it.name("before").type(Scalars.GraphQLString)
+                        it.name("after").description("Get only items after the cursor").type(Scalars.GraphQLString)
                     }.argument {
-                        it.name("first").type(Scalars.GraphQLInt)
+                        it.name("before").description("Get only items before the cursor").type(Scalars.GraphQLString)
                     }.argument {
-                        it.name("last").type(Scalars.GraphQLInt)
+                        it.name("first").description("Get the first n items. Must not be used if before is specified")
+                            .type(Scalars.GraphQLInt)
+                    }.argument {
+                        it.name("last").description("Get the last n items. Must not be used if after is specified")
+                            .type(Scalars.GraphQLInt)
                     }.type(GraphQLNonNull(generateConnectionGraphQLType(returnNodeName)))
                 }.build()
 
             val function = connectionType.jvmErasure.memberFunctions.first { it.name == functionName }
-            val dataFetcher = ConnectionWrapperDataFetcher(null, function, objectMapper, applicationContext, filter)
+            val dataFetcher =
+                ConnectionWrapperDataFetcher(null, function, objectMapper, applicationContext, filter)
             registerDataFetcher(type, functionName) { dataFetcher }
 
             type
@@ -113,6 +125,35 @@ class ConnectionWrapperGraphQLTypeFactory(
             registerFunctionDataFetcher(type, "cursor", Edge::class)
 
             type
+        }
+    }
+
+    private fun generateOrderGraphQLType(returnNodeName: String, orders: Map<String, OrderField<*>>): GraphQLInputType {
+        val name = "${returnNodeName}Order"
+        return inputTypeCache.computeIfAbsent(name) {
+            GraphQLInputObjectType.newInputObject().name(name)
+                .description("Defines the order of a $returnNodeName list").field {
+                    it.name("field").description("The field to order by, defaults to ID")
+                        .type(generateOrderFieldGraphQLType(returnNodeName, orders))
+                        .defaultValueLiteral(EnumValue("ID"))
+                }.field {
+                    it.name("direction").description("The direction to order by, defaults to ASC")
+                        .type(GraphQLTypeReference("OrderDirection")).defaultValueLiteral(EnumValue("ASC"))
+                }.build()
+        }
+    }
+
+    private fun generateOrderFieldGraphQLType(
+        returnNodeName: String, orders: Map<String, OrderField<*>>
+    ): GraphQLInputType {
+        val name = "${returnNodeName}OrderField"
+        return inputTypeCache.computeIfAbsent(name) {
+            val builder =
+                GraphQLEnumType.newEnum().name(name).description("Fields a list of $returnNodeName can be sorted by")
+            for ((fieldName, fieldValue) in orders.entries) {
+                builder.value(fieldName, fieldValue, "Order by ${fieldValue.name}")
+            }
+            builder.build()
         }
     }
 

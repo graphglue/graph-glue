@@ -19,6 +19,7 @@ import com.nkcoding.graphglue.graphql.connection.filter.definition.FilterDefinit
 import com.nkcoding.graphglue.graphql.connection.filter.definition.FilterDefinitionCache
 import com.nkcoding.graphglue.graphql.connection.filter.definition.FilterDefinitionCollection
 import com.nkcoding.graphglue.graphql.connection.filter.definition.SubFilterGenerator
+import com.nkcoding.graphglue.graphql.connection.order.OrderDirection
 import com.nkcoding.graphglue.graphql.extensions.toTopLevelObjects
 import com.nkcoding.graphglue.graphql.redirect.rewireFieldType
 import com.nkcoding.graphglue.model.Node
@@ -47,8 +48,8 @@ class GraphglueGraphQLConfiguration {
 
     private val logger = LoggerFactory.getLogger(GraphglueGraphQLConfiguration::class.java)
 
-    private val inputTypeCache = ConcurrentHashMap<String, GraphQLInputObjectType>()
-    private val outputTypeCache = ConcurrentHashMap<String, GraphQLObjectType>()
+    private val inputTypeCache = ConcurrentHashMap<String, GraphQLInputType>()
+    private val outputTypeCache = ConcurrentHashMap<String, GraphQLOutputType>()
     private val filterDefinitions: FilterDefinitionCache =
         ConcurrentHashMap<KClass<out Node>, FilterDefinition<out Node>>()
 
@@ -143,7 +144,8 @@ class GraphglueGraphQLConfiguration {
                 queries.orElse(emptyList()).toTopLevelObjects(),
                 mutations.orElse(emptyList()).toTopLevelObjects(),
                 subscriptions.orElse(emptyList()).toTopLevelObjects(),
-                additionalTypes = setOf(Node::class.createType(), PageInfo::class.createType())
+                additionalTypes = setOf(Node::class.createType(), PageInfo::class.createType()),
+                additionalInputTypes = setOf(OrderDirection::class.createType())
             )
         }
 

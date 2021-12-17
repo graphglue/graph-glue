@@ -14,7 +14,7 @@ fun generateFilterDefinition(
 
     return subFilterGenerator.filterDefinitionCache.computeIfAbsent(type) {
         val filterProperties = type.memberProperties.filter { it.hasAnnotation<FilterProperty>() }
-        val filterFields = filterProperties.map { subFilterGenerator.filterForType(it.returnType.jvmErasure, it.name) }
+        val filterFields = filterProperties.map { subFilterGenerator.filterForType(it.returnType, it.name) }
         FilterDefinition(type, filterFields)
     }
 }

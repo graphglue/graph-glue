@@ -12,7 +12,7 @@ class FilterDefinition<T : Node>(private val entryType: KClass<T>, entries: List
 
     private val entries = entries.associateBy { it.name }
 
-    fun parseFilter(value: Any): Filter {
+    fun parseFilter(value: Any?): Filter {
         return Filter(parseMetaFilter(value))
     }
 

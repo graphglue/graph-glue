@@ -3,10 +3,7 @@ package com.nkcoding.graphglue.graphql.connection
 import com.expediagroup.graphql.server.spring.execution.SpringDataFetcher
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.nkcoding.graphglue.graphql.connection.filter.definition.FilterDefinition
-import com.nkcoding.graphglue.graphql.connection.order.IdOrderField
-import com.nkcoding.graphglue.graphql.connection.order.Order
-import com.nkcoding.graphglue.graphql.connection.order.OrderDirection
-import com.nkcoding.graphglue.graphql.connection.order.OrderField
+import com.nkcoding.graphglue.graphql.connection.order.*
 import graphql.schema.DataFetchingEnvironment
 import org.springframework.context.ApplicationContext
 import kotlin.reflect.KFunction
@@ -31,16 +28,5 @@ class ConnectionWrapperDataFetcher(
         } else {
             super.mapParameterToValue(param, environment)
         }
-    }
-
-    private fun parseOrder(value: Any): Order<*> {
-        value as Map<*, *>
-        val directionName = value["direction"] as String?
-        val direction = if (directionName != null) {
-            OrderDirection.valueOf(directionName)
-        } else {
-            OrderDirection.ASC
-        }
-        return Order(direction, value["field"] as OrderField<*>? ?: IdOrderField)
     }
 }

@@ -1,6 +1,7 @@
 package com.nkcoding.graphglue.graphql.connection.filter.definition
 
 import com.nkcoding.graphglue.graphql.connection.filter.FilterProperty
+import com.nkcoding.graphglue.graphql.extensions.getPropertyName
 import com.nkcoding.graphglue.model.Node
 import kotlin.reflect.KClass
 import kotlin.reflect.full.hasAnnotation
@@ -14,7 +15,7 @@ fun generateFilterDefinition(
 
     return subFilterGenerator.filterDefinitionCache.computeIfAbsent(type) {
         val filterProperties = type.memberProperties.filter { it.hasAnnotation<FilterProperty>() }
-        val filterFields = filterProperties.map { subFilterGenerator.filterForType(it.returnType, it.name) }
+        val filterFields = filterProperties.map { subFilterGenerator.filterForType(it.returnType, it.getPropertyName(type)) }
         FilterDefinition(type, filterFields)
     }
 }

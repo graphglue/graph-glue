@@ -16,8 +16,8 @@ class NodeListFilterDefinition(name: String, nodeType: KType, subFilterGenerator
                 subFilterGenerator
             ),
             NodeSubFilterDefinition(
-                "some",
-                "Filters for nodes where some of the related nodes match this filter",
+                "any",
+                "Filters for nodes where any of the related nodes match this filter",
                 nodeType,
                 subFilterGenerator
             ),
@@ -38,7 +38,7 @@ class NodeListFilterDefinition(name: String, nodeType: KType, subFilterGenerator
             val filter = definition.parseEntry(entry)
             when(name) {
                 "all" -> AllNodeListFilterEntry(definition, filter)
-                "some" -> SomeNodeListFilterEntry(definition, filter)
+                "any" -> AnyNodeListFilterEntry(definition, filter)
                 "none" -> NoneNodeListFilterEntry(definition, filter)
                 else -> throw IllegalStateException("Unknown NodeListFilter entry")
             }

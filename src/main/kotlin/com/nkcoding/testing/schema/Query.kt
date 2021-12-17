@@ -11,7 +11,9 @@ import org.springframework.stereotype.Component
 @Component
 class Query : Query {
 
-    fun node(id: String): Node {
+    fun node(id: String, dfe: DataFetchingEnvironment): Node {
+        val  fields = dfe.selectionSet.fields
+        println()
         return VerySpecialLeaf("lol")
     }
 

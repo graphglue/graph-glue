@@ -11,6 +11,6 @@ abstract class NodeListFilterEntry(definition: FilterEntryDefinition, filter: No
 
 class AllNodeListFilterEntry(definition: FilterEntryDefinition, filter: NodeSubFilter) : NodeListFilterEntry(definition, filter)
 
-class SomeNodeListFilterEntry(definition: FilterEntryDefinition, filter: NodeSubFilter) : NodeListFilterEntry(definition, filter)
+class AnyNodeListFilterEntry(definition: FilterEntryDefinition, filter: NodeSubFilter) : NodeListFilterEntry(definition, filter)
 
 class NoneNodeListFilterEntry(definition: FilterEntryDefinition, filter: NodeSubFilter) : NodeListFilterEntry(definition, filter)

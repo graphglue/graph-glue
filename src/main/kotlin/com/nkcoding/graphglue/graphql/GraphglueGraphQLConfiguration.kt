@@ -21,6 +21,7 @@ import com.nkcoding.graphglue.graphql.connection.filter.definition.FilterDefinit
 import com.nkcoding.graphglue.graphql.connection.filter.definition.SubFilterGenerator
 import com.nkcoding.graphglue.graphql.connection.order.OrderDirection
 import com.nkcoding.graphglue.graphql.extensions.toTopLevelObjects
+import com.nkcoding.graphglue.graphql.redirect.RedirectKotlinDataFetcherFactoryProvider
 import com.nkcoding.graphglue.graphql.redirect.rewireFieldType
 import com.nkcoding.graphglue.model.Node
 import com.nkcoding.graphglue.model.NodeList
@@ -152,4 +153,11 @@ class GraphglueGraphQLConfiguration {
         logger.info("\n${schema.print()}")
         return schema
     }
+
+    @Bean
+    @ConditionalOnMissingBean
+    fun dataFetcherFactoryProvider(
+        objectMapper: ObjectMapper,
+        applicationContext: ApplicationContext
+    ): KotlinDataFetcherFactoryProvider = RedirectKotlinDataFetcherFactoryProvider(objectMapper, applicationContext)
 }

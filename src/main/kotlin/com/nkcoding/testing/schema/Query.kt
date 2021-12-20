@@ -1,18 +1,29 @@
 package com.nkcoding.testing.schema
 
+import com.expediagroup.graphql.generator.annotations.GraphQLIgnore
 import com.expediagroup.graphql.server.operations.Query
+import com.nkcoding.graphglue.graphql.execution.QueryOptions
+import com.nkcoding.graphglue.graphql.execution.QueryParser
+import com.nkcoding.graphglue.graphql.execution.definition.NodeDefinitionCollection
 import com.nkcoding.graphglue.model.Node
 import com.nkcoding.testing.model.Root
 import com.nkcoding.testing.model.Tree
 import com.nkcoding.testing.model.VerySpecialLeaf
 import graphql.schema.DataFetchingEnvironment
+import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Component
 
 @Component
 class Query : Query {
 
-    fun node(id: String, dfe: DataFetchingEnvironment): Node {
-        val  fields = dfe.selectionSet.fields
+    fun node(
+        id: String,
+        dfe: DataFetchingEnvironment,
+        @Autowired @GraphQLIgnore queryParser: QueryParser,
+    ): Node {
+        val nodeDefinitionCollection = queryParser.nodeDefinitionCollection
+        val parsedQuery =
+            queryParser.generateNodeQuery(nodeDefinitionCollection.getNodeDefinition<Node>(), dfe, QueryOptions())
         println()
         return VerySpecialLeaf("lol")
     }

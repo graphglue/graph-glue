@@ -20,6 +20,11 @@ import com.nkcoding.graphglue.graphql.connection.filter.definition.FilterDefinit
 import com.nkcoding.graphglue.graphql.connection.filter.definition.FilterDefinitionCollection
 import com.nkcoding.graphglue.graphql.connection.filter.definition.SubFilterGenerator
 import com.nkcoding.graphglue.graphql.connection.order.OrderDirection
+import com.nkcoding.graphglue.graphql.execution.QueryParser
+import com.nkcoding.graphglue.graphql.execution.definition.NodeDefinition
+import com.nkcoding.graphglue.graphql.execution.definition.NodeDefinitionCollection
+import com.nkcoding.graphglue.graphql.execution.definition.generateNodeDefinition
+import com.nkcoding.graphglue.graphql.extensions.getSimpleName
 import com.nkcoding.graphglue.graphql.extensions.toTopLevelObjects
 import com.nkcoding.graphglue.graphql.redirect.RedirectKotlinDataFetcherFactoryProvider
 import com.nkcoding.graphglue.graphql.redirect.rewireFieldType
@@ -38,6 +43,8 @@ import java.util.concurrent.ConcurrentHashMap
 import kotlin.reflect.KClass
 import kotlin.reflect.KType
 import kotlin.reflect.full.createType
+import kotlin.reflect.full.isSubclassOf
+import kotlin.reflect.full.isSubtypeOf
 import kotlin.reflect.jvm.jvmErasure
 
 /**
@@ -53,6 +60,8 @@ class GraphglueGraphQLConfiguration {
     private val outputTypeCache = ConcurrentHashMap<String, GraphQLOutputType>()
     private val filterDefinitions: FilterDefinitionCache =
         ConcurrentHashMap<KClass<out Node>, FilterDefinition<out Node>>()
+    private val nodeDefinitions = ConcurrentHashMap<KClass<out Node>, NodeDefinition>()
+    private val supertypeNodeDefinitionLookup = ConcurrentHashMap<Set<String>, NodeDefinition>()
 
     /**
      * Code registry used as a temporary cache before its DataFetchers are added to the
@@ -89,6 +98,12 @@ class GraphglueGraphQLConfiguration {
             }
 
             override fun willGenerateGraphQLType(type: KType): GraphQLType? {
+                if (type.isSubtypeOf(Node::class.createType())) {
+                    @Suppress("UNCHECKED_CAST") val nodeClass = type.jvmErasure as KClass<out Node>
+                    nodeDefinitions.computeIfAbsent(nodeClass) {
+                        generateNodeDefinition(nodeClass)
+                    }
+                }
                 return if (type.jvmErasure == NodeList::class) {
                     val factory = ConnectionWrapperGraphQLTypeFactory(
                         outputTypeCache,
@@ -104,6 +119,16 @@ class GraphglueGraphQLConfiguration {
                     super.willGenerateGraphQLType(type)
                 }
             }
+
+            override fun willBuildSchema(builder: GraphQLSchema.Builder): GraphQLSchema.Builder {
+                for ((nodeClass, nodeDefinition) in nodeDefinitions) {
+                    val subTypes = nodeDefinitions.keys.filter { it.isSubclassOf(nodeClass) }
+                        .map { it.getSimpleName() }
+                        .toSet()
+                    supertypeNodeDefinitionLookup[subTypes] = nodeDefinition
+                }
+                return super.willBuildSchema(builder)
+            }
         }
     }
 
@@ -111,7 +136,22 @@ class GraphglueGraphQLConfiguration {
      * Gets a list of all filter definitions
      */
     @Bean
+    @ConditionalOnMissingBean
     fun filterDefinitions() = FilterDefinitionCollection(filterDefinitions)
+
+    /**
+     * Gets a list of all node definitions
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    fun nodeDefinitions() = NodeDefinitionCollection(nodeDefinitions, supertypeNodeDefinitionLookup)
+
+    @Bean
+    @ConditionalOnMissingBean
+    fun queryParser(
+        nodeDefinitionCollection: NodeDefinitionCollection,
+        filterDefinitionCollection: FilterDefinitionCollection
+    ) = QueryParser(nodeDefinitionCollection, filterDefinitionCollection)
 
     @Bean
     @ConditionalOnMissingBean

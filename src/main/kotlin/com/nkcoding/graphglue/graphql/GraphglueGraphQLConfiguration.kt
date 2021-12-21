@@ -150,8 +150,9 @@ class GraphglueGraphQLConfiguration {
     @ConditionalOnMissingBean
     fun queryParser(
         nodeDefinitionCollection: NodeDefinitionCollection,
-        filterDefinitionCollection: FilterDefinitionCollection
-    ) = QueryParser(nodeDefinitionCollection, filterDefinitionCollection)
+        filterDefinitionCollection: FilterDefinitionCollection,
+        objectMapper: ObjectMapper
+    ) = QueryParser(nodeDefinitionCollection, filterDefinitionCollection, objectMapper)
 
     @Bean
     @ConditionalOnMissingBean

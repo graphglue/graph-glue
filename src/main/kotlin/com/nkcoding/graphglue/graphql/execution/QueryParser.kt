@@ -1,5 +1,6 @@
 package com.nkcoding.graphglue.graphql.execution
 
+import com.fasterxml.jackson.databind.ObjectMapper
 import com.nkcoding.graphglue.graphql.connection.filter.definition.FilterDefinitionCollection
 import com.nkcoding.graphglue.graphql.connection.order.IdOrderField
 import com.nkcoding.graphglue.graphql.connection.order.Order
@@ -15,7 +16,7 @@ import graphql.schema.DataFetchingFieldSelectionSet
 import graphql.schema.SelectedField
 
 class QueryParser(
-    val nodeDefinitionCollection: NodeDefinitionCollection, val filterDefinitionCollection: FilterDefinitionCollection
+    val nodeDefinitionCollection: NodeDefinitionCollection, val filterDefinitionCollection: FilterDefinitionCollection, val objectMapper: ObjectMapper
 ) {
     fun generateNodeQuery(
         definition: NodeDefinition, dataFetchingEnvironment: DataFetchingEnvironment, queryOptions: QueryOptions
@@ -30,7 +31,7 @@ class QueryParser(
     ): NodeQuery {
         val oneSubQueries = ArrayList<NodeSubQuery>()
         val manySubQueries = ArrayList<NodeSubQuery>()
-        for (field in selectionSet.fields) {
+        for (field in selectionSet.immediateFields) {
             if (field.fieldDefinitions.first().hasDirective(NODE_RELATIONSHIP_DIRECTIVE)) {
                 val onlyOnTypes = nodeDefinitionCollection.getNodeDefinitionsFromGraphQLNames(field.objectTypeNames)
                 val firstPossibleType = onlyOnTypes.first()
@@ -67,8 +68,8 @@ class QueryParser(
         val subQueryOptions = QueryOptions(
             filter = filter,
             orderBy = orderBy,
-            after = field.arguments["after"] as String?,
-            before = field.arguments["before"] as String?,
+            after = field.arguments["after"]?.let { orderBy.parseCursor(it as String, objectMapper) },
+            before = field.arguments["before"]?.let { orderBy.parseCursor(it as String, objectMapper) },
             first = field.arguments["first"] as Int?,
             last = field.arguments["last"] as Int?
         )

@@ -7,7 +7,7 @@ class NodeListFilter(definition: NodeListFilterDefinition, entries: List<NodeLis
     SimpleObjectFilter(definition, entries) {
 }
 
-abstract class NodeListFilterEntry(definition: FilterEntryDefinition, filter: NodeSubFilter) : FilterEntry(definition)
+abstract class NodeListFilterEntry(definition: FilterEntryDefinition, val filter: NodeSubFilter) : FilterEntry(definition)
 
 class AllNodeListFilterEntry(definition: FilterEntryDefinition, filter: NodeSubFilter) : NodeListFilterEntry(definition, filter)
 

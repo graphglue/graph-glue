@@ -2,6 +2,7 @@ package com.nkcoding.testing.schema
 
 import com.expediagroup.graphql.generator.annotations.GraphQLIgnore
 import com.expediagroup.graphql.server.operations.Query
+import com.fasterxml.jackson.databind.ObjectMapper
 import com.nkcoding.graphglue.graphql.execution.QueryOptions
 import com.nkcoding.graphglue.graphql.execution.QueryParser
 import com.nkcoding.graphglue.graphql.execution.definition.NodeDefinitionCollection
@@ -12,6 +13,7 @@ import com.nkcoding.testing.model.VerySpecialLeaf
 import graphql.schema.DataFetchingEnvironment
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Component
+import java.util.*
 
 @Component
 class Query : Query {
@@ -25,7 +27,7 @@ class Query : Query {
         val parsedQuery =
             queryParser.generateNodeQuery(nodeDefinitionCollection.getNodeDefinition<Node>(), dfe, QueryOptions())
         println()
-        return VerySpecialLeaf("lol")
+        return Root()
     }
 
     fun tree(): Tree {
@@ -50,6 +52,16 @@ class Query : Query {
         val arguments = environment.arguments
 
         return listOf(Tree())
+    }
+
+    fun encoderTest(@Autowired @GraphQLIgnore objectMapper: ObjectMapper): String {
+        val source = mapOf("x" to 10, "y" to "hello world", "z" to 11.5)
+        val encoded = objectMapper.writeValueAsBytes(source)
+        val res = Base64.getEncoder().encodeToString(encoded)
+        val deBase64 = Base64.getDecoder().decode(res)
+        val decoded = objectMapper.readValue(deBase64, Map::class.java)
+        println(decoded)
+        return res
     }
 
 }

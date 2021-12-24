@@ -6,5 +6,6 @@ import com.nkcoding.graphglue.graphql.execution.definition.RelationshipDefinitio
 data class NodeSubQuery(
     val query: NodeQuery,
     val onlyOnTypes: List<NodeDefinition>,
-    val relationshipDefinition: RelationshipDefinition
+    val relationshipDefinition: RelationshipDefinition,
+    val resultKey: String
 )

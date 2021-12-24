@@ -123,6 +123,7 @@ class GraphglueGraphQLConfiguration {
             override fun willBuildSchema(builder: GraphQLSchema.Builder): GraphQLSchema.Builder {
                 for ((nodeClass, nodeDefinition) in nodeDefinitions) {
                     val subTypes = nodeDefinitions.keys.filter { it.isSubclassOf(nodeClass) }
+                        .filter { !it.isAbstract }
                         .map { it.getSimpleName() }
                         .toSet()
                     supertypeNodeDefinitionLookup[subTypes] = nodeDefinition

@@ -12,49 +12,56 @@ import com.nkcoding.graphglue.graphql.execution.definition.NodeDefinitionCollect
 import com.nkcoding.graphglue.graphql.execution.definition.OneRelationshipDefinition
 import com.nkcoding.graphglue.model.NODE_RELATIONSHIP_DIRECTIVE
 import graphql.schema.DataFetchingEnvironment
-import graphql.schema.DataFetchingFieldSelectionSet
 import graphql.schema.SelectedField
 
 class QueryParser(
-    val nodeDefinitionCollection: NodeDefinitionCollection, val filterDefinitionCollection: FilterDefinitionCollection, val objectMapper: ObjectMapper
+    val nodeDefinitionCollection: NodeDefinitionCollection,
+    val filterDefinitionCollection: FilterDefinitionCollection,
+    val objectMapper: ObjectMapper
 ) {
     fun generateNodeQuery(
         definition: NodeDefinition, dataFetchingEnvironment: DataFetchingEnvironment, queryOptions: QueryOptions
     ): NodeQuery {
         return generateNodeQuery(
-            definition, dataFetchingEnvironment.selectionSet, queryOptions
+            definition, mapOf("default" to dataFetchingEnvironment.selectionSet.fields), queryOptions
         )
     }
 
     private fun generateNodeQuery(
-        definition: NodeDefinition, selectionSet: DataFetchingFieldSelectionSet, queryOptions: QueryOptions
+        definition: NodeDefinition, fieldParts: Map<String, List<SelectedField>>, queryOptions: QueryOptions
     ): NodeQuery {
         val oneSubQueries = ArrayList<NodeSubQuery>()
         val manySubQueries = ArrayList<NodeSubQuery>()
-        for (field in selectionSet.immediateFields) {
-            if (field.fieldDefinitions.first().hasDirective(NODE_RELATIONSHIP_DIRECTIVE)) {
-                val onlyOnTypes = nodeDefinitionCollection.getNodeDefinitionsFromGraphQLNames(field.objectTypeNames)
-                val firstPossibleType = onlyOnTypes.first()
-                val manyRelationshipDefinition = firstPossibleType.manyRelationshipDefinitions[field.name]
-                if (manyRelationshipDefinition != null) {
-                    val subQuery = NodeSubQuery(
-                        generateManyNodeQuery(manyRelationshipDefinition, field),
-                        onlyOnTypes,
-                        manyRelationshipDefinition
-                    )
-                    manySubQueries.add(subQuery)
-                } else {
-                    val oneRelationshipDefinition = firstPossibleType.oneRelationshipDefinitions[field.name]!!
-                    val subQuery = NodeSubQuery(
-                        generateOneNodeQuery(oneRelationshipDefinition, field),
-                        onlyOnTypes,
-                        oneRelationshipDefinition
-                    )
-                    oneSubQueries.add(subQuery)
+        val parts = fieldParts.mapValues {
+            val (_, fields) = it
+            for (field in fields) {
+                if (field.fieldDefinitions.first().hasDirective(NODE_RELATIONSHIP_DIRECTIVE)) {
+                    val onlyOnTypes = nodeDefinitionCollection.getNodeDefinitionsFromGraphQLNames(field.objectTypeNames)
+                    val firstPossibleType = onlyOnTypes.first()
+                    val manyRelationshipDefinition = firstPossibleType.manyRelationshipDefinitions[field.name]
+                    if (manyRelationshipDefinition != null) {
+                        val subQuery = NodeSubQuery(
+                            generateManyNodeQuery(manyRelationshipDefinition, field),
+                            onlyOnTypes,
+                            manyRelationshipDefinition,
+                            field.resultKey
+                        )
+                        manySubQueries.add(subQuery)
+                    } else {
+                        val oneRelationshipDefinition = firstPossibleType.oneRelationshipDefinitions[field.name]!!
+                        val subQuery = NodeSubQuery(
+                            generateOneNodeQuery(oneRelationshipDefinition, field),
+                            onlyOnTypes,
+                            oneRelationshipDefinition,
+                            field.resultKey
+                        )
+                        oneSubQueries.add(subQuery)
+                    }
                 }
             }
+            NodeQueryPart(oneSubQueries + manySubQueries)
         }
-        return NodeQuery(definition, queryOptions, oneSubQueries, manySubQueries)
+        return NodeQuery(definition, queryOptions, parts)
     }
 
     private fun generateManyNodeQuery(
@@ -73,8 +80,12 @@ class QueryParser(
             first = field.arguments["first"] as Int?,
             last = field.arguments["last"] as Int?
         )
+        val parts = mapOf(
+            "nodes" to field.selectionSet.getFields("nodes"),
+            "edges" to field.selectionSet.getFields("edges/node")
+        )
         return generateNodeQuery(
-            nodeDefinition, field.selectionSet, subQueryOptions
+            nodeDefinition, parts, subQueryOptions
         )
     }
 
@@ -83,9 +94,9 @@ class QueryParser(
         field: SelectedField,
     ): NodeQuery {
         val nodeDefinition = nodeDefinitionCollection.backingCollection[oneRelationshipDefinition.nodeKClass]!!
-        val subQueryOptions = QueryOptions(first = 1)
+        val subQueryOptions = QueryOptions(first = 1, orderBy = Order(OrderDirection.ASC, IdOrderField))
         return generateNodeQuery(
-            nodeDefinition, field.selectionSet, subQueryOptions
+            nodeDefinition, mapOf("default" to field.selectionSet.fields), subQueryOptions
         )
     }
 }

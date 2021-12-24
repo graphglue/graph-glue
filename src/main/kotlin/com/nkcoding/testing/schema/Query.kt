@@ -7,9 +7,7 @@ import com.nkcoding.graphglue.graphql.execution.QueryOptions
 import com.nkcoding.graphglue.graphql.execution.QueryParser
 import com.nkcoding.graphglue.graphql.execution.definition.NodeDefinitionCollection
 import com.nkcoding.graphglue.model.Node
-import com.nkcoding.testing.model.Root
-import com.nkcoding.testing.model.Tree
-import com.nkcoding.testing.model.VerySpecialLeaf
+import com.nkcoding.testing.model.*
 import graphql.schema.DataFetchingEnvironment
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Component
@@ -27,7 +25,7 @@ class Query : Query {
         val parsedQuery =
             queryParser.generateNodeQuery(nodeDefinitionCollection.getNodeDefinition<Node>(), dfe, QueryOptions())
         println()
-        return Root()
+        return ARoot()
     }
 
     fun tree(): Tree {
@@ -35,7 +33,7 @@ class Query : Query {
     }
 
     fun root(): Root {
-        return Root()
+        return BRoot()
     }
 
 

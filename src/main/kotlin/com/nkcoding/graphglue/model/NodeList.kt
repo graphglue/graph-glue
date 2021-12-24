@@ -1,8 +1,15 @@
 package com.nkcoding.graphglue.model
 
+import com.expediagroup.graphql.generator.annotations.GraphQLIgnore
 import com.nkcoding.graphglue.graphql.connection.filter.model.Filter
 import com.nkcoding.graphglue.graphql.connection.order.Order
+import com.nkcoding.graphglue.graphql.execution.QueryOptions
+import com.nkcoding.graphglue.graphql.execution.QueryParser
 import com.nkcoding.graphglue.graphql.redirect.RedirectPropertyClass
+import com.nkcoding.testing.model.Leaf
+import com.nkcoding.testing.model.VerySpecialLeaf
+import graphql.schema.DataFetchingEnvironment
+import org.springframework.beans.factory.annotation.Autowired
 
 @RedirectPropertyClass
 class NodeList<T : Node> : List<T> {
@@ -13,8 +20,15 @@ class NodeList<T : Node> : List<T> {
         after: String? = null,
         before: String? = null,
         first: Int? = null,
-        last: Int? = null
-    ): List<T> {
+        last: Int? = null,
+        @GraphQLIgnore @Autowired
+        queryParser: QueryParser,
+        dfe: DataFetchingEnvironment
+    ): Connection<T> {
+        println(dfe.executionStepInfo.path)
+        println(dfe.parentType)
+        //queryParser.generateNodeQuery(queryParser.nodeDefinitionCollection.getNodeDefinition<Leaf>(), dfe, QueryOptions())
+        return Connection(listOf(VerySpecialLeaf("test"), VerySpecialLeaf("test2")) as List<T>, PageInfo("lol", "lolol", true, true), 10)
         TODO("Implement, add correct types, ...")
     }
 

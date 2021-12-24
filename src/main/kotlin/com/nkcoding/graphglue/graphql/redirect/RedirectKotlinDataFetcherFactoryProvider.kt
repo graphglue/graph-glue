@@ -44,8 +44,9 @@ class RedirectKotlinDataFetcherFactoryProvider(
         val function = type.memberFunctions.first {
             it.hasAnnotation<RedirectPropertyFunction>()
         }
-        val functionDataFetcher = SpringDataFetcher(null, function, objectMapper, applicationContext)
-        return DataFetcherFactory {
+        val functionDataFetcherFactory = delegate.functionDataFetcherFactory(null, function)
+        return DataFetcherFactory { dataFetcherFactoryEnvironment ->
+            val functionDataFetcher = functionDataFetcherFactory.get(dataFetcherFactoryEnvironment)
             DataFetcher {
                 val environment = DelegateDataFetchingEnvironment(it, kProperty)
                 functionDataFetcher.get(environment)

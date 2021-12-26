@@ -6,23 +6,30 @@ import com.nkcoding.graphglue.graphql.execution.NodeQuery
 import com.nkcoding.graphglue.graphql.execution.NodeSubQuery
 import com.nkcoding.graphglue.graphql.execution.definition.NodeDefinition
 import org.neo4j.cypherdsl.core.*
+import org.neo4j.cypherdsl.core.renderer.Configuration
+import org.neo4j.cypherdsl.core.renderer.Renderer
 import org.springframework.data.neo4j.core.Neo4jClient
 import org.springframework.data.neo4j.core.mapping.Neo4jMappingContext
 import org.springframework.data.neo4j.core.mapping.Neo4jPersistentEntity
+
+const val NODE_KEY = "node"
+const val NODES_KEY = "nodes"
+const val TOTAL_COUNT_KEY = "total_count"
 
 class NodeQueryExecutor(
     private val nodeQuery: NodeQuery, private val client: Neo4jClient, private val mappingContext: Neo4jMappingContext
 ) {
     private var nameCounter = 0
 
-    init {
-        createRootNodeQuery()
+    fun parseQuery(): String {
+        val (statement, _) = createRootNodeQuery()
+        return Renderer.getRenderer(Configuration.prettyPrinting()).render(statement)
     }
 
-    private fun createRootNodeQuery() {
+    private fun createRootNodeQuery(): Pair<Statement, SymbolicName> {
         val rootNode = createNodeDefinitionNode(nodeQuery.definition).named(generateUniqueName().value)
         val builder = Cypher.match(rootNode).with(rootNode)
-        createNodeQuery(nodeQuery, builder, rootNode)
+        return createNodeQuery(nodeQuery, builder, rootNode)
     }
 
     private fun createNodeQuery(
@@ -41,15 +48,16 @@ class NodeQueryExecutor(
 
         // calc totalCount
         val totalCount = generateUniqueName()
-        val (totalCountBuilder, allWithExpressions) = if (options.fetchTotalCount) {
+        val (totalCountBuilder, additionalWithExpressions) = if (options.fetchTotalCount) {
             val allNodesCollected = generateUniqueName()
             val newBuilder = filteredBuilder.with(Functions.collect(node).`as`(allNodesCollected))
                 .with(Functions.size(allNodesCollected).`as`(totalCount), allNodesCollected as Expression)
-                .unwind(allNodesCollected).`as`(nodeAlias).with(nodeAlias, totalCount)
-            newBuilder to listOf(nodeAlias, totalCount)
+                .unwind(allNodesCollected).`as`(nodeAlias)
+            newBuilder to listOf(totalCount)
         } else {
-            filteredBuilder.with(nodeAlias) to listOf(nodeAlias)
+            filteredBuilder to emptyList()
         }
+        val allWithExpressions = listOf(nodeAlias) + additionalWithExpressions
 
         // filter for after and before
         val afterAndBeforeBuilder = if (options.after != null || options.before != null) {
@@ -74,9 +82,10 @@ class NodeQueryExecutor(
                     )
                 )
             }
-            totalCountBuilder.where(filterCondition).with(allWithExpressions)
+            totalCountBuilder.with(allWithExpressions)
+                .where(filterCondition).with(allWithExpressions)
         } else {
-            totalCountBuilder
+            totalCountBuilder.with(allWithExpressions)
         }
 
         // limit the results
@@ -98,19 +107,31 @@ class NodeQueryExecutor(
         for (part in nodeQuery.parts.values) {
             for (subQuery in part.subQueries) {
                 val (subQueryStatement, resultName) = createSubQuery(subQuery, node)
-                callBuilder = callBuilder.call(subQueryStatement, nodeAlias)
-                subQueryResultList.add(nodeAlias)
+                callBuilder = callBuilder.call(subQueryStatement)
+                subQueryResultList.add(resultName)
                 //TODO put result in map
             }
         }
 
         // build result map
+        val resultNodeMap = mapOf(NODE_KEY to nodeAlias) + subQueryResultList.associateBy { it.value }
+        val resultNodeExpression = Cypher.asExpression(resultNodeMap)
+        val resultNode = generateUniqueName()
+        val resultBuilder = callBuilder.with(listOf(resultNodeExpression.`as`(resultNode)) + allWithExpressions)
 
         // order and collect nodes
+        val collectedNodes = generateUniqueName()
+        val orderedCollectedResultsBuilder = resultBuilder.orderBy(generateOrderFields(options.orderBy, nodeAlias))
+            .with(listOf(Functions.collect(resultNode).`as`(collectedNodes)) + additionalWithExpressions)
+
 
         // return
         val returnAlias = generateUniqueName()
-        TODO()
+        val returnBuilder = orderedCollectedResultsBuilder.returning(Cypher.asExpression(mapOf(
+            NODES_KEY to collectedNodes,
+            TOTAL_COUNT_KEY to if (options.fetchTotalCount) totalCount else Cypher.literalNull()
+        )).`as`(returnAlias))
+        return returnBuilder.build() to returnAlias
     }
 
     private fun generateCursorFilterExpression(
@@ -153,6 +174,7 @@ class NodeQueryExecutor(
         val relatedNode = createNodeDefinitionNode(nodeQuery.definition).named(generateUniqueName().value)
 
         val builder = Cypher.with(node)
+            .with(node)
             .where(labelCondition)
             .match(subQuery.relationshipDefinition.generateRelationship(node, relatedNode))
             .with(relatedNode)

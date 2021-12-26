@@ -38,6 +38,7 @@ import org.springframework.context.ApplicationContext
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.context.annotation.Import
+import org.springframework.data.neo4j.core.mapping.Neo4jMappingContext
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.reflect.KClass
@@ -79,7 +80,8 @@ class GraphglueGraphQLConfiguration {
         filters: List<TypeFilterDefinitionEntry>,
         dataFetcherFactoryProvider: KotlinDataFetcherFactoryProvider,
         applicationContext: ApplicationContext,
-        objectMapper: ObjectMapper
+        objectMapper: ObjectMapper,
+        neo4jMappingContext: Neo4jMappingContext
     ): SchemaGeneratorHooks {
         return object : SchemaGeneratorHooks {
             override fun onRewireGraphQLType(
@@ -111,8 +113,7 @@ class GraphglueGraphQLConfiguration {
                         SubFilterGenerator(filters, filterDefinitions),
                         tempCodeRegistry,
                         dataFetcherFactoryProvider,
-                        applicationContext,
-                        objectMapper
+                        neo4jMappingContext
                     )
                     factory.generateWrapperGraphQLType(type)
                 } else {

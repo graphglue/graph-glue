@@ -2,28 +2,69 @@ package com.nkcoding.graphglue.graphql.execution
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.nkcoding.graphglue.graphql.connection.filter.definition.FilterDefinitionCollection
-import com.nkcoding.graphglue.graphql.connection.order.IdOrderField
-import com.nkcoding.graphglue.graphql.connection.order.Order
-import com.nkcoding.graphglue.graphql.connection.order.OrderDirection
-import com.nkcoding.graphglue.graphql.connection.order.parseOrder
-import com.nkcoding.graphglue.graphql.execution.definition.ManyRelationshipDefinition
-import com.nkcoding.graphglue.graphql.execution.definition.NodeDefinition
-import com.nkcoding.graphglue.graphql.execution.definition.NodeDefinitionCollection
-import com.nkcoding.graphglue.graphql.execution.definition.OneRelationshipDefinition
+import com.nkcoding.graphglue.graphql.connection.order.*
+import com.nkcoding.graphglue.graphql.execution.definition.*
 import com.nkcoding.graphglue.model.NODE_RELATIONSHIP_DIRECTIVE
+import com.nkcoding.graphglue.model.Node
+import com.nkcoding.graphglue.neo4j.CypherConditionGenerator
 import graphql.schema.DataFetchingEnvironment
+import graphql.schema.DataFetchingFieldSelectionSet
 import graphql.schema.SelectedField
+import org.neo4j.cypherdsl.core.Condition
+import org.neo4j.cypherdsl.core.Cypher
+import org.neo4j.cypherdsl.core.Predicates
+
+const val DEFAULT_PART_ID = "default"
+const val NODES_PART_ID = "nodes"
+const val EDGES_PART_ID = "edges"
 
 class QueryParser(
     val nodeDefinitionCollection: NodeDefinitionCollection,
     val filterDefinitionCollection: FilterDefinitionCollection,
     val objectMapper: ObjectMapper
 ) {
-    fun generateNodeQuery(
-        definition: NodeDefinition, dataFetchingEnvironment: DataFetchingEnvironment, queryOptions: QueryOptions
+
+    fun generateRelationshipNodeQuery(
+        definition: NodeDefinition,
+        dataFetchingEnvironment: DataFetchingEnvironment,
+        relationshipDefinition: RelationshipDefinition,
+        parentNode: Node
     ): NodeQuery {
-        return generateNodeQuery(
-            definition, mapOf("default" to dataFetchingEnvironment.selectionSet.fields), queryOptions
+        val rootCypherNode = Cypher.anyNode().withProperties(mapOf("id" to parentNode.id))
+        val relationshipCondition = object : CypherConditionGenerator {
+            override fun generateCondition(node: org.neo4j.cypherdsl.core.Node): Condition {
+                return Predicates.exists(relationshipDefinition.generateRelationship(rootCypherNode, node))
+            }
+        }
+        return when (relationshipDefinition) {
+            is OneRelationshipDefinition -> generateOneNodeQuery(
+                definition, dataFetchingEnvironment, listOf(relationshipCondition)
+            )
+            is ManyRelationshipDefinition -> generateManyNodeQuery(
+                definition, dataFetchingEnvironment, listOf(relationshipCondition)
+            )
+            else -> throw IllegalStateException("Unknown relationship type")
+        }
+    }
+
+    fun generateOneNodeQuery(
+        definition: NodeDefinition,
+        dataFetchingEnvironment: DataFetchingEnvironment,
+        additionalConditions: List<CypherConditionGenerator>
+    ): NodeQuery {
+        return generateOneNodeQuery(definition, dataFetchingEnvironment.selectionSet, additionalConditions)
+    }
+
+    fun generateManyNodeQuery(
+        definition: NodeDefinition,
+        dataFetchingEnvironment: DataFetchingEnvironment,
+        additionalConditions: List<CypherConditionGenerator>
+    ): NodeQuery {
+        return generateManyNodeQuery(
+            definition,
+            dataFetchingEnvironment.selectionSet,
+            dataFetchingEnvironment.arguments,
+            additionalConditions
         )
     }
 
@@ -41,7 +82,11 @@ class QueryParser(
                     val manyRelationshipDefinition = firstPossibleType.manyRelationshipDefinitions[field.name]
                     if (manyRelationshipDefinition != null) {
                         val subQuery = NodeSubQuery(
-                            generateManyNodeQuery(manyRelationshipDefinition, field),
+                            generateManyNodeQuery(
+                                nodeDefinitionCollection.backingCollection[manyRelationshipDefinition.nodeKClass]!!,
+                                field.selectionSet,
+                                field.arguments
+                            ),
                             onlyOnTypes,
                             manyRelationshipDefinition,
                             field.resultKey
@@ -50,7 +95,10 @@ class QueryParser(
                     } else {
                         val oneRelationshipDefinition = firstPossibleType.oneRelationshipDefinitions[field.name]!!
                         val subQuery = NodeSubQuery(
-                            generateOneNodeQuery(oneRelationshipDefinition, field),
+                            generateOneNodeQuery(
+                                nodeDefinitionCollection.backingCollection[oneRelationshipDefinition.nodeKClass]!!,
+                                field.selectionSet
+                            ),
                             onlyOnTypes,
                             oneRelationshipDefinition,
                             field.resultKey
@@ -65,24 +113,28 @@ class QueryParser(
     }
 
     private fun generateManyNodeQuery(
-        manyRelationshipDefinition: ManyRelationshipDefinition, field: SelectedField
+        nodeDefinition: NodeDefinition,
+        selectionSet: DataFetchingFieldSelectionSet,
+        arguments: Map<String, Any>,
+        additionalConditions: List<CypherConditionGenerator> = emptyList()
     ): NodeQuery {
-        val nodeType = manyRelationshipDefinition.nodeKClass
-        val nodeDefinition = nodeDefinitionCollection.backingCollection[nodeType]!!
-        val filterDefinition = filterDefinitionCollection.backingCollection[nodeType]!!
-        val filter = field.arguments["filter"]?.let { filterDefinition.parseFilter(it) }
-        val orderBy = field.arguments["orderBy"]?.let { parseOrder(it) } ?: Order(OrderDirection.ASC, IdOrderField)
+        val filterDefinition = filterDefinitionCollection.backingCollection[nodeDefinition.nodeType]!!
+        val filters = ArrayList(additionalConditions)
+        arguments["filter"]?.also {
+            filters.add(filterDefinition.parseFilter(it))
+        }
+        val orderBy = arguments["orderBy"]?.let { parseOrder(it) } ?: IdOrder
         val subQueryOptions = QueryOptions(
-            filter = filter,
+            filters = filters,
             orderBy = orderBy,
-            after = field.arguments["after"]?.let { orderBy.parseCursor(it as String, objectMapper) },
-            before = field.arguments["before"]?.let { orderBy.parseCursor(it as String, objectMapper) },
-            first = field.arguments["first"] as Int?,
-            last = field.arguments["last"] as Int?
+            after = arguments["after"]?.let { orderBy.parseCursor(it as String, objectMapper) },
+            before = arguments["before"]?.let { orderBy.parseCursor(it as String, objectMapper) },
+            first = arguments["first"]?.let { (it as Int) + 1 },
+            last = arguments["last"]?.let { (it as Int) + 1 }
         )
         val parts = mapOf(
-            "nodes" to field.selectionSet.getFields("nodes"),
-            "edges" to field.selectionSet.getFields("edges/node")
+            NODES_PART_ID to selectionSet.getFields("nodes"),
+            EDGES_PART_ID to selectionSet.getFields("edges/node")
         )
         return generateNodeQuery(
             nodeDefinition, parts, subQueryOptions
@@ -90,13 +142,13 @@ class QueryParser(
     }
 
     private fun generateOneNodeQuery(
-        oneRelationshipDefinition: OneRelationshipDefinition,
-        field: SelectedField,
+        nodeDefinition: NodeDefinition,
+        selectionSet: DataFetchingFieldSelectionSet,
+        additionalConditions: List<CypherConditionGenerator> = emptyList()
     ): NodeQuery {
-        val nodeDefinition = nodeDefinitionCollection.backingCollection[oneRelationshipDefinition.nodeKClass]!!
-        val subQueryOptions = QueryOptions(first = 1, orderBy = Order(OrderDirection.ASC, IdOrderField))
+        val subQueryOptions = QueryOptions(filters = additionalConditions, orderBy = IdOrder, first = 1)
         return generateNodeQuery(
-            nodeDefinition, mapOf("default" to field.selectionSet.fields), subQueryOptions
+            nodeDefinition, mapOf(DEFAULT_PART_ID to selectionSet.fields), subQueryOptions
         )
     }
 }

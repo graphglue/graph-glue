@@ -4,6 +4,7 @@ import com.expediagroup.graphql.generator.annotations.GraphQLDescription
 import com.expediagroup.graphql.generator.annotations.GraphQLIgnore
 import com.expediagroup.graphql.generator.scalars.ID
 import org.springframework.data.neo4j.core.schema.GeneratedValue
+import org.springframework.data.neo4j.core.schema.Id
 import org.springframework.data.neo4j.core.support.UUIDStringGenerator
 
 /**
@@ -15,7 +16,7 @@ import org.springframework.data.neo4j.core.support.UUIDStringGenerator
 @Neo4jNode
 @GraphQLDescription("Base class of all nodes")
 abstract class Node(
-    @GraphQLIgnore @GeneratedValue(UUIDStringGenerator::class) val id: String
+    @GraphQLIgnore @Id @GeneratedValue(UUIDStringGenerator::class) val id: String
 ) {
     @GraphQLDescription("The unique id of this node")
     fun id(): ID {

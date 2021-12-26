@@ -1,7 +1,6 @@
 package com.nkcoding.graphglue.graphql.connection
 
 import com.expediagroup.graphql.generator.execution.KotlinDataFetcherFactoryProvider
-import com.fasterxml.jackson.databind.ObjectMapper
 import com.nkcoding.graphglue.graphql.connection.filter.definition.SubFilterGenerator
 import com.nkcoding.graphglue.graphql.connection.filter.definition.generateFilterDefinition
 import com.nkcoding.graphglue.graphql.connection.order.OrderField
@@ -14,7 +13,7 @@ import com.nkcoding.graphglue.model.Node
 import graphql.Scalars
 import graphql.language.EnumValue
 import graphql.schema.*
-import org.springframework.context.ApplicationContext
+import org.springframework.data.neo4j.core.mapping.Neo4jMappingContext
 import kotlin.reflect.KClass
 import kotlin.reflect.KType
 import kotlin.reflect.full.memberFunctions
@@ -27,8 +26,7 @@ class ConnectionWrapperGraphQLTypeFactory(
     private val subFilterGenerator: SubFilterGenerator,
     private val codeRegistry: GraphQLCodeRegistry.Builder,
     private val dataFetcherFactoryProvider: KotlinDataFetcherFactoryProvider,
-    private val applicationContext: ApplicationContext,
-    private val objectMapper: ObjectMapper
+    private val mappingContext: Neo4jMappingContext
 ) {
 
 
@@ -41,7 +39,7 @@ class ConnectionWrapperGraphQLTypeFactory(
         return outputTypeCache.computeIfAbsent(name) {
             val filter = generateFilterDefinition(returnNodeType, subFilterGenerator)
 
-            val orders = generateOrders(returnNodeType)
+            val orders = generateOrders(returnNodeType, mappingContext.getPersistentEntity(returnNodeType.java)!!)
 
             val type = GraphQLObjectType.newObject().name(name).withDirective(REDIRECT_PROPERTY_DIRECTIVE)
                 .field { fieldBuilder ->
@@ -65,9 +63,8 @@ class ConnectionWrapperGraphQLTypeFactory(
                 }.build()
 
             val function = connectionType.jvmErasure.memberFunctions.first { it.name == functionName }
-            val dataFetcher =
-                ConnectionWrapperDataFetcher(null, function, objectMapper, applicationContext, filter)
-            registerDataFetcher(type, functionName) { dataFetcher }
+            val dataFetcherFactory = dataFetcherFactoryProvider.functionDataFetcherFactory(null, function)
+            registerDataFetcher(type, functionName, dataFetcherFactory)
 
             type
         }

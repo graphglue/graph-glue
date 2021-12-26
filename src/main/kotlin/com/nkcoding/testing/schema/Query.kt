@@ -22,9 +22,6 @@ class Query : Query {
         @Autowired @GraphQLIgnore queryParser: QueryParser,
     ): Node {
         val nodeDefinitionCollection = queryParser.nodeDefinitionCollection
-        val parsedQuery =
-            queryParser.generateNodeQuery(nodeDefinitionCollection.getNodeDefinition<Node>(), dfe, QueryOptions())
-        println()
         return ARoot()
     }
 

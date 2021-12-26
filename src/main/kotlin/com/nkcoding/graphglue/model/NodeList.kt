@@ -15,12 +15,6 @@ import org.springframework.beans.factory.annotation.Autowired
 class NodeList<T : Node> : List<T> {
 
     fun getFromGraphQL(
-        filter: Filter? = null,
-        orderBy: Order<T>? = null,
-        after: String? = null,
-        before: String? = null,
-        first: Int? = null,
-        last: Int? = null,
         @GraphQLIgnore @Autowired
         queryParser: QueryParser,
         dfe: DataFetchingEnvironment

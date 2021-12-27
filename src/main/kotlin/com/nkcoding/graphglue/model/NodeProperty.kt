@@ -6,14 +6,14 @@ import com.nkcoding.graphglue.neo4j.execution.NodeQueryResult
 import kotlin.reflect.KProperty
 
 @RedirectPropertyDelegateClass
-class NodeProperty<T: Node?>(value: T? = null) {
+class NodeProperty<T : Node?>(value: T? = null) {
     private var isLoaded = false
     private var currentNode: T? = null
     private var persistedNode: T? = null
 
     init {
         if (value != null) {
-            isLoaded  = true
+            isLoaded = true
             currentNode = value
         }
     }
@@ -33,7 +33,7 @@ class NodeProperty<T: Node?>(value: T? = null) {
 
     operator fun setValue(thisRef: Node, property: KProperty<*>, value: T) {
         val current = getCurrentNode()
-        if (value != current)  {
+        if (value != current) {
             currentNode = current
         }
     }

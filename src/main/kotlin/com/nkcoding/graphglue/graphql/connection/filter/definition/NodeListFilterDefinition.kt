@@ -6,7 +6,12 @@ import com.nkcoding.graphglue.graphql.extensions.getSimpleName
 import kotlin.reflect.KType
 import kotlin.reflect.jvm.jvmErasure
 
-class NodeListFilterDefinition(name: String, nodeType: KType, subFilterGenerator: SubFilterGenerator, relationshipDefinition: RelationshipDefinition) :
+class NodeListFilterDefinition(
+    name: String,
+    nodeType: KType,
+    subFilterGenerator: SubFilterGenerator,
+    relationshipDefinition: RelationshipDefinition
+) :
     SimpleObjectFilterDefinitionEntry<NodeSubFilterDefinition>(
         name, "", "${nodeType.jvmErasure.getSimpleName()}ListFilterInput",
         listOf(
@@ -40,7 +45,7 @@ class NodeListFilterDefinition(name: String, nodeType: KType, subFilterGenerator
             val (name, entry) = it
             val definition = fields[name] ?: throw IllegalStateException("Unknown input")
             val filter = definition.parseEntry(entry)
-            when(name) {
+            when (name) {
                 "all" -> AllNodeListFilterEntry(definition, filter)
                 "any" -> AnyNodeListFilterEntry(definition, filter)
                 "none" -> NoneNodeListFilterEntry(definition, filter)

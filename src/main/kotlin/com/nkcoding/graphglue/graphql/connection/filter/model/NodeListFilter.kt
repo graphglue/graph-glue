@@ -5,8 +5,7 @@ import com.nkcoding.graphglue.graphql.connection.filter.definition.NodeSubFilter
 import org.neo4j.cypherdsl.core.*
 
 class NodeListFilter(definition: NodeListFilterDefinition, entries: List<NodeListFilterEntry>) :
-    SimpleObjectFilter(definition, entries) {
-}
+    SimpleObjectFilter(definition, entries)
 
 abstract class NodeListFilterEntry(
     private val subFilterDefinition: NodeSubFilterDefinition,

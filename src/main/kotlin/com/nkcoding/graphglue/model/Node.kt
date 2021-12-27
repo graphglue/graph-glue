@@ -17,7 +17,9 @@ import org.springframework.data.neo4j.core.support.UUIDStringGenerator
 @GraphQLDescription("Base class of all nodes")
 abstract class Node {
 
-    @GraphQLIgnore @Id @GeneratedValue(UUIDStringGenerator::class)
+    @GraphQLIgnore
+    @Id
+    @GeneratedValue(UUIDStringGenerator::class)
     lateinit var id: String
 
     @GraphQLDescription("The unique id of this node")

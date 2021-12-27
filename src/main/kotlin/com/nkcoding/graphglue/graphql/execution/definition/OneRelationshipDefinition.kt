@@ -19,7 +19,7 @@ class OneRelationshipDefinition(
     parentKClass
 ) {
     @Suppress("UNCHECKED_CAST")
-    override fun <T: Node> registerQueryResult(node: Node, nodeQueryResult: NodeQueryResult<T>) {
+    override fun <T : Node> registerQueryResult(node: Node, nodeQueryResult: NodeQueryResult<T>) {
         property as KProperty1<Node, *>
         property.isAccessible = true
         val nodeProperty = property.getDelegate(node) as NodeProperty<T>

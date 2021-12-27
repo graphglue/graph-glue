@@ -13,7 +13,7 @@ fun <T : Node> generateOrders(type: KClass<T>, persistentEntity: Neo4jPersistent
             val neo4jPropertyName = persistentEntity.getPersistentProperty(it.name)!!.propertyName
             OrderField(it.getPropertyName(type), listOf(SimpleOrderPart(it, neo4jPropertyName), IdOrderPart))
         }
-    val allOrders =  generatedOrders + IdOrderField
+    val allOrders = generatedOrders + IdOrderField
     return allOrders.associateBy { it.name.toEnumNameCase() }
 }
 

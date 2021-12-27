@@ -5,5 +5,4 @@ import com.nkcoding.graphglue.model.Neo4jNode
 import com.nkcoding.graphglue.model.Node
 
 @Neo4jNode
-class Ant( @FilterProperty val name: String = "anty") : Node() {
-}
+class Ant(@FilterProperty val name: String = "anty") : Node()

@@ -8,7 +8,6 @@ import com.nkcoding.graphglue.neo4j.execution.NodeQueryResult
 import graphql.schema.DataFetchingEnvironment
 import org.springframework.beans.factory.annotation.Autowired
 import java.util.*
-import kotlin.collections.HashSet
 
 @RedirectPropertyClass
 class NodeSet<T : Node>(value: Collection<T>?) : AbstractSet<T>(), MutableSet<T> {
@@ -96,7 +95,7 @@ class NodeSet<T : Node>(value: Collection<T>?) : AbstractSet<T>(), MutableSet<T>
         return NodeSetIterator(getCurrentNodes().iterator())
     }
 
-    inner class NodeSetIterator(private val parentIterator: MutableIterator<T>): MutableIterator<T> {
+    inner class NodeSetIterator(private val parentIterator: MutableIterator<T>) : MutableIterator<T> {
         private var current: T? = null
 
         override fun hasNext() = parentIterator.hasNext()

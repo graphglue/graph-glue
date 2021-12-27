@@ -6,6 +6,7 @@ import com.expediagroup.graphql.generator.annotations.GraphQLDescription
 enum class OrderDirection {
     @GraphQLDescription("Ascending")
     ASC,
+
     @GraphQLDescription("Descending")
     DESC
 }

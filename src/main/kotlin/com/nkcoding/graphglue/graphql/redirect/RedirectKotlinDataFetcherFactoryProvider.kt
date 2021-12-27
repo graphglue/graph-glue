@@ -1,7 +1,6 @@
 package com.nkcoding.graphglue.graphql.redirect
 
 import com.expediagroup.graphql.generator.execution.KotlinDataFetcherFactoryProvider
-import com.expediagroup.graphql.server.spring.execution.SpringDataFetcher
 import com.expediagroup.graphql.server.spring.execution.SpringKotlinDataFetcherFactoryProvider
 import com.fasterxml.jackson.databind.ObjectMapper
 import graphql.schema.DataFetcher

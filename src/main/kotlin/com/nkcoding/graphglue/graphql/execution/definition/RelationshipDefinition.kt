@@ -20,11 +20,11 @@ abstract class RelationshipDefinition(
         rootNode: org.neo4j.cypherdsl.core.Node,
         propertyNode: org.neo4j.cypherdsl.core.Node
     ): org.neo4j.cypherdsl.core.Relationship {
-       return when(direction) {
-           Relationship.Direction.OUTGOING -> rootNode.relationshipTo(propertyNode, type)
-           Relationship.Direction.INCOMING -> rootNode.relationshipFrom(propertyNode, type)
-       }
+        return when (direction) {
+            Relationship.Direction.OUTGOING -> rootNode.relationshipTo(propertyNode, type)
+            Relationship.Direction.INCOMING -> rootNode.relationshipFrom(propertyNode, type)
+        }
     }
 
-    internal abstract fun <T: Node> registerQueryResult(node: Node, nodeQueryResult: NodeQueryResult<T>)
+    internal abstract fun <T : Node> registerQueryResult(node: Node, nodeQueryResult: NodeQueryResult<T>)
 }

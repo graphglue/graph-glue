@@ -5,7 +5,6 @@ import com.nkcoding.graphglue.graphql.connection.filter.definition.SubFilterGene
 import com.nkcoding.graphglue.graphql.connection.filter.definition.generateFilterDefinition
 import com.nkcoding.graphglue.graphql.connection.order.OrderField
 import com.nkcoding.graphglue.graphql.connection.order.generateOrders
-import com.nkcoding.graphglue.graphql.execution.definition.MutableNodeDefinitionCollection
 import com.nkcoding.graphglue.graphql.extensions.getSimpleName
 import com.nkcoding.graphglue.graphql.redirect.REDIRECT_PROPERTY_DIRECTIVE
 import com.nkcoding.graphglue.model.Connection

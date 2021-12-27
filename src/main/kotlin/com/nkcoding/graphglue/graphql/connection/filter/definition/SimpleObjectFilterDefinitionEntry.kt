@@ -5,7 +5,7 @@ import graphql.schema.GraphQLInputType
 
 abstract class SimpleObjectFilterDefinitionEntry<T : FilterEntryDefinition>(
     name: String,
-    description:  String,
+    description: String,
     val typeName: String,
     fields: List<T>
 ) : FilterEntryDefinition(name, description) {

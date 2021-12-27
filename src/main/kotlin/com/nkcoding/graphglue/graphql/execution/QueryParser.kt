@@ -2,7 +2,8 @@ package com.nkcoding.graphglue.graphql.execution
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.nkcoding.graphglue.graphql.connection.filter.definition.FilterDefinitionCollection
-import com.nkcoding.graphglue.graphql.connection.order.*
+import com.nkcoding.graphglue.graphql.connection.order.IdOrder
+import com.nkcoding.graphglue.graphql.connection.order.parseOrder
 import com.nkcoding.graphglue.graphql.execution.definition.*
 import com.nkcoding.graphglue.model.NODE_RELATIONSHIP_DIRECTIVE
 import com.nkcoding.graphglue.model.Node
@@ -134,7 +135,7 @@ class QueryParser(
         )
         val parts = mapOf(
             NODES_PART_ID to (selectionSet?.getFields("nodes") ?: emptyList()),
-            EDGES_PART_ID to (selectionSet?.getFields("edges/node")  ?: emptyList())
+            EDGES_PART_ID to (selectionSet?.getFields("edges/node") ?: emptyList())
         )
         return generateNodeQuery(
             nodeDefinition, parts, subQueryOptions

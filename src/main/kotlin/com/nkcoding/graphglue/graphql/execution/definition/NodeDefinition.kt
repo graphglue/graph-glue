@@ -22,7 +22,8 @@ class NodeDefinition(
 ) {
     val oneRelationshipDefinitions = oneRelationshipDefinitions.associateBy { it.graphQLName }
     val manyRelationshipDefinitions = manyRelationshipDefinitions.associateBy { it.graphQLName }
-    private val relationshipDefinitionsByProperty = (oneRelationshipDefinitions + manyRelationshipDefinitions).associateBy { it.property }
+    private val relationshipDefinitionsByProperty =
+        (oneRelationshipDefinitions + manyRelationshipDefinitions).associateBy { it.property }
     val returnExpression: Expression
     val returnNodeName: SymbolicName
 

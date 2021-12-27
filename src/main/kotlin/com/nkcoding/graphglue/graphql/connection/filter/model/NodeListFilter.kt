@@ -14,7 +14,7 @@ abstract class NodeListFilterEntry(
 ) : FilterEntry(subFilterDefinition) {
     override fun generateCondition(node: Node): Condition {
         val relationshipDefinition = subFilterDefinition.relationshipDefinition
-        val relatedNode = Cypher.anyNode(node.requiredSymbolicName.value + "_") //TODO maybe use correct primary label, but most likely not
+        val relatedNode = Cypher.anyNode(node.requiredSymbolicName.value + "_")
         val relationship = relationshipDefinition.generateRelationship(node, relatedNode)
         return generatePredicate(relatedNode.requiredSymbolicName)
             .`in`(Cypher.listBasedOn(relationship).returning(relatedNode))

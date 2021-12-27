@@ -41,10 +41,14 @@ class NodeQueryExecutor(
 
         // filter
         val options = nodeQuery.options
-        val filter = options.filters.fold(Conditions.isTrue()) { condition, filter ->
-            condition.and(filter.generateCondition(node))
+        val filteredBuilder = if (options.filters.isEmpty()) {
+            builder
+        } else {
+            val filter = options.filters.fold(Conditions.noCondition()) { condition, filter ->
+                condition.and(filter.generateCondition(node))
+            }
+            builder.where(filter)
         }
-        val filteredBuilder = builder.where(filter)
 
         // calc totalCount
         val totalCount = generateUniqueName()

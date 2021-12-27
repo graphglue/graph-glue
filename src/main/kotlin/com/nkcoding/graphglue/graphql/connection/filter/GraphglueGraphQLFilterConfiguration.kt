@@ -32,7 +32,7 @@ class GraphglueGraphQLFilterConfiguration {
 
     @Bean
     fun nodeListFilter() =
-        TypeFilterDefinitionEntry(List::class.createType(listOf(KTypeProjection.covariant(Node::class.createType())))) { name, property, parentNodeDefinition, subFilterGenerator ->
+        TypeFilterDefinitionEntry(Set::class.createType(listOf(KTypeProjection.covariant(Node::class.createType())))) { name, property, parentNodeDefinition, subFilterGenerator ->
             NodeListFilterDefinition(
                 name,
                 property.returnType.arguments.first().type!!,

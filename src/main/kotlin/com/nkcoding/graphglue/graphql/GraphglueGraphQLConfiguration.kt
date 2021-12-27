@@ -24,7 +24,6 @@ import com.nkcoding.graphglue.graphql.execution.QueryParser
 import com.nkcoding.graphglue.graphql.execution.definition.NodeDefinition
 import com.nkcoding.graphglue.graphql.execution.definition.NodeDefinitionCollection
 import com.nkcoding.graphglue.graphql.execution.definition.NodeDefinitionCollectionImpl
-import com.nkcoding.graphglue.graphql.execution.definition.generateNodeDefinition
 import com.nkcoding.graphglue.graphql.extensions.getSimpleName
 import com.nkcoding.graphglue.graphql.extensions.toTopLevelObjects
 import com.nkcoding.graphglue.graphql.redirect.RedirectKotlinDataFetcherFactoryProvider

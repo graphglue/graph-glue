@@ -4,16 +4,50 @@ import com.nkcoding.graphglue.graphql.connection.filter.model.FilterEntry
 import com.nkcoding.graphglue.graphql.connection.filter.model.StringFilter
 import com.nkcoding.graphglue.graphql.connection.filter.model.StringFilterEntry
 import graphql.Scalars
+import org.neo4j.cypherdsl.core.Condition
+import org.neo4j.cypherdsl.core.Expression
+import org.neo4j.cypherdsl.core.Property
 
-class StringFilterDefinition(name: String) : SimpleObjectFilterDefinitionEntry<StringFilterEntryDefinition>(
-    name, "Filter which can be used to filter for Nodes with a specific String field", "StringFilterInput", listOf(
-        StringFilterEntryDefinition("equals", "Matches Strings which are identical to the provided value"),
-        StringFilterEntryDefinition("startsWith", "Matches Strings which start with the provided value"),
-        StringFilterEntryDefinition("endsWith", "Matches Strings which end with the provided value"),
-        StringFilterEntryDefinition("contains", "Matches Strings which contain the provided value"),
-        StringFilterEntryDefinition("matches", "Matches Strings using the provided RegEx")
-    )
-) {
+class StringFilterDefinition(name: String, neo4jName: String) :
+    SimpleObjectFilterDefinitionEntry<StringFilterEntryDefinition>(
+        name, "Filter which can be used to filter for Nodes with a specific String field", "StringFilterInput", listOf(
+            StringFilterEntryDefinition(
+                "equals",
+                "Matches Strings which are identical to the provided value",
+                neo4jName
+            ) { property, value ->
+                property.isEqualTo(value)
+            },
+            StringFilterEntryDefinition(
+                "startsWith",
+                "Matches Strings which start with the provided value",
+                neo4jName
+            ) { property, value ->
+                property.startsWith(value)
+            },
+            StringFilterEntryDefinition(
+                "endsWith",
+                "Matches Strings which end with the provided value",
+                neo4jName
+            ) { property, value ->
+                property.endsWith(value)
+            },
+            StringFilterEntryDefinition(
+                "contains",
+                "Matches Strings which contain the provided value",
+                neo4jName
+            ) { property, value ->
+                property.contains(value)
+            },
+            StringFilterEntryDefinition(
+                "matches",
+                "Matches Strings using the provided RegEx",
+                neo4jName
+            ) { property, value ->
+                property.matches(value)
+            }
+        )
+    ) {
     override fun parseEntry(value: Any?): FilterEntry {
         value as Map<*, *>
         val entries = value.map {
@@ -25,8 +59,19 @@ class StringFilterDefinition(name: String) : SimpleObjectFilterDefinitionEntry<S
     }
 }
 
-class StringFilterEntryDefinition(name: String, description: String) :
-    SimpleFilterDefinitionEntry(name, description, Scalars.GraphQLString) {
+class StringFilterEntryDefinition(
+    name: String,
+    description: String,
+    neo4jName: String,
+    conditionGenerator: (property: Property, value: Expression) -> Condition
+) :
+    SimpleFilterEntryDefinition<String>(
+        name,
+        description,
+        Scalars.GraphQLString,
+        neo4jName,
+        conditionGenerator
+    ) {
     override fun parseEntry(value: Any?): StringFilterEntry {
         return StringFilterEntry(this, value as String)
     }

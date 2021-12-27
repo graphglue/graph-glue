@@ -1,6 +1,8 @@
 package com.nkcoding.graphglue.graphql.execution.definition
 
 import com.nkcoding.graphglue.model.Node
+import com.nkcoding.graphglue.model.NodeSet
+import com.nkcoding.graphglue.neo4j.execution.NodeQueryResult
 import org.springframework.data.neo4j.core.schema.Relationship
 import kotlin.reflect.KClass
 import kotlin.reflect.KProperty1
@@ -17,4 +19,11 @@ class ManyRelationshipDefinition(
     type,
     direction,
     parentKClass
-) {}
+) {
+    @Suppress("UNCHECKED_CAST")
+    override fun <T : Node> registerQueryResult(node: Node, nodeQueryResult: NodeQueryResult<T>) {
+        property as KProperty1<Node, NodeSet<T>>
+        val nodeSet = property.get(node)
+        nodeSet.registerQueryResult(nodeQueryResult)
+    }
+}

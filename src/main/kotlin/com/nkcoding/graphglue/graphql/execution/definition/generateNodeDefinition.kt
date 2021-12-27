@@ -1,19 +1,23 @@
 package com.nkcoding.graphglue.graphql.execution.definition
 
 import com.nkcoding.graphglue.model.Node
-import com.nkcoding.graphglue.model.NodeList
+import com.nkcoding.graphglue.model.NodeSet
 import com.nkcoding.graphglue.model.NodeProperty
 import com.nkcoding.graphglue.model.NodeRelationship
+import org.springframework.data.neo4j.core.mapping.Neo4jMappingContext
 import kotlin.reflect.KClass
 import kotlin.reflect.KTypeProjection
 import kotlin.reflect.full.*
 import kotlin.reflect.jvm.javaField
+import kotlin.reflect.jvm.jvmName
 
-fun generateNodeDefinition(nodeClass: KClass<out Node>): NodeDefinition {
+fun generateNodeDefinition(nodeClass: KClass<out Node>, mappingContext: Neo4jMappingContext): NodeDefinition {
     return NodeDefinition(
         nodeClass,
         generateOneRelationshipDefinitions(nodeClass),
-        generateManyRelationshipDefinitions(nodeClass)
+        generateManyRelationshipDefinitions(nodeClass),
+        mappingContext.getPersistentEntity(nodeClass.java)!!,
+        mappingContext.getRequiredMappingFunctionFor(nodeClass.java)!!
     )
 }
 
@@ -31,7 +35,7 @@ private fun generateOneRelationshipDefinitions(nodeClass: KClass<out Node>): Lis
 }
 
 private fun generateManyRelationshipDefinitions(nodeClass: KClass<out Node>): List<ManyRelationshipDefinition> {
-    val nodeListType = NodeList::class.createType(listOf(KTypeProjection.covariant(Node::class.createType())))
+    val nodeListType = NodeSet::class.createType(listOf(KTypeProjection.covariant(Node::class.createType())))
     val properties = nodeClass.memberProperties.filter { it.returnType.isSubtypeOf(nodeListType) }
     return properties.map {
         val annotation = it.findAnnotation<NodeRelationship>()

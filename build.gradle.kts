@@ -1,3 +1,5 @@
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+
 description = "A framework to connect graphql-kotlin and neo4j"
 
 val reactorVersion = "5.3.10"
@@ -7,7 +9,7 @@ val neo4jVersion = "2.6.2"
 plugins {
     id("org.springframework.boot") version "2.5.5"
 	id("io.spring.dependency-management") version "1.0.11.RELEASE"
-	kotlin("jvm") version "1.6.0"
+	kotlin("jvm") version "1.6.10"
 	kotlin("plugin.spring") version "1.6.10"
     id("com.expediagroup.graphql") version "5.3.0"
 }

@@ -2,17 +2,23 @@ package com.nkcoding.testing.model
 
 import com.nkcoding.graphglue.graphql.connection.filter.FilterProperty
 import com.nkcoding.graphglue.graphql.connection.order.OrderProperty
+import com.nkcoding.graphglue.model.Neo4jNode
 import com.nkcoding.graphglue.model.Node
-import com.nkcoding.graphglue.model.NodeProperty
-import com.nkcoding.graphglue.model.NodeRelationship
+import org.springframework.data.neo4j.core.schema.Id
 import org.springframework.data.neo4j.core.schema.Relationship
 
-abstract class Leaf(id: String) : Node(id) {
+@Neo4jNode
+class Leaf(
     @FilterProperty
     @OrderProperty
-    val text = "I am a leaf"
+    val text: String = "I am a leaf",
+    @Relationship(type = "related", direction = Relationship.Direction.OUTGOING)
+    val relatedLeaf: List<RelatedLeaf>
+) : Node()
 
-    @NodeRelationship("ANT", Relationship.Direction.OUTGOING)
-    val ant by NodeProperty<Ant>()
-}
+@Neo4jNode
+class RelatedLeaf(
+    @Id val id: String,
+    val lol: String
+)
 

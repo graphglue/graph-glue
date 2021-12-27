@@ -26,7 +26,7 @@ class QueryParser(
 
     fun generateRelationshipNodeQuery(
         definition: NodeDefinition,
-        dataFetchingEnvironment: DataFetchingEnvironment,
+        dataFetchingEnvironment: DataFetchingEnvironment?,
         relationshipDefinition: RelationshipDefinition,
         parentNode: Node
     ): NodeQuery {
@@ -49,21 +49,21 @@ class QueryParser(
 
     fun generateOneNodeQuery(
         definition: NodeDefinition,
-        dataFetchingEnvironment: DataFetchingEnvironment,
+        dataFetchingEnvironment: DataFetchingEnvironment?,
         additionalConditions: List<CypherConditionGenerator>
     ): NodeQuery {
-        return generateOneNodeQuery(definition, dataFetchingEnvironment.selectionSet, additionalConditions)
+        return generateOneNodeQuery(definition, dataFetchingEnvironment?.selectionSet, additionalConditions)
     }
 
     fun generateManyNodeQuery(
         definition: NodeDefinition,
-        dataFetchingEnvironment: DataFetchingEnvironment,
+        dataFetchingEnvironment: DataFetchingEnvironment?,
         additionalConditions: List<CypherConditionGenerator>
     ): NodeQuery {
         return generateManyNodeQuery(
             definition,
-            dataFetchingEnvironment.selectionSet,
-            dataFetchingEnvironment.arguments,
+            dataFetchingEnvironment?.selectionSet,
+            dataFetchingEnvironment?.arguments ?: emptyMap(),
             additionalConditions
         )
     }
@@ -114,7 +114,7 @@ class QueryParser(
 
     private fun generateManyNodeQuery(
         nodeDefinition: NodeDefinition,
-        selectionSet: DataFetchingFieldSelectionSet,
+        selectionSet: DataFetchingFieldSelectionSet?,
         arguments: Map<String, Any>,
         additionalConditions: List<CypherConditionGenerator> = emptyList()
     ): NodeQuery {
@@ -133,8 +133,8 @@ class QueryParser(
             last = arguments["last"]?.let { (it as Int) + 1 }
         )
         val parts = mapOf(
-            NODES_PART_ID to selectionSet.getFields("nodes"),
-            EDGES_PART_ID to selectionSet.getFields("edges/node")
+            NODES_PART_ID to (selectionSet?.getFields("nodes") ?: emptyList()),
+            EDGES_PART_ID to (selectionSet?.getFields("edges/node")  ?: emptyList())
         )
         return generateNodeQuery(
             nodeDefinition, parts, subQueryOptions
@@ -143,12 +143,12 @@ class QueryParser(
 
     private fun generateOneNodeQuery(
         nodeDefinition: NodeDefinition,
-        selectionSet: DataFetchingFieldSelectionSet,
+        selectionSet: DataFetchingFieldSelectionSet?,
         additionalConditions: List<CypherConditionGenerator> = emptyList()
     ): NodeQuery {
         val subQueryOptions = QueryOptions(filters = additionalConditions, orderBy = IdOrder, first = 1)
         return generateNodeQuery(
-            nodeDefinition, mapOf(DEFAULT_PART_ID to selectionSet.fields), subQueryOptions
+            nodeDefinition, mapOf(DEFAULT_PART_ID to (selectionSet?.fields ?: emptyList())), subQueryOptions
         )
     }
 }

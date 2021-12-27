@@ -1,5 +1,12 @@
 package com.nkcoding.graphglue.graphql.connection.filter.model
 
-import com.nkcoding.graphglue.graphql.connection.filter.definition.FilterEntryDefinition
+import com.nkcoding.graphglue.graphql.connection.filter.definition.SimpleFilterEntryDefinition
+import org.neo4j.cypherdsl.core.Condition
+import org.neo4j.cypherdsl.core.Node
 
-abstract class SimpleFilterEntry<T>(definition: FilterEntryDefinition, val value: T) : FilterEntry(definition)
+abstract class SimpleFilterEntry<T>(private val simpleDefinition: SimpleFilterEntryDefinition<T>, val value: T) :
+    FilterEntry(simpleDefinition) {
+    override fun generateCondition(node: Node): Condition {
+        return simpleDefinition.generateCondition(node, value)
+    }
+}

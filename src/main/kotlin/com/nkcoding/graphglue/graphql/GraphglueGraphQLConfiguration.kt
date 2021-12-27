@@ -23,13 +23,14 @@ import com.nkcoding.graphglue.graphql.connection.order.OrderDirection
 import com.nkcoding.graphglue.graphql.execution.QueryParser
 import com.nkcoding.graphglue.graphql.execution.definition.NodeDefinition
 import com.nkcoding.graphglue.graphql.execution.definition.NodeDefinitionCollection
+import com.nkcoding.graphglue.graphql.execution.definition.NodeDefinitionCollectionImpl
 import com.nkcoding.graphglue.graphql.execution.definition.generateNodeDefinition
 import com.nkcoding.graphglue.graphql.extensions.getSimpleName
 import com.nkcoding.graphglue.graphql.extensions.toTopLevelObjects
 import com.nkcoding.graphglue.graphql.redirect.RedirectKotlinDataFetcherFactoryProvider
 import com.nkcoding.graphglue.graphql.redirect.rewireFieldType
 import com.nkcoding.graphglue.model.Node
-import com.nkcoding.graphglue.model.NodeList
+import com.nkcoding.graphglue.model.NodeSet
 import com.nkcoding.graphglue.model.PageInfo
 import graphql.schema.*
 import org.slf4j.LoggerFactory
@@ -53,7 +54,7 @@ import kotlin.reflect.jvm.jvmErasure
  */
 @Configuration
 @Import(GraphglueGraphQLFilterConfiguration::class)
-class GraphglueGraphQLConfiguration {
+class GraphglueGraphQLConfiguration(private val neo4jMappingContext: Neo4jMappingContext) {
 
     private val logger = LoggerFactory.getLogger(GraphglueGraphQLConfiguration::class.java)
 
@@ -63,6 +64,8 @@ class GraphglueGraphQLConfiguration {
         ConcurrentHashMap<KClass<out Node>, FilterDefinition<out Node>>()
     private val nodeDefinitions = ConcurrentHashMap<KClass<out Node>, NodeDefinition>()
     private val supertypeNodeDefinitionLookup = ConcurrentHashMap<Set<String>, NodeDefinition>()
+    private val nodeDefinitionCollection =
+        NodeDefinitionCollectionImpl(nodeDefinitions, supertypeNodeDefinitionLookup, neo4jMappingContext)
 
     /**
      * Code registry used as a temporary cache before its DataFetchers are added to the
@@ -80,8 +83,7 @@ class GraphglueGraphQLConfiguration {
         filters: List<TypeFilterDefinitionEntry>,
         dataFetcherFactoryProvider: KotlinDataFetcherFactoryProvider,
         applicationContext: ApplicationContext,
-        objectMapper: ObjectMapper,
-        neo4jMappingContext: Neo4jMappingContext
+        objectMapper: ObjectMapper
     ): SchemaGeneratorHooks {
         return object : SchemaGeneratorHooks {
             override fun onRewireGraphQLType(
@@ -102,15 +104,13 @@ class GraphglueGraphQLConfiguration {
             override fun willGenerateGraphQLType(type: KType): GraphQLType? {
                 if (type.isSubtypeOf(Node::class.createType())) {
                     @Suppress("UNCHECKED_CAST") val nodeClass = type.jvmErasure as KClass<out Node>
-                    nodeDefinitions.computeIfAbsent(nodeClass) {
-                        generateNodeDefinition(nodeClass)
-                    }
+                    nodeDefinitionCollection.getOrCreate(nodeClass)
                 }
-                return if (type.jvmErasure == NodeList::class) {
+                return if (type.jvmErasure == NodeSet::class) {
                     val factory = ConnectionWrapperGraphQLTypeFactory(
                         outputTypeCache,
                         inputTypeCache,
-                        SubFilterGenerator(filters, filterDefinitions),
+                        SubFilterGenerator(filters, filterDefinitions, nodeDefinitionCollection),
                         tempCodeRegistry,
                         dataFetcherFactoryProvider,
                         neo4jMappingContext
@@ -146,7 +146,7 @@ class GraphglueGraphQLConfiguration {
      */
     @Bean
     @ConditionalOnMissingBean
-    fun nodeDefinitions() = NodeDefinitionCollection(nodeDefinitions, supertypeNodeDefinitionLookup)
+    fun nodeDefinitions() = nodeDefinitionCollection
 
     @Bean
     @ConditionalOnMissingBean

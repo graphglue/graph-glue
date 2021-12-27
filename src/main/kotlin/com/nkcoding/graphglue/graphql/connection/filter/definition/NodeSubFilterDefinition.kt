@@ -1,6 +1,7 @@
 package com.nkcoding.graphglue.graphql.connection.filter.definition
 
 import com.nkcoding.graphglue.graphql.connection.filter.model.NodeSubFilter
+import com.nkcoding.graphglue.graphql.execution.definition.RelationshipDefinition
 import com.nkcoding.graphglue.model.Node
 import graphql.schema.GraphQLInputType
 import kotlin.reflect.KClass
@@ -11,7 +12,8 @@ class NodeSubFilterDefinition(
     name: String,
     description: String,
     nodeType: KType,
-    subFilterGenerator: SubFilterGenerator
+    subFilterGenerator: SubFilterGenerator,
+    val relationshipDefinition: RelationshipDefinition
 ) :
     FilterEntryDefinition(name, description) {
 

@@ -2,6 +2,7 @@ package com.nkcoding.graphglue.graphql.execution.definition
 
 import com.nkcoding.graphglue.graphql.extensions.getPropertyName
 import com.nkcoding.graphglue.model.Node
+import com.nkcoding.graphglue.neo4j.execution.NodeQueryResult
 import org.springframework.data.neo4j.core.schema.Relationship
 import kotlin.reflect.KClass
 import kotlin.reflect.KProperty1
@@ -24,4 +25,6 @@ abstract class RelationshipDefinition(
            Relationship.Direction.INCOMING -> rootNode.relationshipFrom(propertyNode, type)
        }
     }
+
+    internal abstract fun <T: Node> registerQueryResult(node: Node, nodeQueryResult: NodeQueryResult<T>)
 }

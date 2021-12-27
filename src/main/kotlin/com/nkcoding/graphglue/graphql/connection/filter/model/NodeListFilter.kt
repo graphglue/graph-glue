@@ -1,16 +1,40 @@
 package com.nkcoding.graphglue.graphql.connection.filter.model
 
-import com.nkcoding.graphglue.graphql.connection.filter.definition.FilterEntryDefinition
 import com.nkcoding.graphglue.graphql.connection.filter.definition.NodeListFilterDefinition
+import com.nkcoding.graphglue.graphql.connection.filter.definition.NodeSubFilterDefinition
+import org.neo4j.cypherdsl.core.*
 
 class NodeListFilter(definition: NodeListFilterDefinition, entries: List<NodeListFilterEntry>) :
     SimpleObjectFilter(definition, entries) {
 }
 
-abstract class NodeListFilterEntry(definition: FilterEntryDefinition, val filter: NodeSubFilter) : FilterEntry(definition)
+abstract class NodeListFilterEntry(
+    private val subFilterDefinition: NodeSubFilterDefinition,
+    val filter: NodeSubFilter
+) : FilterEntry(subFilterDefinition) {
+    override fun generateCondition(node: Node): Condition {
+        val relationshipDefinition = subFilterDefinition.relationshipDefinition
+        val relatedNode = Cypher.anyNode(node.requiredSymbolicName.value + "_") //TODO maybe use correct primary label, but most likely not
+        val relationship = relationshipDefinition.generateRelationship(node, relatedNode)
+        return generatePredicate(relatedNode.requiredSymbolicName)
+            .`in`(Cypher.listBasedOn(relationship).returning(relatedNode))
+            .where(filter.generateCondition(relatedNode))
+    }
 
-class AllNodeListFilterEntry(definition: FilterEntryDefinition, filter: NodeSubFilter) : NodeListFilterEntry(definition, filter)
+    abstract fun generatePredicate(variable: SymbolicName): Predicates.OngoingListBasedPredicateFunction
+}
 
-class AnyNodeListFilterEntry(definition: FilterEntryDefinition, filter: NodeSubFilter) : NodeListFilterEntry(definition, filter)
+class AllNodeListFilterEntry(definition: NodeSubFilterDefinition, filter: NodeSubFilter) :
+    NodeListFilterEntry(definition, filter) {
+    override fun generatePredicate(variable: SymbolicName) = Predicates.all(variable)
+}
 
-class NoneNodeListFilterEntry(definition: FilterEntryDefinition, filter: NodeSubFilter) : NodeListFilterEntry(definition, filter)
+class AnyNodeListFilterEntry(definition: NodeSubFilterDefinition, filter: NodeSubFilter) :
+    NodeListFilterEntry(definition, filter) {
+    override fun generatePredicate(variable: SymbolicName) = Predicates.any(variable)
+}
+
+class NoneNodeListFilterEntry(definition: NodeSubFilterDefinition, filter: NodeSubFilter) :
+    NodeListFilterEntry(definition, filter) {
+    override fun generatePredicate(variable: SymbolicName) = Predicates.none(variable)
+}

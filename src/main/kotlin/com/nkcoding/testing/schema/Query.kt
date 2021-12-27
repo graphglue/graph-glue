@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.nkcoding.graphglue.graphql.execution.QueryOptions
 import com.nkcoding.graphglue.graphql.execution.QueryParser
 import com.nkcoding.graphglue.graphql.execution.definition.NodeDefinitionCollection
+import com.nkcoding.graphglue.graphql.execution.definition.getNodeDefinition
 import com.nkcoding.graphglue.model.Node
 import com.nkcoding.graphglue.neo4j.execution.NodeQueryExecutor
 import com.nkcoding.testing.model.*
@@ -33,41 +34,7 @@ class Query : Query {
         )
         val executor = NodeQueryExecutor(parsedQuery, neo4jClient, mappingContext)
         println(executor.parseQuery())
-        return ARoot()
-    }
-
-    fun tree(): Tree {
-        return Tree()
-    }
-
-    fun root(): Root {
-        return BRoot()
-    }
-
-
-    fun echo(text: String): String = text
-
-    val test: List<Int> = listOf(1, 2, 3);
-
-    fun trees(environment: DataFetchingEnvironment): List<Tree> {
-        //environment.field.arguments[1].value;
-        val selectedFields = environment.selectionSet.fields
-        val field = environment.field
-        val argument = environment.getArgument<Any>("input")
-        val argument2 = field.arguments[0]
-        val arguments = environment.arguments
-
-        return listOf(Tree())
-    }
-
-    fun encoderTest(@Autowired @GraphQLIgnore objectMapper: ObjectMapper): String {
-        val source = mapOf("x" to 10, "y" to "hello world", "z" to 11.5)
-        val encoded = objectMapper.writeValueAsBytes(source)
-        val res = Base64.getEncoder().encodeToString(encoded)
-        val deBase64 = Base64.getDecoder().decode(res)
-        val decoded = objectMapper.readValue(deBase64, Map::class.java)
-        println(decoded)
-        return res
+        TODO()
     }
 
 }

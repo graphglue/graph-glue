@@ -10,7 +10,6 @@ import org.neo4j.cypherdsl.core.renderer.Configuration
 import org.neo4j.cypherdsl.core.renderer.Renderer
 import org.springframework.data.neo4j.core.Neo4jClient
 import org.springframework.data.neo4j.core.mapping.Neo4jMappingContext
-import org.springframework.data.neo4j.core.mapping.Neo4jPersistentEntity
 
 const val NODE_KEY = "node"
 const val NODES_KEY = "nodes"
@@ -37,6 +36,7 @@ class NodeQueryExecutor(
         builder: StatementBuilder.OrderableOngoingReadingAndWithWithoutWhere,
         node: Node
     ): Pair<Statement, SymbolicName> {
+        val nodeDefinition = nodeQuery.definition
         val nodeAlias = node.symbolicName.orElseThrow()
 
         // filter
@@ -114,10 +114,13 @@ class NodeQueryExecutor(
         }
 
         // build result map
-        val resultNodeMap = mapOf(NODE_KEY to nodeAlias) + subQueryResultList.associateBy { it.value }
+        val resultNodeMap =
+            mapOf(NODE_KEY to nodeDefinition.returnExpression) + subQueryResultList.associateBy { it.value }
         val resultNodeExpression = Cypher.asExpression(resultNodeMap)
         val resultNode = generateUniqueName()
-        val resultBuilder = callBuilder.with(listOf(resultNodeExpression.`as`(resultNode)) + allWithExpressions)
+        val resultBuilder =
+            callBuilder.with(listOf(nodeAlias.`as`(nodeDefinition.returnNodeName)) + additionalWithExpressions)
+                .with(listOf(resultNodeExpression.`as`(resultNode)) + allWithExpressions)
 
         // order and collect nodes
         val collectedNodes = generateUniqueName()
@@ -127,10 +130,14 @@ class NodeQueryExecutor(
 
         // return
         val returnAlias = generateUniqueName()
-        val returnBuilder = orderedCollectedResultsBuilder.returning(Cypher.asExpression(mapOf(
-            NODES_KEY to collectedNodes,
-            TOTAL_COUNT_KEY to if (options.fetchTotalCount) totalCount else Cypher.literalNull()
-        )).`as`(returnAlias))
+        val returnBuilder = orderedCollectedResultsBuilder.returning(
+            Cypher.asExpression(
+                mapOf(
+                    NODES_KEY to collectedNodes,
+                    TOTAL_COUNT_KEY to if (options.fetchTotalCount) totalCount else Cypher.literalNull()
+                )
+            ).`as`(returnAlias)
+        )
         return returnBuilder.build() to returnAlias
     }
 
@@ -144,7 +151,7 @@ class NodeQueryExecutor(
         var filterExpression = Conditions.noCondition()
         for (part in order.field.parts.reversed()) {
             val property = node.property(part.neo4jPropertyName)
-            val propertyValue = Cypher.literalOf<Any?>(cursor[part.property.name])
+            val propertyValue = Cypher.anonParameter<Any?>(cursor[part.property.name])
             filterExpression = property.eq(propertyValue).and(filterExpression)
             val neqCondition = if (realForwards) {
                 property.gt(propertyValue)
@@ -183,12 +190,8 @@ class NodeQueryExecutor(
 
     private fun generateUniqueName() = Cypher.name("a_${nameCounter++}")
 
-    private fun nodeDefinitionToPersistentEntity(nodeDefinition: NodeDefinition): Neo4jPersistentEntity<*> {
-        return mappingContext.getPersistentEntity(nodeDefinition.nodeType.java)!!
-    }
-
     private fun getNodeDefinitionPrimaryLabel(nodeDefinition: NodeDefinition): String {
-        val persistentEntity = nodeDefinitionToPersistentEntity(nodeDefinition)
+        val persistentEntity = nodeDefinition.persistentEntity
         return persistentEntity.primaryLabel
     }
 

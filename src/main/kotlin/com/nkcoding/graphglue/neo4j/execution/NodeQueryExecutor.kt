@@ -6,8 +6,9 @@ import com.nkcoding.graphglue.graphql.execution.NodeQuery
 import com.nkcoding.graphglue.graphql.execution.NodeSubQuery
 import com.nkcoding.graphglue.graphql.execution.definition.NodeDefinition
 import org.neo4j.cypherdsl.core.*
-import org.neo4j.cypherdsl.core.renderer.Configuration
 import org.neo4j.cypherdsl.core.renderer.Renderer
+import org.neo4j.driver.Value
+import org.neo4j.driver.types.TypeSystem
 import org.springframework.data.neo4j.core.Neo4jClient
 import org.springframework.data.neo4j.core.mapping.Neo4jMappingContext
 
@@ -19,10 +20,16 @@ class NodeQueryExecutor(
     private val nodeQuery: NodeQuery, private val client: Neo4jClient, private val mappingContext: Neo4jMappingContext
 ) {
     private var nameCounter = 0
+    private val subQueryLookup = HashMap<String, NodeSubQuery>()
 
-    fun parseQuery(): String {
+    fun execute(): NodeQueryResult<*> {
         val (statement, _) = createRootNodeQuery()
-        return Renderer.getRenderer(Configuration.prettyPrinting()).render(statement)
+        return client.query(Renderer.getDefaultRenderer().render(statement))
+            .bindAll(statement.parameters)
+            .fetchAs(NodeQueryResult::class.java)
+            .mappedBy { typeSystem, record ->
+                parseQueryResult(typeSystem, record[NODES_KEY], record[TOTAL_COUNT_KEY], nodeQuery)
+            }.one().orElseThrow()
     }
 
     private fun createRootNodeQuery(): Pair<Statement, SymbolicName> {
@@ -113,7 +120,7 @@ class NodeQueryExecutor(
                 val (subQueryStatement, resultName) = createSubQuery(subQuery, node)
                 callBuilder = callBuilder.call(subQueryStatement)
                 subQueryResultList.add(resultName)
-                //TODO put result in map
+                subQueryLookup[resultName.value!!] = subQuery
             }
         }
 
@@ -138,7 +145,7 @@ class NodeQueryExecutor(
             Cypher.asExpression(
                 mapOf(
                     NODES_KEY to collectedNodes,
-                    TOTAL_COUNT_KEY to if (options.fetchTotalCount) totalCount else Cypher.literalNull()
+                    //TOTAL_COUNT_KEY to if (options.fetchTotalCount) totalCount else Cypher.literalNull()
                 )
             ).`as`(returnAlias)
         )
@@ -201,5 +208,43 @@ class NodeQueryExecutor(
 
     private fun createNodeDefinitionNode(nodeDefinition: NodeDefinition): Node {
         return Cypher.node(getNodeDefinitionPrimaryLabel(nodeDefinition))
+    }
+
+    private fun parseQueryResult(
+        typeSystem: TypeSystem,
+        nodesValue: Value,
+        totalCountValue: Value,
+        nodeQuery: NodeQuery
+    ): NodeQueryResult<*> {
+        val nodes = nodesValue.asList { parseNode(typeSystem, it, nodeQuery.definition) }
+        val totalCount = if (totalCountValue.isNull) null else totalCountValue.asInt()
+        return NodeQueryResult(nodeQuery.options, nodes, totalCount)
+    }
+
+    private fun parseNode(
+        typeSystem: TypeSystem,
+        value: Value,
+        nodeDefinition: NodeDefinition
+    ): com.nkcoding.graphglue.model.Node {
+        val node = nodeDefinition.mappingFunction.apply(typeSystem, value.get(NODE_KEY))
+        for (relatedNodeName in value.keys()) {
+            if (relatedNodeName != NODE_KEY) {
+                val relatedNodesValue = value[relatedNodeName]
+                val subQuery = subQueryLookup[relatedNodeName]!!
+                val subQueryResult = parseQueryResult(
+                    typeSystem,
+                    relatedNodesValue[NODES_KEY],
+                    relatedNodesValue[TOTAL_COUNT_KEY],
+                    subQuery.query
+                )
+                val relationshipDefinition = subQuery.relationshipDefinition
+                @Suppress("UNCHECKED_CAST")
+                relationshipDefinition.registerQueryResult(
+                    node,
+                    subQueryResult as NodeQueryResult<com.nkcoding.graphglue.model.Node>
+                )
+            }
+        }
+        return node
     }
 }

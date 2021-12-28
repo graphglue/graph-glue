@@ -98,7 +98,7 @@ class ConnectionWrapperGraphQLTypeFactory(
                             .type(GraphQLNonNull(GraphQLTypeReference("PageInfo")))
                     }.build()
 
-            registerPropertyDataFetcher(type, "nodes", Connection::class)
+            registerFunctionDataFetcher(type, "nodes", Connection::class)
             registerFunctionDataFetcher(type, "edges", Connection::class)
             registerFunctionDataFetcher(type, "totalCount", Connection::class)
             registerPropertyDataFetcher(type, "pageInfo", Connection::class)

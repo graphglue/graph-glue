@@ -1,16 +1,30 @@
 package com.nkcoding.graphglue.model
 
 import com.expediagroup.graphql.generator.annotations.GraphQLIgnore
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.nkcoding.graphglue.graphql.connection.order.IdOrder
+import com.nkcoding.graphglue.graphql.execution.NodeQuery
+import com.nkcoding.graphglue.graphql.execution.NodeQueryPart
 import com.nkcoding.graphglue.graphql.execution.QueryOptions
 import com.nkcoding.graphglue.graphql.execution.QueryParser
+import com.nkcoding.graphglue.graphql.extensions.getParentNodeDefinition
 import com.nkcoding.graphglue.graphql.redirect.RedirectPropertyClass
+import com.nkcoding.graphglue.neo4j.execution.NodeQueryExecutor
 import com.nkcoding.graphglue.neo4j.execution.NodeQueryResult
+import graphql.execution.DataFetcherResult
 import graphql.schema.DataFetchingEnvironment
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.data.neo4j.core.Neo4jClient
+import org.springframework.data.neo4j.core.mapping.Neo4jMappingContext
 import java.util.*
+import kotlin.reflect.KProperty1
 
 @RedirectPropertyClass
-class NodeSet<T : Node>(value: Collection<T>?) : AbstractSet<T>(), MutableSet<T> {
+class NodeSet<T : Node>(
+    value: Collection<T>?,
+    private val parent: Node,
+    val property: KProperty1<*, *>
+) : AbstractSet<T>(), MutableSet<T> {
 
     private val cache = IdentityHashMap<QueryOptions, NodeQueryResult<T>>()
     private val addedNodes = HashSet<T>()
@@ -30,9 +44,45 @@ class NodeSet<T : Node>(value: Collection<T>?) : AbstractSet<T>(), MutableSet<T>
     fun getFromGraphQL(
         @GraphQLIgnore @Autowired
         queryParser: QueryParser,
-        dfe: DataFetchingEnvironment
+        dataFetchingEnvironment: DataFetchingEnvironment
+    ): DataFetcherResult<Connection<T>> {
+        val parentNodeQueryPart = dataFetchingEnvironment.getLocalContext<NodeQueryPart>()
+        val result: NodeQueryResult<T>
+        val localContext: NodeQuery?
+        if (parentNodeQueryPart != null) {
+            val providedNodeQuery =
+                parentNodeQueryPart.getSubQuery(dataFetchingEnvironment.executionStepInfo.resultKey) {
+                    dataFetchingEnvironment.getParentNodeDefinition(queryParser.nodeDefinitionCollection)
+                }.query
+            val options = providedNodeQuery.options
+            result = cache[options] ?: throw IllegalStateException("Result not found in cache")
+            localContext = providedNodeQuery
+        } else {
+            val (loadResult, nodeQuery) = parent.loadNodesOfRelationship<T>(property, dataFetchingEnvironment)
+            result = loadResult
+            localContext = nodeQuery
+        }
+        val connection = queryResultToConnection(result, queryParser.objectMapper)
+        return DataFetcherResult.newResult<Connection<T>>()
+            .data(connection)
+            .localContext(localContext)
+            .build()
+    }
+
+    private fun queryResultToConnection(
+        queryResult: NodeQueryResult<T>,
+        objectMapper: ObjectMapper
     ): Connection<T> {
-        TODO("Implement, add correct types, ...")
+        val options = queryResult.options
+        val nodes = if (options.first != null) {
+            queryResult.nodes.subList(0, options.first)
+        } else if (options.last != null) {
+            queryResult.nodes.subList((queryResult.nodes.size - options.last).coerceAtLeast(0), queryResult.nodes.size)
+        } else {
+            queryResult.nodes
+        }
+        val pageInfo = PageInfo(options, queryResult.nodes, objectMapper)
+        return Connection(nodes, pageInfo, queryResult.totalCount)
     }
 
     internal fun registerQueryResult(nodeQueryResult: NodeQueryResult<T>) {
@@ -56,11 +106,11 @@ class NodeSet<T : Node>(value: Collection<T>?) : AbstractSet<T>(), MutableSet<T>
     }
 
     private fun getCurrentNodes(): MutableSet<T> {
-        if (isLoaded) {
-            return currentNodes!!
-        } else {
-            TODO()
+        if (!isLoaded) {
+            val (result, _) = parent.loadNodesOfRelationship<T>(property)
+            currentNodes = result.nodes.toMutableSet()
         }
+        return currentNodes!!
     }
 
     //region list implementation

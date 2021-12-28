@@ -1,5 +1,6 @@
 package com.nkcoding.graphglue.graphql.execution.definition
 
+import com.nkcoding.graphglue.graphql.extensions.getDelegateAccessible
 import com.nkcoding.graphglue.model.Node
 import com.nkcoding.graphglue.model.NodeProperty
 import com.nkcoding.graphglue.neo4j.execution.NodeQueryResult
@@ -18,11 +19,8 @@ class OneRelationshipDefinition(
     direction,
     parentKClass
 ) {
-    @Suppress("UNCHECKED_CAST")
-    override fun <T : Node> registerQueryResult(node: Node, nodeQueryResult: NodeQueryResult<T>) {
-        property as KProperty1<Node, *>
-        property.isAccessible = true
-        val nodeProperty = property.getDelegate(node) as NodeProperty<T>
+    override fun <T : Node> registerLocalQueryResult(node: Node, nodeQueryResult: NodeQueryResult<T>) {
+        val nodeProperty = property.getDelegateAccessible<NodeProperty<T>>(node)
         nodeProperty.registerQueryResult(nodeQueryResult)
     }
 }

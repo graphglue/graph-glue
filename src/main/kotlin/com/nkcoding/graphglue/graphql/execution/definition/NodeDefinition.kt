@@ -2,6 +2,7 @@ package com.nkcoding.graphglue.graphql.execution.definition
 
 import com.nkcoding.graphglue.graphql.extensions.getSimpleName
 import com.nkcoding.graphglue.model.Node
+import org.neo4j.cypherdsl.core.Cypher
 import org.neo4j.cypherdsl.core.Expression
 import org.neo4j.cypherdsl.core.SymbolicName
 import org.neo4j.driver.types.MapAccessor
@@ -30,11 +31,11 @@ class NodeDefinition(
     init {
         val expressions = CypherGenerator.INSTANCE.createReturnStatementForMatch(persistentEntity)
         if (expressions.size != 1) {
-            val properties = persistentEntity.graphProperties
             throw IllegalStateException("Cannot get return expression for $nodeType, probably due to cyclic references: $expressions")
         }
         returnExpression = expressions.first()
-        returnNodeName = Constants.NAME_OF_TYPED_ROOT_NODE.apply(persistentEntity)
+        //returnNodeName = Constants.NAME_OF_TYPED_ROOT_NODE.apply(persistentEntity)
+        returnNodeName = Cypher.name("lol")
     }
 
     fun getNeo4jNameOfProperty(property: KProperty1<*, *>): String {

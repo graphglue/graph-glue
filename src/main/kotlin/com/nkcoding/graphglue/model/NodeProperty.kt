@@ -1,12 +1,22 @@
 package com.nkcoding.graphglue.model
 
+import com.expediagroup.graphql.generator.annotations.GraphQLIgnore
+import com.nkcoding.graphglue.graphql.execution.DEFAULT_PART_ID
+import com.nkcoding.graphglue.graphql.execution.NodeQuery
+import com.nkcoding.graphglue.graphql.execution.NodeQueryPart
+import com.nkcoding.graphglue.graphql.execution.QueryParser
+import com.nkcoding.graphglue.graphql.extensions.getParentNodeDefinition
 import com.nkcoding.graphglue.graphql.redirect.RedirectPropertyDelegateClass
 import com.nkcoding.graphglue.graphql.redirect.RedirectPropertyFunction
 import com.nkcoding.graphglue.neo4j.execution.NodeQueryResult
+import graphql.execution.DataFetcherResult
+import graphql.schema.DataFetchingEnvironment
+import org.springframework.beans.factory.annotation.Autowired
 import kotlin.reflect.KProperty
+import kotlin.reflect.KProperty1
 
 @RedirectPropertyDelegateClass
-class NodeProperty<T : Node?>(value: T? = null) {
+class NodeProperty<T : Node?>(value: T? = null, private val parent: Node, private val property: KProperty1<*, *>) {
     private var isLoaded = false
     private var currentNode: T? = null
     private var persistedNode: T? = null
@@ -39,15 +49,40 @@ class NodeProperty<T : Node?>(value: T? = null) {
     }
 
     @RedirectPropertyFunction
-    fun getFromGraphQL(): T {
-        TODO()
+    fun getFromGraphQL(
+        @GraphQLIgnore @Autowired
+        queryParser: QueryParser,
+        dataFetchingEnvironment: DataFetchingEnvironment
+    ): DataFetcherResult<T> {
+        val parentNodeQueryPart = dataFetchingEnvironment.getLocalContext<NodeQueryPart>()
+        var localContext = if (parentNodeQueryPart != null) {
+            parentNodeQueryPart.getSubQuery(dataFetchingEnvironment.executionStepInfo.resultKey) {
+                dataFetchingEnvironment.getParentNodeDefinition(queryParser.nodeDefinitionCollection)
+            }.query.parts[DEFAULT_PART_ID]
+        } else {
+            null
+        }
+        val (result, nodeQuery) = getCurrentNodeInternal(dataFetchingEnvironment)
+        if (localContext == null && nodeQuery != null) {
+            localContext = nodeQuery.parts[DEFAULT_PART_ID]
+        }
+        return DataFetcherResult.newResult<T>()
+            .data(result)
+            .localContext(localContext)
+            .build()
     }
 
     private fun getCurrentNode(): T? {
-        if (isLoaded) {
-            return currentNode
+        return getCurrentNodeInternal().first
+    }
+
+    private fun getCurrentNodeInternal(dataFetchingEnvironment: DataFetchingEnvironment? = null): Pair<T?, NodeQuery?> {
+        return if (!isLoaded) {
+            val (result, nodeQuery) = parent.loadNodesOfRelationship<T>(property)
+            currentNode = result.nodes.first()
+            currentNode to nodeQuery
         } else {
-            TODO()
+            currentNode to null
         }
     }
 
@@ -58,6 +93,14 @@ class NodeProperty<T : Node?>(value: T? = null) {
             }
             currentNode = nodeQueryResult.nodes.firstOrNull()
             persistedNode = currentNode
+            isLoaded = true
+        }
+    }
+
+    internal fun setFromRemote(value: T) {
+        if (!isLoaded) {
+            currentNode = value
+            persistedNode = value
             isLoaded = true
         }
     }

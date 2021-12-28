@@ -1,5 +1,8 @@
 package com.nkcoding.testing.model
 
+import com.expediagroup.graphql.generator.annotations.GraphQLDescription
+import com.nkcoding.graphglue.graphql.connection.filter.FilterProperty
+import com.nkcoding.graphglue.graphql.connection.order.OrderProperty
 import com.nkcoding.graphglue.model.*
 import org.springframework.data.annotation.Transient
 import org.springframework.data.neo4j.core.schema.Relationship
@@ -15,3 +18,28 @@ class Tree : Node() {
     @delegate:Transient
     val leafs by NodeSetProperty<Leaf>()
 }
+
+@Neo4jNode
+class Leaf(
+    @FilterProperty
+    @OrderProperty
+    val text: String = "I am a leaf",
+) : Node() {
+
+    @NodeRelationship("ants", Relationship.Direction.OUTGOING)
+    @delegate:Transient
+    @FilterProperty
+    val ants by NodeSetProperty<Ant>()
+
+}
+
+@Neo4jNode
+class Ant(@FilterProperty val name: String = "anty") : Node()
+
+@Neo4jNode
+@GraphQLDescription("What a nice type")
+class Root(
+    @FilterProperty
+    @OrderProperty
+    val subRootCount: Int = 0
+) : Node()

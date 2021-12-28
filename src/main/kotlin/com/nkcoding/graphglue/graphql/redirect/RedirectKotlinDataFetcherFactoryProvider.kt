@@ -3,6 +3,7 @@ package com.nkcoding.graphglue.graphql.redirect
 import com.expediagroup.graphql.generator.execution.KotlinDataFetcherFactoryProvider
 import com.expediagroup.graphql.server.spring.execution.SpringKotlinDataFetcherFactoryProvider
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.nkcoding.graphglue.graphql.extensions.getDelegateAccessible
 import graphql.schema.DataFetcher
 import graphql.schema.DataFetcherFactory
 import graphql.schema.DataFetchingEnvironment
@@ -58,10 +59,5 @@ private class DelegateDataFetchingEnvironment(
     private val parent: DataFetchingEnvironment, private val property: KProperty1<*, *>
 ) : DataFetchingEnvironment by parent {
 
-    @Suppress("UNCHECKED_CAST")
-    override fun <T : Any?> getSource(): T {
-        property as KProperty1<Any, *>
-        property.isAccessible = true
-        return property.getDelegate(parent.getSource()) as T
-    }
+    override fun <T : Any?> getSource() = property.getDelegateAccessible<T>(parent.getSource())
 }

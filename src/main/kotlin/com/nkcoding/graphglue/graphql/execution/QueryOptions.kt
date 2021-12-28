@@ -1,11 +1,12 @@
 package com.nkcoding.graphglue.graphql.execution
 
+import com.nkcoding.graphglue.graphql.connection.order.IdOrder
 import com.nkcoding.graphglue.graphql.connection.order.Order
 import com.nkcoding.graphglue.neo4j.CypherConditionGenerator
 
 data class QueryOptions(
     val filters: List<CypherConditionGenerator> = emptyList(),
-    val orderBy: Order<*>,
+    val orderBy: Order<*> = IdOrder,
     val after: Map<String, Any?>? = null,
     val before: Map<String, Any?>? = null,
     val first: Int? = null,

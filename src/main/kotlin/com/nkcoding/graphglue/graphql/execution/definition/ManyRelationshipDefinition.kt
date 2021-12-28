@@ -21,7 +21,7 @@ class ManyRelationshipDefinition(
     parentKClass
 ) {
     @Suppress("UNCHECKED_CAST")
-    override fun <T : Node> registerQueryResult(node: Node, nodeQueryResult: NodeQueryResult<T>) {
+    override fun <T : Node> registerLocalQueryResult(node: Node, nodeQueryResult: NodeQueryResult<T>) {
         property as KProperty1<Node, NodeSet<T>>
         val nodeSet = property.get(node)
         nodeSet.registerQueryResult(nodeQueryResult)

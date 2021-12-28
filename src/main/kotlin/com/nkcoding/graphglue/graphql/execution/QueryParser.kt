@@ -147,7 +147,7 @@ class QueryParser(
         selectionSet: DataFetchingFieldSelectionSet?,
         additionalConditions: List<CypherConditionGenerator> = emptyList()
     ): NodeQuery {
-        val subQueryOptions = QueryOptions(filters = additionalConditions, orderBy = IdOrder, first = 1)
+        val subQueryOptions = QueryOptions(filters = additionalConditions, first = 1)
         return generateNodeQuery(
             nodeDefinition, mapOf(DEFAULT_PART_ID to (selectionSet?.fields ?: emptyList())), subQueryOptions
         )

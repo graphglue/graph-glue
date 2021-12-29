@@ -3,6 +3,7 @@ package com.nkcoding.graphglue.graphql
 import com.expediagroup.graphql.generator.SchemaGenerator
 import com.expediagroup.graphql.generator.SchemaGeneratorConfig
 import com.expediagroup.graphql.generator.TopLevelNames
+import com.expediagroup.graphql.generator.TopLevelObject
 import com.expediagroup.graphql.generator.execution.KotlinDataFetcherFactoryProvider
 import com.expediagroup.graphql.generator.extensions.print
 import com.expediagroup.graphql.generator.hooks.NoopSchemaGeneratorHooks
@@ -26,8 +27,11 @@ import com.nkcoding.graphglue.graphql.execution.definition.NodeDefinitionCollect
 import com.nkcoding.graphglue.graphql.execution.definition.NodeDefinitionCollectionImpl
 import com.nkcoding.graphglue.graphql.extensions.getSimpleName
 import com.nkcoding.graphglue.graphql.extensions.toTopLevelObjects
+import com.nkcoding.graphglue.graphql.query.GraphglueQuery
+import com.nkcoding.graphglue.graphql.query.TopLevelQueryProvider
 import com.nkcoding.graphglue.graphql.redirect.RedirectKotlinDataFetcherFactoryProvider
 import com.nkcoding.graphglue.graphql.redirect.rewireFieldType
+import com.nkcoding.graphglue.model.DomainNode
 import com.nkcoding.graphglue.model.Node
 import com.nkcoding.graphglue.model.NodeSet
 import com.nkcoding.graphglue.model.PageInfo
@@ -43,9 +47,7 @@ import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.reflect.KClass
 import kotlin.reflect.KType
-import kotlin.reflect.full.createType
-import kotlin.reflect.full.isSubclassOf
-import kotlin.reflect.full.isSubtypeOf
+import kotlin.reflect.full.*
 import kotlin.reflect.jvm.jvmErasure
 
 /**
@@ -65,6 +67,7 @@ class GraphglueGraphQLConfiguration(private val neo4jMappingContext: Neo4jMappin
     private val supertypeNodeDefinitionLookup = ConcurrentHashMap<Set<String>, NodeDefinition>()
     private val nodeDefinitionCollection =
         NodeDefinitionCollectionImpl(nodeDefinitions, supertypeNodeDefinitionLookup, neo4jMappingContext)
+    private val topLevelQueries = ConcurrentHashMap<NodeDefinition, TopLevelQueryDefinition>()
 
     /**
      * Code registry used as a temporary cache before its DataFetchers are added to the
@@ -79,10 +82,10 @@ class GraphglueGraphQLConfiguration(private val neo4jMappingContext: Neo4jMappin
     @Bean
     @ConditionalOnMissingBean
     fun schemaGeneratorHooks(
-        filters: List<TypeFilterDefinitionEntry>,
-        dataFetcherFactoryProvider: KotlinDataFetcherFactoryProvider,
+        factory: ConnectionWrapperGraphQLTypeFactory,
         applicationContext: ApplicationContext,
-        objectMapper: ObjectMapper
+        objectMapper: ObjectMapper,
+        dataFetcherFactoryProvider: KotlinDataFetcherFactoryProvider
     ): SchemaGeneratorHooks {
         return object : SchemaGeneratorHooks {
             override fun onRewireGraphQLType(
@@ -103,17 +106,17 @@ class GraphglueGraphQLConfiguration(private val neo4jMappingContext: Neo4jMappin
             override fun willGenerateGraphQLType(type: KType): GraphQLType? {
                 if (type.isSubtypeOf(Node::class.createType())) {
                     @Suppress("UNCHECKED_CAST") val nodeClass = type.jvmErasure as KClass<out Node>
-                    nodeDefinitionCollection.getOrCreate(nodeClass)
+                    val nodeDefinition = nodeDefinitionCollection.getOrCreate(nodeClass)
+                    val domainNodeAnnotation = nodeClass.findAnnotation<DomainNode>()
+                    val topLevelFunctionName = domainNodeAnnotation?.topLevelQueryName
+                    if (topLevelFunctionName?.isNotBlank() == true) {
+                        topLevelQueries[nodeDefinition] = TopLevelQueryDefinition(
+                            topLevelFunctionName,
+                            factory.generateWrapperGraphQLType(nodeClass, nodeClass.getSimpleName())
+                        )
+                    }
                 }
                 return if (type.jvmErasure == NodeSet::class) {
-                    val factory = ConnectionWrapperGraphQLTypeFactory(
-                        outputTypeCache,
-                        inputTypeCache,
-                        SubFilterGenerator(filters, filterDefinitions, nodeDefinitionCollection),
-                        tempCodeRegistry,
-                        dataFetcherFactoryProvider,
-                        neo4jMappingContext
-                    )
                     factory.generateWrapperGraphQLType(type)
                 } else {
                     super.willGenerateGraphQLType(type)
@@ -128,7 +131,43 @@ class GraphglueGraphQLConfiguration(private val neo4jMappingContext: Neo4jMappin
                         .toSet()
                     supertypeNodeDefinitionLookup[subTypes] = nodeDefinition
                 }
-                return super.willBuildSchema(builder)
+
+                return super.willBuildSchema(completeSchema(builder))
+            }
+
+            private fun completeSchema(builder: GraphQLSchema.Builder): GraphQLSchema.Builder {
+                val schema = builder.build()
+                val codeRegistry = schema.codeRegistry
+                val newBuilder = GraphQLSchema.newSchema(builder.build())
+                updateQueryType(schema, newBuilder)
+                newBuilder.codeRegistry(
+                    codeRegistry.transform {
+                        it.dataFetchers(tempCodeRegistry.build())
+                    }
+                )
+                return newBuilder
+            }
+
+            private fun updateQueryType(schema: GraphQLSchema, newBuilder: GraphQLSchema.Builder) {
+                val queryType = schema.queryType!!
+                val newQueryType = queryType.transform {
+                    val function = TopLevelQueryProvider::class.memberFunctions.first { it.name == "getFromGraphQL" }
+                    for ((nodeDefinition, queryDefinition) in topLevelQueries) {
+                        val (name, wrapperType) = queryDefinition
+                        wrapperType as GraphQLObjectType
+                        val field = wrapperType.fields.first().transform { fieldBuilder ->
+                            fieldBuilder.name(name)
+                                .description("Query for nodes of type ${nodeDefinition.nodeType.getSimpleName()}")
+                        }
+                        it.field(field)
+                        val coordinates = FieldCoordinates.coordinates(queryType.name, name)
+                        val dataFetcherFactory = dataFetcherFactoryProvider.functionDataFetcherFactory(
+                            TopLevelQueryProvider<Node>(nodeDefinition), function
+                        )
+                        tempCodeRegistry.dataFetcher(coordinates, dataFetcherFactory)
+                    }
+                }
+                newBuilder.query(newQueryType)
             }
         }
     }
@@ -169,7 +208,7 @@ class GraphglueGraphQLConfiguration(private val neo4jMappingContext: Neo4jMappin
             topLevelNames = topLevelNames.orElse(TopLevelNames()),
             hooks = generatorHooks,
             dataFetcherFactoryProvider = dataFetcherFactoryProvider,
-            introspectionEnabled = config.introspection.enabled,
+            introspectionEnabled = config.introspection.enabled
         )
     }
 
@@ -182,13 +221,14 @@ class GraphglueGraphQLConfiguration(private val neo4jMappingContext: Neo4jMappin
         schemaConfig: SchemaGeneratorConfig
     ): GraphQLSchema {
         val generator = SchemaGenerator(schemaConfig)
+        val nodeDefinition = nodeDefinitionCollection.getOrCreate(Node::class)
         val schema = generator.use {
             it.generateSchema(
-                queries.orElse(emptyList()).toTopLevelObjects(),
+                queries.orElse(emptyList()).toTopLevelObjects() + TopLevelObject(GraphglueQuery(nodeDefinition)),
                 mutations.orElse(emptyList()).toTopLevelObjects(),
                 subscriptions.orElse(emptyList()).toTopLevelObjects(),
                 additionalTypes = setOf(Node::class.createType(), PageInfo::class.createType()),
-                additionalInputTypes = setOf(OrderDirection::class.createType())
+                additionalInputTypes = setOf(OrderDirection::class.createType()),
             )
         }
 
@@ -202,4 +242,22 @@ class GraphglueGraphQLConfiguration(private val neo4jMappingContext: Neo4jMappin
         objectMapper: ObjectMapper,
         applicationContext: ApplicationContext
     ): KotlinDataFetcherFactoryProvider = RedirectKotlinDataFetcherFactoryProvider(objectMapper, applicationContext)
+
+    @Bean
+    @ConditionalOnMissingBean
+    fun connectionWrapperGraphQLTypeFactory(
+        filters: List<TypeFilterDefinitionEntry>,
+        dataFetcherFactoryProvider: KotlinDataFetcherFactoryProvider
+    ): ConnectionWrapperGraphQLTypeFactory {
+        return ConnectionWrapperGraphQLTypeFactory(
+            outputTypeCache,
+            inputTypeCache,
+            SubFilterGenerator(filters, filterDefinitions, nodeDefinitionCollection),
+            tempCodeRegistry,
+            dataFetcherFactoryProvider,
+            neo4jMappingContext
+        )
+    }
 }
+
+private data class TopLevelQueryDefinition(val name: String, val graphQLWrapperType: GraphQLOutputType)

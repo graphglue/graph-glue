@@ -10,6 +10,7 @@ import com.nkcoding.graphglue.graphql.redirect.REDIRECT_PROPERTY_DIRECTIVE
 import com.nkcoding.graphglue.model.Connection
 import com.nkcoding.graphglue.model.Edge
 import com.nkcoding.graphglue.model.Node
+import com.nkcoding.graphglue.model.NodeSet
 import graphql.Scalars
 import graphql.language.EnumValue
 import graphql.schema.*
@@ -34,12 +35,16 @@ class ConnectionWrapperGraphQLTypeFactory(
         @Suppress("UNCHECKED_CAST") val returnNodeType =
             connectionType.arguments[0].type!!.jvmErasure as KClass<out Node>
         val returnNodeName = returnNodeType.getSimpleName()
-        val name = "${returnNodeName}ListWrapper"
+        return generateWrapperGraphQLType(returnNodeType, returnNodeName)
+    }
+
+    fun generateWrapperGraphQLType(nodeType: KClass<out Node>, nodeName: String): GraphQLOutputType {
+        val name = "${nodeName}ListWrapper"
         val functionName = "getFromGraphQL"
         return outputTypeCache.computeIfAbsent(name) {
-            val filter = generateFilterDefinition(returnNodeType, subFilterGenerator)
+            val filter = generateFilterDefinition(nodeType, subFilterGenerator)
 
-            val orders = generateOrders(returnNodeType, mappingContext.getPersistentEntity(returnNodeType.java)!!)
+            val orders = generateOrders(nodeType, mappingContext.getPersistentEntity(nodeType.java)!!)
 
             val type = GraphQLObjectType.newObject().name(name).withDirective(REDIRECT_PROPERTY_DIRECTIVE)
                 .field { fieldBuilder ->
@@ -48,7 +53,7 @@ class ConnectionWrapperGraphQLTypeFactory(
                             .type(filter.toGraphQLType(inputTypeCache))
                     }.argument {
                         it.name("orderBy").description("Order in which the items are sorted")
-                            .type(generateOrderGraphQLType(returnNodeName, orders))
+                            .type(generateOrderGraphQLType(nodeName, orders))
                     }.argument {
                         it.name("after").description("Get only items after the cursor").type(Scalars.GraphQLString)
                     }.argument {
@@ -59,10 +64,10 @@ class ConnectionWrapperGraphQLTypeFactory(
                     }.argument {
                         it.name("last").description("Get the last n items. Must not be used if after is specified")
                             .type(Scalars.GraphQLInt)
-                    }.type(GraphQLNonNull(generateConnectionGraphQLType(returnNodeName)))
+                    }.type(GraphQLNonNull(generateConnectionGraphQLType(nodeName)))
                 }.build()
 
-            val function = connectionType.jvmErasure.memberFunctions.first { it.name == functionName }
+            val function = NodeSet::class.memberFunctions.first { it.name == functionName }
             val dataFetcherFactory = dataFetcherFactoryProvider.functionDataFetcherFactory(null, function)
             registerDataFetcher(type, functionName, dataFetcherFactory)
 

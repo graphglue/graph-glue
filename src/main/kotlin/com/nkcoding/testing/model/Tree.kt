@@ -8,7 +8,7 @@ import org.springframework.data.annotation.Transient
 import org.springframework.data.neo4j.core.schema.Relationship
 
 
-@Neo4jNode
+@DomainNode
 class Tree : Node() {
     @NodeRelationship("root", Relationship.Direction.OUTGOING)
     @delegate:Transient
@@ -19,7 +19,7 @@ class Tree : Node() {
     val leafs by NodeSetProperty<Leaf>()
 }
 
-@Neo4jNode
+@DomainNode
 class Leaf(
     @FilterProperty
     @OrderProperty
@@ -33,10 +33,10 @@ class Leaf(
 
 }
 
-@Neo4jNode
+@DomainNode
 class Ant(@FilterProperty val name: String = "anty") : Node()
 
-@Neo4jNode
+@DomainNode
 @GraphQLDescription("What a nice type")
 class Root(
     @FilterProperty

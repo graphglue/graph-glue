@@ -5,14 +5,11 @@ import com.expediagroup.graphql.generator.annotations.GraphQLIgnore
 import com.expediagroup.graphql.generator.scalars.ID
 import com.nkcoding.graphglue.graphql.execution.NodeQuery
 import com.nkcoding.graphglue.graphql.execution.QueryOptions
-import com.nkcoding.graphglue.graphql.execution.QueryParser
+import com.nkcoding.graphglue.neo4j.LazyLoadingContext
 import com.nkcoding.graphglue.neo4j.execution.NodeQueryExecutor
 import com.nkcoding.graphglue.neo4j.execution.NodeQueryResult
 import graphql.schema.DataFetchingEnvironment
-import org.springframework.context.ApplicationContext
-import org.springframework.data.neo4j.core.Neo4jClient
 import org.springframework.data.neo4j.core.convert.ConvertWith
-import org.springframework.data.neo4j.core.mapping.Neo4jMappingContext
 import org.springframework.data.neo4j.core.schema.GeneratedValue
 import org.springframework.data.neo4j.core.schema.Id
 import org.springframework.data.neo4j.core.schema.Property
@@ -28,7 +25,7 @@ import kotlin.reflect.KProperty1
  * All domain entities which can be retrieved via the api
  * and should be persisted in the database should inherit from this class
  */
-@Neo4jNode
+@DomainNode
 @GraphQLDescription("Base class of all nodes")
 abstract class Node {
 
@@ -38,10 +35,10 @@ abstract class Node {
     internal lateinit var id: String
 
     @Property("_")
-    @ConvertWith(converterRef = "applicationContextConverter")
-    private var applicationContextOptional: Optional<ApplicationContext> = Optional.empty()
+    @ConvertWith(converterRef = "lazyLoadingContextConverter")
+    private var lazyLoadingContextOptional: Optional<LazyLoadingContext> = Optional.empty()
 
-    private val applicationContext: ApplicationContext? get() = applicationContextOptional.orElse(null)
+    private val lazyLoadingContext: LazyLoadingContext? get() = lazyLoadingContextOptional.orElse(null)
 
     @GraphQLDescription("The unique id of this node")
     fun id(): ID {
@@ -60,13 +57,11 @@ abstract class Node {
         property: KProperty1<*, *>,
         dataFetchingEnvironment: DataFetchingEnvironment? = null
     ): Pair<NodeQueryResult<T>, NodeQuery?> {
-        val applicationContext = applicationContext
-        if (applicationContext == null) {
+        val lazyLoadingContext = lazyLoadingContext
+        if (lazyLoadingContext == null) {
             return NodeQueryResult<T>(QueryOptions(), emptyList(), null) to null
         } else {
-            val client = applicationContext.getBean(Neo4jClient::class.java)
-            val mappingContext = applicationContext.getBean(Neo4jMappingContext::class.java)
-            val queryParser = applicationContext.getBean(QueryParser::class.java)
+            val queryParser = lazyLoadingContext.queryParser
             val parentNodeDefinition = queryParser.nodeDefinitionCollection.backingCollection[this::class]!!
             val relationshipDefinition = parentNodeDefinition.getRelationshipDefinitionOfProperty(property)
             val nodeDefinition =
@@ -77,7 +72,8 @@ abstract class Node {
                 relationshipDefinition,
                 this
             )
-            val queryExecutor = NodeQueryExecutor(query, client, mappingContext)
+            val queryExecutor =
+                NodeQueryExecutor(query, lazyLoadingContext.neo4jClient, lazyLoadingContext.neo4jMappingContext)
             @Suppress("UNCHECKED_CAST")
             return queryExecutor.execute() as NodeQueryResult<T> to query
         }

@@ -62,27 +62,11 @@ class NodeSet<T : Node>(
             result = loadResult
             localContext = nodeQuery
         }
-        val connection = queryResultToConnection(result, queryParser.objectMapper)
+        val connection = Connection.fromQueryResult(result, queryParser.objectMapper)
         return DataFetcherResult.newResult<Connection<T>>()
             .data(connection)
             .localContext(localContext)
             .build()
-    }
-
-    private fun queryResultToConnection(
-        queryResult: NodeQueryResult<T>,
-        objectMapper: ObjectMapper
-    ): Connection<T> {
-        val options = queryResult.options
-        val nodes = if (options.first != null) {
-            queryResult.nodes.subList(0, options.first)
-        } else if (options.last != null) {
-            queryResult.nodes.subList((queryResult.nodes.size - options.last).coerceAtLeast(0), queryResult.nodes.size)
-        } else {
-            queryResult.nodes
-        }
-        val pageInfo = PageInfo(options, queryResult.nodes, objectMapper)
-        return Connection(nodes, pageInfo, queryResult.totalCount)
     }
 
     internal fun registerQueryResult(nodeQueryResult: NodeQueryResult<T>) {

@@ -8,6 +8,7 @@ import com.nkcoding.graphglue.graphql.execution.QueryOptions
 @GraphQLDescription("Information about the current page in a connection")
 class PageInfo(
     private val queryOptions: QueryOptions,
+    private val allNodes: List<Node>,
     private val nodes: List<Node>,
     private val objectMapper: ObjectMapper
 ) {
@@ -39,7 +40,7 @@ class PageInfo(
     val hasNextPage: Boolean
         get() {
             return if (queryOptions.first != null) {
-                nodes.size > queryOptions.first
+                allNodes.size > queryOptions.first
             } else {
                 false
             }
@@ -49,7 +50,7 @@ class PageInfo(
     val hasPreviousPage: Boolean
         get() {
             return if (queryOptions.last != null) {
-                nodes.size > queryOptions.last
+                allNodes.size > queryOptions.last
             } else {
                 false
             }

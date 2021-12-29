@@ -13,7 +13,7 @@ import org.springframework.stereotype.Component
 @Component
 class Query : Query {
 
-    fun node(
+    fun node2(
         id: String,
         dfe: DataFetchingEnvironment,
         @Autowired @GraphQLIgnore queryParser: QueryParser,

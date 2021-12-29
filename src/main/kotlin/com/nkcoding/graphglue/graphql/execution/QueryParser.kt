@@ -131,7 +131,8 @@ class QueryParser(
             after = arguments["after"]?.let { orderBy.parseCursor(it as String, objectMapper) },
             before = arguments["before"]?.let { orderBy.parseCursor(it as String, objectMapper) },
             first = arguments["first"]?.let { (it as Int) + 1 },
-            last = arguments["last"]?.let { (it as Int) + 1 }
+            last = arguments["last"]?.let { (it as Int) + 1 },
+            fetchTotalCount = selectionSet?.contains("totalCount") ?: true
         )
         val parts = mapOf(
             NODES_PART_ID to (selectionSet?.getFields("nodes") ?: emptyList()),
@@ -147,7 +148,7 @@ class QueryParser(
         selectionSet: DataFetchingFieldSelectionSet?,
         additionalConditions: List<CypherConditionGenerator> = emptyList()
     ): NodeQuery {
-        val subQueryOptions = QueryOptions(filters = additionalConditions, first = 1)
+        val subQueryOptions = QueryOptions(filters = additionalConditions, first = 1, fetchTotalCount = false)
         return generateNodeQuery(
             nodeDefinition, mapOf(DEFAULT_PART_ID to (selectionSet?.fields ?: emptyList())), subQueryOptions
         )

@@ -167,7 +167,7 @@ class ConnectionWrapperGraphQLTypeFactory(
 
     private fun registerFunctionDataFetcher(type: GraphQLFieldsContainer, fieldName: String, kClass: KClass<*>) {
         val function = kClass.memberFunctions.first { it.name == fieldName }
-        val dataFetcherFactory = dataFetcherFactoryProvider.functionDataFetcherFactory(kClass, function)
+        val dataFetcherFactory = dataFetcherFactoryProvider.functionDataFetcherFactory(null, function)
         registerDataFetcher(type, fieldName, dataFetcherFactory)
     }
 

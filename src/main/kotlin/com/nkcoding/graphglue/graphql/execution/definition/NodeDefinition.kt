@@ -34,8 +34,7 @@ class NodeDefinition(
             throw IllegalStateException("Cannot get return expression for $nodeType, probably due to cyclic references: $expressions")
         }
         returnExpression = expressions.first()
-        //returnNodeName = Constants.NAME_OF_TYPED_ROOT_NODE.apply(persistentEntity)
-        returnNodeName = Cypher.name("lol")
+        returnNodeName = Constants.NAME_OF_TYPED_ROOT_NODE.apply(persistentEntity)
     }
 
     fun getNeo4jNameOfProperty(property: KProperty1<*, *>): String {

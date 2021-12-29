@@ -40,7 +40,7 @@ class PageInfo(
     val hasNextPage: Boolean
         get() {
             return if (queryOptions.first != null) {
-                allNodes.size > queryOptions.first
+                allNodes.size > (queryOptions.first - 1)
             } else {
                 false
             }
@@ -50,7 +50,7 @@ class PageInfo(
     val hasPreviousPage: Boolean
         get() {
             return if (queryOptions.last != null) {
-                allNodes.size > queryOptions.last
+                allNodes.size > (queryOptions.last - 1)
             } else {
                 false
             }

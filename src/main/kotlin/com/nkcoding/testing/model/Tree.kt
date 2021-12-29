@@ -7,7 +7,7 @@ import com.nkcoding.graphglue.model.*
 import org.springframework.data.annotation.Transient
 import org.springframework.data.neo4j.core.schema.Relationship
 
-
+/*
 @DomainNode
 class Tree : Node() {
     @NodeRelationship("root", Relationship.Direction.OUTGOING)
@@ -43,3 +43,4 @@ class Root(
     @OrderProperty
     val subRootCount: Int = 0
 ) : Node()
+ */

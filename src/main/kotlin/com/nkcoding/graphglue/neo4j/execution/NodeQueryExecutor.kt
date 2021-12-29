@@ -23,12 +23,13 @@ class NodeQueryExecutor(
     private val subQueryLookup = HashMap<String, NodeSubQuery>()
 
     fun execute(): NodeQueryResult<*> {
-        val (statement, _) = createRootNodeQuery()
+        val (statement, returnName) = createRootNodeQuery()
         return client.query(Renderer.getDefaultRenderer().render(statement))
             .bindAll(statement.parameters)
             .fetchAs(NodeQueryResult::class.java)
             .mappedBy { typeSystem, record ->
-                parseQueryResult(typeSystem, record[NODES_KEY], record[TOTAL_COUNT_KEY], nodeQuery)
+                val result = record[returnName.value]
+                parseQueryResult(typeSystem, result[NODES_KEY], result[TOTAL_COUNT_KEY], nodeQuery)
             }.one().orElseThrow()
     }
 
@@ -126,17 +127,18 @@ class NodeQueryExecutor(
 
         // build result map
         val resultNodeMap =
-            mapOf(NODE_KEY to nodeDefinition.returnExpression) + subQueryResultList.associateBy { it.value }
+            mapOf(NODE_KEY to Cypher.listOf(nodeDefinition.returnExpression)) + subQueryResultList.associateBy { it.value }
         val resultNodeExpression = Cypher.asExpression(resultNodeMap)
         val resultNode = generateUniqueName()
         val resultBuilder =
-            callBuilder.with(listOf(nodeAlias.`as`(nodeDefinition.returnNodeName)) + additionalWithExpressions)
+            callBuilder.with(listOf(nodeAlias.`as`(nodeDefinition.returnNodeName), nodeAlias) + additionalWithExpressions)
                 .with(listOf(resultNodeExpression.`as`(resultNode)) + allWithExpressions)
 
         // order and collect nodes
         val collectedNodes = generateUniqueName()
-        val orderedCollectedResultsBuilder = resultBuilder.orderBy(generateOrderFields(options.orderBy, nodeAlias))
-            .with(listOf(Functions.collect(resultNode).`as`(collectedNodes)) + additionalWithExpressions)
+        val orderedCollectedResultsBuilder =
+            resultBuilder.orderBy(generateOrderFields(options.orderBy, nodeAlias))
+                .with(listOf(Functions.collect(resultNode).`as`(collectedNodes)) + additionalWithExpressions)
 
 
         // return
@@ -145,7 +147,7 @@ class NodeQueryExecutor(
             Cypher.asExpression(
                 mapOf(
                     NODES_KEY to collectedNodes,
-                    //TOTAL_COUNT_KEY to if (options.fetchTotalCount) totalCount else Cypher.literalNull()
+                    TOTAL_COUNT_KEY to if (options.fetchTotalCount) totalCount else Cypher.literalNull()
                 )
             ).`as`(returnAlias)
         )
@@ -159,19 +161,20 @@ class NodeQueryExecutor(
         forwards: Boolean
     ): Condition {
         val realForwards = if (order.direction == OrderDirection.ASC) forwards else !forwards
-        var filterExpression = Conditions.noCondition()
-        for (part in order.field.parts.reversed()) {
+        return order.field.parts.asReversed().foldIndexed(Conditions.noCondition()) { index, filterExpression, part ->
+            var newFilterExpression = filterExpression
             val property = node.property(part.neo4jPropertyName)
             val propertyValue = Cypher.anonParameter<Any?>(cursor[part.property.name])
-            filterExpression = property.eq(propertyValue).and(filterExpression)
+            if (index > 0) {
+                newFilterExpression = property.eq(propertyValue).and(newFilterExpression)
+            }
             val neqCondition = if (realForwards) {
                 property.gt(propertyValue)
             } else {
                 property.lt(propertyValue)
             }
-            filterExpression = neqCondition.or(filterExpression)
+            neqCondition.or(newFilterExpression)
         }
-        return filterExpression
     }
 
     private fun generateOrderFields(order: Order<*>, node: SymbolicName, reversed: Boolean = false): List<SortItem> {

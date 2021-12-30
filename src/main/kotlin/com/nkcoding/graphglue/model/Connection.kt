@@ -2,9 +2,7 @@ package com.nkcoding.graphglue.model
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.nkcoding.graphglue.graphql.connection.order.Order
-import com.nkcoding.graphglue.graphql.execution.EDGES_PART_ID
-import com.nkcoding.graphglue.graphql.execution.NODES_PART_ID
-import com.nkcoding.graphglue.graphql.execution.NodeQuery
+import com.nkcoding.graphglue.graphql.extensions.getDataFetcherResult
 import com.nkcoding.graphglue.neo4j.execution.NodeQueryResult
 import graphql.execution.DataFetcherResult
 import graphql.schema.DataFetchingEnvironment
@@ -17,30 +15,11 @@ class Connection<T : Node>(
 ) {
 
     fun nodes(dataFetchingEnvironment: DataFetchingEnvironment): DataFetcherResult<List<T>> {
-        return getDataFetcherResult(dataFetchingEnvironment, nodes, NODES_PART_ID)
+        return dataFetchingEnvironment.getDataFetcherResult(nodes, dataFetchingEnvironment.executionStepInfo.resultKey)
     }
 
-    fun edges(dataFetchingEnvironment: DataFetchingEnvironment): DataFetcherResult<List<Edge<T>>> {
-        val edges = nodes.map { Edge(it, order) }
-        return getDataFetcherResult(dataFetchingEnvironment, edges, EDGES_PART_ID)
-    }
-
-    private fun <R> getDataFetcherResult(
-        dataFetchingEnvironment: DataFetchingEnvironment,
-        result: R,
-        partId: String
-    ): DataFetcherResult<R> {
-        val nodeQuery = dataFetchingEnvironment.getLocalContext<NodeQuery>()
-        return if (nodeQuery != null) {
-            DataFetcherResult.newResult<R>()
-                .data(result)
-                .localContext(nodeQuery.parts[partId])
-                .build()
-        } else {
-            DataFetcherResult.newResult<R>()
-                .data(result)
-                .build()
-        }
+    fun edges(dataFetchingEnvironment: DataFetchingEnvironment): List<Edge<T>> {
+        return nodes.map { Edge(it, order) }
     }
 
     fun totalCount(): Int {

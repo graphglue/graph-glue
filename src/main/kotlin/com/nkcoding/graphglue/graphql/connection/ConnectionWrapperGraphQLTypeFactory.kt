@@ -123,7 +123,7 @@ class ConnectionWrapperGraphQLTypeFactory(
                     .type(GraphQLNonNull(Scalars.GraphQLString))
             }.build()
 
-            registerPropertyDataFetcher(type, "node", Edge::class)
+            registerFunctionDataFetcher(type, "node", Edge::class)
             registerFunctionDataFetcher(type, "cursor", Edge::class)
 
             type

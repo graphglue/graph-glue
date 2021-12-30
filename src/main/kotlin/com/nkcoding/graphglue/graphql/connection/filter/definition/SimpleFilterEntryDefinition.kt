@@ -1,9 +1,11 @@
 package com.nkcoding.graphglue.graphql.connection.filter.definition
 
+import com.nkcoding.graphglue.graphql.connection.filter.model.FilterEntry
+import com.nkcoding.graphglue.graphql.connection.filter.model.SimpleFilterEntry
 import graphql.schema.GraphQLInputType
 import org.neo4j.cypherdsl.core.*
 
-abstract class SimpleFilterEntryDefinition<T>(
+class SimpleFilterEntryDefinition<T>(
     name: String,
     description: String,
     private val type: GraphQLInputType,
@@ -11,6 +13,12 @@ abstract class SimpleFilterEntryDefinition<T>(
     private val conditionGenerator: (property: Property, value: Expression) -> Condition
 ) :
     FilterEntryDefinition(name, description) {
+
+    @Suppress("UNCHECKED_CAST")
+    override fun parseEntry(value: Any?): FilterEntry {
+        return SimpleFilterEntry(this, value as T)
+    }
+
     override fun toGraphQLType(
         objectTypeCache: MutableMap<String, GraphQLInputType>,
     ) = type

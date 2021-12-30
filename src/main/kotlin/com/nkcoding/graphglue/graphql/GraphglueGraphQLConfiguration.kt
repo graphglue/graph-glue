@@ -16,16 +16,14 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.nkcoding.graphglue.graphql.connection.ConnectionWrapperGraphQLTypeFactory
 import com.nkcoding.graphglue.graphql.connection.filter.GraphglueGraphQLFilterConfiguration
 import com.nkcoding.graphglue.graphql.connection.filter.TypeFilterDefinitionEntry
-import com.nkcoding.graphglue.graphql.connection.filter.definition.FilterDefinition
-import com.nkcoding.graphglue.graphql.connection.filter.definition.FilterDefinitionCache
-import com.nkcoding.graphglue.graphql.connection.filter.definition.FilterDefinitionCollection
-import com.nkcoding.graphglue.graphql.connection.filter.definition.SubFilterGenerator
+import com.nkcoding.graphglue.graphql.connection.filter.definition.*
 import com.nkcoding.graphglue.graphql.connection.order.OrderDirection
 import com.nkcoding.graphglue.graphql.execution.QueryParser
 import com.nkcoding.graphglue.graphql.execution.definition.NodeDefinition
 import com.nkcoding.graphglue.graphql.execution.definition.NodeDefinitionCollection
 import com.nkcoding.graphglue.graphql.execution.definition.NodeDefinitionCollectionImpl
 import com.nkcoding.graphglue.graphql.extensions.getSimpleName
+import com.nkcoding.graphglue.graphql.extensions.springFindAnnotation
 import com.nkcoding.graphglue.graphql.extensions.toTopLevelObjects
 import com.nkcoding.graphglue.graphql.query.GraphglueQuery
 import com.nkcoding.graphglue.graphql.query.TopLevelQueryProvider
@@ -47,7 +45,10 @@ import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.reflect.KClass
 import kotlin.reflect.KType
-import kotlin.reflect.full.*
+import kotlin.reflect.full.createType
+import kotlin.reflect.full.isSubclassOf
+import kotlin.reflect.full.isSubtypeOf
+import kotlin.reflect.full.memberFunctions
 import kotlin.reflect.jvm.jvmErasure
 
 /**
@@ -107,7 +108,7 @@ class GraphglueGraphQLConfiguration(private val neo4jMappingContext: Neo4jMappin
                 if (type.isSubtypeOf(Node::class.createType())) {
                     @Suppress("UNCHECKED_CAST") val nodeClass = type.jvmErasure as KClass<out Node>
                     val nodeDefinition = nodeDefinitionCollection.getOrCreate(nodeClass)
-                    val domainNodeAnnotation = nodeClass.findAnnotation<DomainNode>()
+                    val domainNodeAnnotation = nodeClass.springFindAnnotation<DomainNode>()
                     val topLevelFunctionName = domainNodeAnnotation?.topLevelQueryName
                     if (topLevelFunctionName?.isNotBlank() == true) {
                         topLevelQueries[nodeDefinition] = TopLevelQueryDefinition(
@@ -247,12 +248,13 @@ class GraphglueGraphQLConfiguration(private val neo4jMappingContext: Neo4jMappin
     @ConditionalOnMissingBean
     fun connectionWrapperGraphQLTypeFactory(
         filters: List<TypeFilterDefinitionEntry>,
-        dataFetcherFactoryProvider: KotlinDataFetcherFactoryProvider
+        dataFetcherFactoryProvider: KotlinDataFetcherFactoryProvider,
+        additionalFilterBeans: Map<String, FilterEntryDefinition>
     ): ConnectionWrapperGraphQLTypeFactory {
         return ConnectionWrapperGraphQLTypeFactory(
             outputTypeCache,
             inputTypeCache,
-            SubFilterGenerator(filters, filterDefinitions, nodeDefinitionCollection),
+            SubFilterGenerator(filters, filterDefinitions, nodeDefinitionCollection, additionalFilterBeans),
             tempCodeRegistry,
             dataFetcherFactoryProvider,
             neo4jMappingContext

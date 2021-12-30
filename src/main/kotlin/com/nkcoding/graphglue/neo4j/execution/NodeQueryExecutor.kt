@@ -6,9 +6,11 @@ import com.nkcoding.graphglue.graphql.execution.NodeQuery
 import com.nkcoding.graphglue.graphql.execution.NodeSubQuery
 import com.nkcoding.graphglue.graphql.execution.definition.NodeDefinition
 import org.neo4j.cypherdsl.core.*
+import org.neo4j.cypherdsl.core.renderer.Configuration
 import org.neo4j.cypherdsl.core.renderer.Renderer
 import org.neo4j.driver.Value
 import org.neo4j.driver.types.TypeSystem
+import org.slf4j.LoggerFactory
 import org.springframework.data.neo4j.core.Neo4jClient
 import org.springframework.data.neo4j.core.mapping.Neo4jMappingContext
 
@@ -22,8 +24,11 @@ class NodeQueryExecutor(
     private var nameCounter = 0
     private val subQueryLookup = HashMap<String, NodeSubQuery>()
 
+    private val logger = LoggerFactory.getLogger(NodeQueryExecutor::class.java)
+
     fun execute(): NodeQueryResult<*> {
         val (statement, returnName) = createRootNodeQuery()
+        logger.info(Renderer.getRenderer(Configuration.prettyPrinting()).render(statement))
         return client.query(Renderer.getDefaultRenderer().render(statement))
             .bindAll(statement.parameters)
             .fetchAs(NodeQueryResult::class.java)
@@ -131,7 +136,12 @@ class NodeQueryExecutor(
         val resultNodeExpression = Cypher.asExpression(resultNodeMap)
         val resultNode = generateUniqueName()
         val resultBuilder =
-            callBuilder.with(listOf(nodeAlias.`as`(nodeDefinition.returnNodeName), nodeAlias) + additionalWithExpressions)
+            callBuilder.with(
+                listOf(
+                    nodeAlias.`as`(nodeDefinition.returnNodeName),
+                    nodeAlias
+                ) + additionalWithExpressions + subQueryResultList
+            )
                 .with(listOf(resultNodeExpression.`as`(resultNode)) + allWithExpressions)
 
         // order and collect nodes

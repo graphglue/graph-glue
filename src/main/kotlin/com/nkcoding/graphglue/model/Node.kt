@@ -2,6 +2,7 @@ package com.nkcoding.graphglue.model
 
 import com.expediagroup.graphql.generator.annotations.GraphQLDescription
 import com.expediagroup.graphql.generator.annotations.GraphQLIgnore
+import com.expediagroup.graphql.generator.annotations.GraphQLName
 import com.expediagroup.graphql.generator.scalars.ID
 import com.nkcoding.graphglue.graphql.execution.NodeQuery
 import com.nkcoding.graphglue.graphql.execution.QueryOptions
@@ -26,13 +27,17 @@ import kotlin.reflect.KProperty1
  * and should be persisted in the database should inherit from this class
  */
 @DomainNode
+@AdditionalFilter("idIdFilter")
 @GraphQLDescription("Base class of all nodes")
 abstract class Node {
 
     @GraphQLIgnore
     @Id
     @GeneratedValue(UUIDStringGenerator::class)
-    internal lateinit var id: String
+    internal var id: String? = null
+
+    @GraphQLIgnore
+    val rawId get() = id
 
     @Property("_")
     @ConvertWith(converterRef = "lazyLoadingContextConverter")
@@ -40,10 +45,9 @@ abstract class Node {
 
     private val lazyLoadingContext: LazyLoadingContext? get() = lazyLoadingContextOptional.orElse(null)
 
+    @GraphQLName("id")
     @GraphQLDescription("The unique id of this node")
-    fun id(): ID {
-        return ID(id)
-    }
+    val graphQLId: ID get() = ID(id!!)
 
     protected fun <T : Node> NodeSetProperty(value: Collection<T>? = null): PropertyDelegateProvider<Node, NodeSetProperty<T>> {
         return NodeSetPropertyProvider(value)
@@ -62,10 +66,10 @@ abstract class Node {
             return NodeQueryResult<T>(QueryOptions(), emptyList(), null) to null
         } else {
             val queryParser = lazyLoadingContext.queryParser
-            val parentNodeDefinition = queryParser.nodeDefinitionCollection.backingCollection[this::class]!!
+            val parentNodeDefinition = queryParser.nodeDefinitionCollection.getNodeDefinition(this::class)
             val relationshipDefinition = parentNodeDefinition.getRelationshipDefinitionOfProperty(property)
             val nodeDefinition =
-                queryParser.nodeDefinitionCollection.backingCollection[relationshipDefinition.nodeKClass]!!
+                queryParser.nodeDefinitionCollection.getNodeDefinition(relationshipDefinition.nodeKClass)
             val query = queryParser.generateRelationshipNodeQuery(
                 nodeDefinition,
                 dataFetchingEnvironment,

@@ -5,7 +5,7 @@ import org.neo4j.cypherdsl.core.Condition
 import org.neo4j.cypherdsl.core.Conditions
 import org.neo4j.cypherdsl.core.Node
 
-abstract class SimpleObjectFilter(definition: FilterEntryDefinition, val entries: List<FilterEntry>) :
+open class SimpleObjectFilter(definition: FilterEntryDefinition, val entries: List<FilterEntry>) :
     FilterEntry(definition) {
     override fun generateCondition(node: Node): Condition {
         return if (entries.isEmpty()) {

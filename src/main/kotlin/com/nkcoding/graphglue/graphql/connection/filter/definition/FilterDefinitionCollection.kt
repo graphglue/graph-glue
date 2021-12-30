@@ -3,9 +3,13 @@ package com.nkcoding.graphglue.graphql.connection.filter.definition
 import com.nkcoding.graphglue.model.Node
 import kotlin.reflect.KClass
 
-class FilterDefinitionCollection(val backingCollection: Map<KClass<out Node>, FilterDefinition<out Node>>) {
+class FilterDefinitionCollection(private val backingCollection: Map<KClass<out Node>, FilterDefinition<out Node>>) {
     inline fun <reified T : Node> getFilterDefinition(): FilterDefinition<T> {
+        return getFilterDefinition(T::class)
+    }
+
+    fun <T : Node> getFilterDefinition(nodeType: KClass<out Node>): FilterDefinition<T> {
         @Suppress("UNCHECKED_CAST")
-        return backingCollection[T::class] as FilterDefinition<T>
+        return backingCollection[nodeType] as FilterDefinition<T>
     }
 }

@@ -11,7 +11,8 @@ import kotlin.reflect.jvm.jvmErasure
 class SubFilterGenerator(
     private val filters: List<TypeFilterDefinitionEntry>,
     val filterDefinitionCache: FilterDefinitionCache,
-    val nodeDefinitionCollection: MutableNodeDefinitionCollection
+    val nodeDefinitionCollection: MutableNodeDefinitionCollection,
+    val additionalFilterBeans: Map<String, FilterEntryDefinition>
 ) {
     /**
      * Generates a filter for a specified type with a specified name

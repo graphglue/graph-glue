@@ -1,8 +1,10 @@
 package com.nkcoding.graphglue.graphql.connection.filter
 
+import com.expediagroup.graphql.generator.scalars.ID
 import com.nkcoding.graphglue.graphql.connection.filter.definition.NodeListFilterDefinition
 import com.nkcoding.graphglue.graphql.connection.filter.definition.NodeSubFilterDefinition
-import com.nkcoding.graphglue.graphql.connection.filter.definition.StringFilterDefinition
+import com.nkcoding.graphglue.graphql.connection.filter.definition.scalars.IDFilterDefinition
+import com.nkcoding.graphglue.graphql.connection.filter.definition.scalars.StringFilterDefinition
 import com.nkcoding.graphglue.model.Node
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
@@ -17,6 +19,15 @@ class GraphglueGraphQLFilterConfiguration {
         TypeFilterDefinitionEntry(String::class.createType()) { name, property, parentNodeDefinition, _ ->
             StringFilterDefinition(name, parentNodeDefinition.getNeo4jNameOfProperty(property))
         }
+
+    @Bean
+    fun idFilter() =
+        TypeFilterDefinitionEntry(ID::class.createType()) { name, property, parentNodeDefinition, _ ->
+            IDFilterDefinition(name, parentNodeDefinition.getNeo4jNameOfProperty(property))
+        }
+
+    @Bean("idIdFilter")
+    fun idIdFilter() = IDFilterDefinition("id", "id")
 
     @Bean
     fun nodeFilter() =

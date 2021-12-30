@@ -11,13 +11,10 @@ import com.nkcoding.graphglue.neo4j.CypherConditionGenerator
 import graphql.schema.DataFetchingEnvironment
 import graphql.schema.DataFetchingFieldSelectionSet
 import graphql.schema.SelectedField
-import org.neo4j.cypherdsl.core.Condition
 import org.neo4j.cypherdsl.core.Cypher
 import org.neo4j.cypherdsl.core.Predicates
 
 const val DEFAULT_PART_ID = "default"
-const val NODES_PART_ID = "nodes"
-const val EDGES_PART_ID = "edges"
 
 class QueryParser(
     val nodeDefinitionCollection: NodeDefinitionCollection,
@@ -31,11 +28,14 @@ class QueryParser(
         relationshipDefinition: RelationshipDefinition,
         parentNode: Node
     ): NodeQuery {
-        val rootCypherNode = Cypher.anyNode().withProperties(mapOf("id" to parentNode.id))
-        val relationshipCondition = object : CypherConditionGenerator {
-            override fun generateCondition(node: org.neo4j.cypherdsl.core.Node): Condition {
-                return Predicates.exists(relationshipDefinition.generateRelationship(rootCypherNode, node))
-            }
+        val rootCypherNode = Cypher.anyNode().withProperties(mapOf("id" to parentNode.rawId))
+        val relationshipCondition = CypherConditionGenerator { node ->
+            Predicates.exists(
+                relationshipDefinition.generateRelationship(
+                    rootCypherNode,
+                    node
+                )
+            )
         }
         return when (relationshipDefinition) {
             is OneRelationshipDefinition -> generateOneNodeQuery(
@@ -84,7 +84,7 @@ class QueryParser(
                     if (manyRelationshipDefinition != null) {
                         val subQuery = NodeSubQuery(
                             generateManyNodeQuery(
-                                nodeDefinitionCollection.backingCollection[manyRelationshipDefinition.nodeKClass]!!,
+                                nodeDefinitionCollection.getNodeDefinition(manyRelationshipDefinition.nodeKClass),
                                 field.selectionSet,
                                 field.arguments
                             ),
@@ -97,7 +97,7 @@ class QueryParser(
                         val oneRelationshipDefinition = firstPossibleType.oneRelationshipDefinitions[field.name]!!
                         val subQuery = NodeSubQuery(
                             generateOneNodeQuery(
-                                nodeDefinitionCollection.backingCollection[oneRelationshipDefinition.nodeKClass]!!,
+                                nodeDefinitionCollection.getNodeDefinition(oneRelationshipDefinition.nodeKClass),
                                 field.selectionSet
                             ),
                             onlyOnTypes,
@@ -119,7 +119,7 @@ class QueryParser(
         arguments: Map<String, Any>,
         additionalConditions: List<CypherConditionGenerator> = emptyList()
     ): NodeQuery {
-        val filterDefinition = filterDefinitionCollection.backingCollection[nodeDefinition.nodeType]!!
+        val filterDefinition = filterDefinitionCollection.getFilterDefinition<Node>(nodeDefinition.nodeType)
         val filters = ArrayList(additionalConditions)
         arguments["filter"]?.also {
             filters.add(filterDefinition.parseFilter(it))
@@ -134,10 +134,15 @@ class QueryParser(
             last = arguments["last"]?.let { (it as Int) + 1 },
             fetchTotalCount = selectionSet?.contains("totalCount") ?: true
         )
-        val parts = mapOf(
-            NODES_PART_ID to (selectionSet?.getFields("nodes") ?: emptyList()),
-            EDGES_PART_ID to (selectionSet?.getFields("edges/node") ?: emptyList())
-        )
+        val parts = HashMap<String, List<SelectedField>>()
+        for (nodesPart in selectionSet?.getFields("nodes") ?: emptyList()) {
+            parts[nodesPart.resultKey] = nodesPart.selectionSet.fields
+        }
+        for (edgesPart in  selectionSet?.getFields("edges") ?: emptyList()) {
+            for (nodePart in edgesPart.selectionSet.getFields("node")) {
+                parts["${edgesPart.resultKey}/${nodePart.resultKey}"] = nodePart.selectionSet.fields
+            }
+        }
         return generateNodeQuery(
             nodeDefinition, parts, subQueryOptions
         )

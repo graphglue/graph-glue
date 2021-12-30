@@ -9,7 +9,9 @@ import com.nkcoding.graphglue.neo4j.execution.NodeQueryResult
 import org.springframework.data.neo4j.core.schema.Relationship
 import kotlin.reflect.KClass
 import kotlin.reflect.KProperty1
+import kotlin.reflect.full.createType
 import kotlin.reflect.full.findAnnotation
+import kotlin.reflect.full.isSubtypeOf
 import kotlin.reflect.full.memberProperties
 
 abstract class RelationshipDefinition(
@@ -26,9 +28,11 @@ abstract class RelationshipDefinition(
         for (remoteProperty in nodeKClass.memberProperties) {
             val annotation = remoteProperty.findAnnotation<NodeRelationship>()
             if (annotation?.type == type && annotation.direction != direction) {
-                return { remoteNode, value ->
-                    val nodeProperty = remoteProperty.getDelegateAccessible<NodeProperty<Node>>(remoteNode)
-                    nodeProperty.setFromRemote(value)
+                if (remoteProperty.returnType.isSubtypeOf(Node::class.createType())) {
+                    return { remoteNode, value ->
+                        val nodeProperty = remoteProperty.getDelegateAccessible<NodeProperty<Node>>(remoteNode)
+                        nodeProperty.setFromRemote(value)
+                    }
                 }
             }
         }

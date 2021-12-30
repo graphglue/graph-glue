@@ -4,7 +4,7 @@ import com.nkcoding.graphglue.graphql.connection.filter.definition.SimpleFilterE
 import org.neo4j.cypherdsl.core.Condition
 import org.neo4j.cypherdsl.core.Node
 
-abstract class SimpleFilterEntry<T>(private val simpleDefinition: SimpleFilterEntryDefinition<T>, val value: T) :
+class SimpleFilterEntry<T>(private val simpleDefinition: SimpleFilterEntryDefinition<T>, val value: T) :
     FilterEntry(simpleDefinition) {
     override fun generateCondition(node: Node): Condition {
         return simpleDefinition.generateCondition(node, value)

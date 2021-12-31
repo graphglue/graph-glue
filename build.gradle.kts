@@ -1,5 +1,3 @@
-import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
-
 description = "A framework to connect graphql-kotlin and neo4j"
 
 val reactorVersion = "5.3.10"
@@ -7,11 +5,9 @@ val graphqlKotlinVersion = "5.3.1"
 val neo4jVersion = "2.6.2"
 
 plugins {
-    id("org.springframework.boot") version "2.6.2"
-	id("io.spring.dependency-management") version "1.0.11.RELEASE"
 	kotlin("jvm") version "1.6.10"
 	kotlin("plugin.spring") version "1.6.10"
-    id("com.expediagroup.graphql") version "5.3.0"
+    id("maven-publish")
 }
 
 repositories {
@@ -19,13 +15,24 @@ repositories {
 }
 
 dependencies {
-    implementation("com.expediagroup", "graphql-kotlin-spring-server",graphqlKotlinVersion)
-    implementation("com.expediagroup", "graphql-kotlin-hooks-provider", graphqlKotlinVersion)
-    implementation("org.springframework.boot", "spring-boot-starter-data-neo4j", neo4jVersion)
+    api("com.expediagroup", "graphql-kotlin-spring-server",graphqlKotlinVersion)
+    api("org.springframework.boot", "spring-boot-starter-data-neo4j", neo4jVersion)
 }
 
-graphql {
-    schema {
-        packages = listOf("de.nkcoding.testing")
+publishing {
+    publications {
+        create<MavenPublication>("mavenJava") {
+            groupId = "de.graphglue"
+            artifactId = "graphglue"
+            version = "0.1"
+
+            from(components.getByName("java"))
+        }
+    }
+}
+
+tasks {
+    jar {
+        enabled = true
     }
 }

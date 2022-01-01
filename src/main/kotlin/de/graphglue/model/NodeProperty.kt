@@ -11,6 +11,7 @@ import de.graphglue.graphql.redirect.RedirectPropertyFunction
 import de.graphglue.neo4j.execution.NodeQueryResult
 import graphql.execution.DataFetcherResult
 import graphql.schema.DataFetchingEnvironment
+import kotlinx.coroutines.runBlocking
 import org.springframework.beans.factory.annotation.Autowired
 import kotlin.reflect.KProperty
 import kotlin.reflect.KProperty1
@@ -30,26 +31,30 @@ class NodeProperty<T : Node?>(value: T? = null, private val parent: Node, privat
 
     @Suppress("UNCHECKED_CAST")
     operator fun getValue(thisRef: Node, property: KProperty<*>): T {
-        val value = getCurrentNode()
-        return if (property.returnType.isMarkedNullable) {
-            value as T
-        } else {
-            if (value == null) {
-                throw IllegalStateException("The non-nullable property $property has a null value")
+        return runBlocking {
+            val value = getCurrentNode()
+            if (property.returnType.isMarkedNullable) {
+                value as T
+            } else {
+                if (value == null) {
+                    throw IllegalStateException("The non-nullable property $property has a null value")
+                }
+                value
             }
-            value
         }
     }
 
     operator fun setValue(thisRef: Node, property: KProperty<*>, value: T) {
-        val current = getCurrentNode()
-        if (value != current) {
-            currentNode = current
+        runBlocking {
+            val current = getCurrentNode()
+            if (value != current) {
+                currentNode = current
+            }
         }
     }
 
     @RedirectPropertyFunction
-    fun getFromGraphQL(
+    suspend fun getFromGraphQL(
         @GraphQLIgnore @Autowired
         queryParser: QueryParser,
         dataFetchingEnvironment: DataFetchingEnvironment
@@ -72,11 +77,11 @@ class NodeProperty<T : Node?>(value: T? = null, private val parent: Node, privat
             .build()
     }
 
-    private fun getCurrentNode(): T? {
+    private suspend fun getCurrentNode(): T? {
         return getCurrentNodeInternal().first
     }
 
-    private fun getCurrentNodeInternal(dataFetchingEnvironment: DataFetchingEnvironment? = null): Pair<T?, NodeQuery?> {
+    private suspend fun getCurrentNodeInternal(dataFetchingEnvironment: DataFetchingEnvironment? = null): Pair<T?, NodeQuery?> {
         return if (!isLoaded) {
             val (result, nodeQuery) = parent.loadNodesOfRelationship<T>(property)
             currentNode = result.nodes.first()

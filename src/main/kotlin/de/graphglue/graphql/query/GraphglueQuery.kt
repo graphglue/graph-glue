@@ -18,7 +18,7 @@ import org.springframework.beans.factory.annotation.Autowired
 
 class GraphglueQuery(private val nodeDefinition: NodeDefinition) : Query {
     @GraphQLDescription("Get a Node by id")
-    fun node(
+    suspend fun node(
         @GraphQLDescription("The id of the node to get") id: ID,
         @Autowired @GraphQLIgnore
         queryParser: QueryParser,

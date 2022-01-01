@@ -5,7 +5,7 @@ import org.neo4j.driver.Value
 import org.neo4j.driver.Values
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
-import org.springframework.data.neo4j.core.Neo4jClient
+import org.springframework.data.neo4j.core.ReactiveNeo4jClient
 import org.springframework.data.neo4j.core.convert.Neo4jPersistentPropertyConverter
 import org.springframework.data.neo4j.core.mapping.Neo4jMappingContext
 import java.util.*
@@ -29,7 +29,7 @@ class GraphglueNeo4jConfiguration {
 
     @Bean
     fun lazyLoadingContext(
-        neo4jClient: Neo4jClient,
+        neo4jClient: ReactiveNeo4jClient,
         neo4jMappingContext: Neo4jMappingContext,
         queryParser: QueryParser
     ): LazyLoadingContext {

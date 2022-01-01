@@ -5,13 +5,14 @@ import de.graphglue.graphql.connection.order.OrderDirection
 import de.graphglue.graphql.execution.NodeQuery
 import de.graphglue.graphql.execution.NodeSubQuery
 import de.graphglue.graphql.execution.definition.NodeDefinition
+import kotlinx.coroutines.reactor.awaitSingle
 import org.neo4j.cypherdsl.core.*
 import org.neo4j.cypherdsl.core.renderer.Configuration
 import org.neo4j.cypherdsl.core.renderer.Renderer
 import org.neo4j.driver.Value
 import org.neo4j.driver.types.TypeSystem
 import org.slf4j.LoggerFactory
-import org.springframework.data.neo4j.core.Neo4jClient
+import org.springframework.data.neo4j.core.ReactiveNeo4jClient
 import org.springframework.data.neo4j.core.mapping.Neo4jMappingContext
 
 const val NODE_KEY = "node"
@@ -19,14 +20,14 @@ const val NODES_KEY = "nodes"
 const val TOTAL_COUNT_KEY = "total_count"
 
 class NodeQueryExecutor(
-    private val nodeQuery: NodeQuery, private val client: Neo4jClient, private val mappingContext: Neo4jMappingContext
+    private val nodeQuery: NodeQuery, private val client: ReactiveNeo4jClient, private val mappingContext: Neo4jMappingContext
 ) {
     private var nameCounter = 0
     private val subQueryLookup = HashMap<String, NodeSubQuery>()
 
     private val logger = LoggerFactory.getLogger(NodeQueryExecutor::class.java)
 
-    fun execute(): NodeQueryResult<*> {
+    suspend fun execute(): NodeQueryResult<*> {
         val (statement, returnName) = createRootNodeQuery()
         logger.info(Renderer.getRenderer(Configuration.prettyPrinting()).render(statement))
         return client.query(Renderer.getDefaultRenderer().render(statement))
@@ -35,7 +36,7 @@ class NodeQueryExecutor(
             .mappedBy { typeSystem, record ->
                 val result = record[returnName.value]
                 parseQueryResult(typeSystem, result[NODES_KEY], result[TOTAL_COUNT_KEY], nodeQuery)
-            }.one().orElseThrow()
+            }.one().awaitSingle()
     }
 
     private fun createRootNodeQuery(): Pair<Statement, SymbolicName> {

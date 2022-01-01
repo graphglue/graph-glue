@@ -59,7 +59,7 @@ abstract class Node {
         return NodePropertyProvider(value)
     }
 
-    internal fun <T : Node?> loadNodesOfRelationship(
+    internal suspend fun <T : Node?> loadNodesOfRelationship(
         property: KProperty1<*, *>,
         dataFetchingEnvironment: DataFetchingEnvironment? = null
     ): Pair<NodeQueryResult<T>, NodeQuery?> {

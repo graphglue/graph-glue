@@ -16,7 +16,7 @@ import org.springframework.beans.factory.annotation.Autowired
 class TopLevelQueryProvider<T : Node>(private val nodeDefinition: NodeDefinition) {
 
     @Suppress("UNCHECKED_CAST")
-    fun getFromGraphQL(
+    suspend fun getFromGraphQL(
         @Autowired @GraphQLIgnore
         queryParser: QueryParser,
         dataFetchingEnvironment: DataFetchingEnvironment,

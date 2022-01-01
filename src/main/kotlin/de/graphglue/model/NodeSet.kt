@@ -10,6 +10,7 @@ import de.graphglue.graphql.redirect.RedirectPropertyClass
 import de.graphglue.neo4j.execution.NodeQueryResult
 import graphql.execution.DataFetcherResult
 import graphql.schema.DataFetchingEnvironment
+import kotlinx.coroutines.runBlocking
 import org.springframework.beans.factory.annotation.Autowired
 import java.util.*
 import kotlin.reflect.KProperty1
@@ -36,7 +37,7 @@ class NodeSet<T : Node>(
         }
     }
 
-    fun getFromGraphQL(
+    suspend fun getFromGraphQL(
         @GraphQLIgnore @Autowired
         queryParser: QueryParser,
         dataFetchingEnvironment: DataFetchingEnvironment
@@ -84,7 +85,7 @@ class NodeSet<T : Node>(
         return copy
     }
 
-    private fun getCurrentNodes(): MutableSet<T> {
+    private suspend fun getCurrentNodes(): MutableSet<T> {
         if (!isLoaded) {
             val (result, _) = parent.loadNodesOfRelationship<T>(property)
             currentNodes = result.nodes.toMutableSet()
@@ -94,34 +95,38 @@ class NodeSet<T : Node>(
 
     //region list implementation
 
-    override val size get() = getCurrentNodes().size
+    override val size get() = runBlocking { getCurrentNodes().size }
 
-    override fun contains(element: T) = getCurrentNodes().contains(element)
+    override fun contains(element: T) =  runBlocking { getCurrentNodes().contains(element) }
 
     override fun add(element: T): Boolean {
-        val currentNodes = getCurrentNodes()
-        val result = currentNodes.add(element)
-        if (result) {
-            if (!removedNodes.remove(element)) {
-                addedNodes.add(element)
+        return runBlocking {
+            val currentNodes = getCurrentNodes()
+            val result = currentNodes.add(element)
+            if (result) {
+                if (!removedNodes.remove(element)) {
+                    addedNodes.add(element)
+                }
             }
+            result
         }
-        return result
     }
 
     override fun remove(element: T): Boolean {
-        val currentNodes = getCurrentNodes()
-        val result = currentNodes.remove(element)
-        if (result) {
-            if (!addedNodes.remove(element)) {
-                removedNodes.add(element)
+        return runBlocking {
+            val currentNodes = getCurrentNodes()
+            val result = currentNodes.remove(element)
+            if (result) {
+                if (!addedNodes.remove(element)) {
+                    removedNodes.add(element)
+                }
             }
+            result
         }
-        return result
     }
 
     override fun iterator(): MutableIterator<T> {
-        return NodeSetIterator(getCurrentNodes().iterator())
+        return runBlocking { NodeSetIterator(getCurrentNodes().iterator()) }
     }
 
     inner class NodeSetIterator(private val parentIterator: MutableIterator<T>) : MutableIterator<T> {

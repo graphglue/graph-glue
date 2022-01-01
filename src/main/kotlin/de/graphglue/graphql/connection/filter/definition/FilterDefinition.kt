@@ -2,7 +2,6 @@ package de.graphglue.graphql.connection.filter.definition
 
 import de.graphglue.graphql.connection.filter.model.*
 import de.graphglue.graphql.extensions.getSimpleName
-import de.graphglue.graphql.generation.GraphQLInputTypeGenerator
 import de.graphglue.model.Node
 import de.graphglue.util.CacheMap
 import graphql.schema.*

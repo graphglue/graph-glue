@@ -11,6 +11,7 @@ import de.graphglue.neo4j.CypherConditionGenerator
 import graphql.schema.DataFetchingEnvironment
 import graphql.schema.DataFetchingFieldSelectionSet
 import graphql.schema.SelectedField
+import org.neo4j.cypherdsl.core.Conditions
 import org.neo4j.cypherdsl.core.Cypher
 import org.neo4j.cypherdsl.core.Predicates
 
@@ -28,14 +29,16 @@ class QueryParser(
         relationshipDefinition: RelationshipDefinition,
         parentNode: Node
     ): NodeQuery {
-        val rootCypherNode = Cypher.anyNode().withProperties(mapOf("id" to parentNode.rawId))
+        val idParameter = Cypher.anonParameter(parentNode.rawId)
+        val rootCypherNode = Cypher.anyNode().withProperties(mapOf("id" to idParameter))
         val relationshipCondition = CypherConditionGenerator { node ->
-            Predicates.exists(
-                relationshipDefinition.generateRelationship(
-                    rootCypherNode,
-                    node
-                )
-            )
+            Predicates.any(rootCypherNode.requiredSymbolicName).`in`(
+                Cypher.listBasedOn(
+                    relationshipDefinition.generateRelationship(
+                        rootCypherNode, node
+                    )
+                ).returning(rootCypherNode)
+            ).where(Conditions.isTrue())
         }
         return when (relationshipDefinition) {
             is OneRelationshipDefinition -> generateOneNodeQuery(
@@ -87,10 +90,7 @@ class QueryParser(
                                 nodeDefinitionCollection.getNodeDefinition(manyRelationshipDefinition.nodeKClass),
                                 field.selectionSet,
                                 field.arguments
-                            ),
-                            onlyOnTypes,
-                            manyRelationshipDefinition,
-                            field.resultKey
+                            ), onlyOnTypes, manyRelationshipDefinition, field.resultKey
                         )
                         manySubQueries.add(subQuery)
                     } else {
@@ -99,10 +99,7 @@ class QueryParser(
                             generateOneNodeQuery(
                                 nodeDefinitionCollection.getNodeDefinition(oneRelationshipDefinition.nodeKClass),
                                 field.selectionSet
-                            ),
-                            onlyOnTypes,
-                            oneRelationshipDefinition,
-                            field.resultKey
+                            ), onlyOnTypes, oneRelationshipDefinition, field.resultKey
                         )
                         oneSubQueries.add(subQuery)
                     }

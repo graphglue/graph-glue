@@ -83,7 +83,7 @@ class NodeProperty<T : Node?>(value: T? = null, private val parent: Node, privat
 
     private suspend fun getCurrentNodeInternal(dataFetchingEnvironment: DataFetchingEnvironment? = null): Pair<T?, NodeQuery?> {
         return if (!isLoaded) {
-            val (result, nodeQuery) = parent.loadNodesOfRelationship<T>(property)
+            val (result, nodeQuery) = parent.loadNodesOfRelationship<T>(property, dataFetchingEnvironment)
             currentNode = result.nodes.first()
             currentNode to nodeQuery
         } else {

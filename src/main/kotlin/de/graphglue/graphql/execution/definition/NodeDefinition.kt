@@ -17,8 +17,7 @@ class NodeDefinition(
     val nodeType: KClass<out Node>,
     oneRelationshipDefinitions: List<OneRelationshipDefinition>,
     manyRelationshipDefinitions: List<ManyRelationshipDefinition>,
-    val persistentEntity: Neo4jPersistentEntity<*>,
-    val mappingFunction: BiFunction<TypeSystem, MapAccessor, out Node>
+    val persistentEntity: Neo4jPersistentEntity<*>
 ) {
     val oneRelationshipDefinitions = oneRelationshipDefinitions.associateBy { it.graphQLName }
     val manyRelationshipDefinitions = manyRelationshipDefinitions.associateBy { it.graphQLName }

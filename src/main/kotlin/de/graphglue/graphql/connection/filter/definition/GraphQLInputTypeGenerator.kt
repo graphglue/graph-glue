@@ -1,4 +1,4 @@
-package de.graphglue.graphql.generation
+package de.graphglue.graphql.connection.filter.definition
 
 import de.graphglue.util.CacheMap
 import graphql.schema.GraphQLInputType

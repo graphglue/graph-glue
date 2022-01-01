@@ -24,6 +24,7 @@ class NodeQueryExecutor(
 ) {
     private var nameCounter = 0
     private val subQueryLookup = HashMap<String, NodeSubQuery>()
+    private val entityConverter = mappingContext.entityConverter
 
     private val logger = LoggerFactory.getLogger(NodeQueryExecutor::class.java)
 
@@ -240,7 +241,7 @@ class NodeQueryExecutor(
         value: Value,
         nodeDefinition: NodeDefinition
     ): de.graphglue.model.Node {
-        val node = nodeDefinition.mappingFunction.apply(typeSystem, value.get(NODE_KEY))
+        val node = entityConverter.read(nodeDefinition.nodeType.java, value.get(NODE_KEY))
         for (relatedNodeName in value.keys()) {
             if (relatedNodeName != NODE_KEY) {
                 val relatedNodesValue = value[relatedNodeName]

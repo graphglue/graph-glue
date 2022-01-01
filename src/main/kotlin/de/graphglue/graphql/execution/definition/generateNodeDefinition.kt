@@ -15,8 +15,7 @@ fun generateNodeDefinition(nodeClass: KClass<out Node>, mappingContext: Neo4jMap
         nodeClass,
         generateOneRelationshipDefinitions(nodeClass),
         generateManyRelationshipDefinitions(nodeClass),
-        mappingContext.getPersistentEntity(nodeClass.java)!!,
-        mappingContext.getRequiredMappingFunctionFor(nodeClass.java)!!
+        mappingContext.getPersistentEntity(nodeClass.java)!!
     )
 }
 

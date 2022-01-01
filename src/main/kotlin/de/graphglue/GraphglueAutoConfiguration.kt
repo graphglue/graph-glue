@@ -19,7 +19,6 @@ import org.springframework.context.annotation.Import
     value = [
         GraphQLAutoConfiguration::class,
         Neo4jAutoConfiguration::class,
-        Neo4jDataAutoConfiguration::class,
         Neo4jReactiveDataAutoConfiguration::class
     ]
 )

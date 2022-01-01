@@ -18,7 +18,7 @@ class Connection<T : Node>(
         return dataFetchingEnvironment.getDataFetcherResult(nodes, dataFetchingEnvironment.executionStepInfo.resultKey)
     }
 
-    fun edges(dataFetchingEnvironment: DataFetchingEnvironment): List<Edge<T>> {
+    fun edges(): List<Edge<T>> {
         return nodes.map { Edge(it, order) }
     }
 

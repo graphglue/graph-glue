@@ -16,7 +16,10 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import de.graphglue.graphql.connection.ConnectionWrapperGraphQLTypeFactory
 import de.graphglue.graphql.connection.filter.GraphglueGraphQLFilterConfiguration
 import de.graphglue.graphql.connection.filter.TypeFilterDefinitionEntry
-import de.graphglue.graphql.connection.filter.definition.*
+import de.graphglue.graphql.connection.filter.definition.FilterDefinitionCache
+import de.graphglue.graphql.connection.filter.definition.FilterDefinitionCollection
+import de.graphglue.graphql.connection.filter.definition.FilterEntryDefinition
+import de.graphglue.graphql.connection.filter.definition.SubFilterGenerator
 import de.graphglue.graphql.connection.order.OrderDirection
 import de.graphglue.graphql.execution.QueryParser
 import de.graphglue.graphql.execution.definition.NodeDefinition
@@ -33,6 +36,7 @@ import de.graphglue.model.DomainNode
 import de.graphglue.model.Node
 import de.graphglue.model.NodeSet
 import de.graphglue.model.PageInfo
+import de.graphglue.util.CacheMap
 import graphql.schema.*
 import org.slf4j.LoggerFactory
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
@@ -42,7 +46,6 @@ import org.springframework.context.annotation.Configuration
 import org.springframework.context.annotation.Import
 import org.springframework.data.neo4j.core.mapping.Neo4jMappingContext
 import java.util.*
-import java.util.concurrent.ConcurrentHashMap
 import kotlin.reflect.KClass
 import kotlin.reflect.KType
 import kotlin.reflect.full.createType
@@ -58,17 +61,16 @@ import kotlin.reflect.jvm.jvmErasure
 @Import(GraphglueGraphQLFilterConfiguration::class)
 class GraphglueGraphQLConfiguration(private val neo4jMappingContext: Neo4jMappingContext) {
 
-    private val logger = LoggerFactory.getLogger(de.graphglue.graphql.GraphglueGraphQLConfiguration::class.java)
+    private val logger = LoggerFactory.getLogger(GraphglueGraphQLConfiguration::class.java)
 
-    private val inputTypeCache = ConcurrentHashMap<String, GraphQLInputType>()
-    private val outputTypeCache = ConcurrentHashMap<String, GraphQLOutputType>()
-    private val filterDefinitions: FilterDefinitionCache =
-        ConcurrentHashMap<KClass<out Node>, FilterDefinition<out Node>>()
-    private val nodeDefinitions = ConcurrentHashMap<KClass<out Node>, NodeDefinition>()
-    private val supertypeNodeDefinitionLookup = ConcurrentHashMap<Set<String>, NodeDefinition>()
+    private val inputTypeCache = CacheMap<String, GraphQLInputType>()
+    private val outputTypeCache = CacheMap<String, GraphQLOutputType>()
+    private val filterDefinitions: FilterDefinitionCache = CacheMap()
+    private val nodeDefinitions = CacheMap<KClass<out Node>, NodeDefinition>()
+    private val supertypeNodeDefinitionLookup = HashMap<Set<String>, NodeDefinition>()
     private val nodeDefinitionCollection =
         NodeDefinitionCollectionImpl(nodeDefinitions, supertypeNodeDefinitionLookup, neo4jMappingContext)
-    private val topLevelQueries = ConcurrentHashMap<NodeDefinition, de.graphglue.graphql.TopLevelQueryDefinition>()
+    private val topLevelQueries = HashMap<NodeDefinition, TopLevelQueryDefinition>()
 
     /**
      * Code registry used as a temporary cache before its DataFetchers are added to the
@@ -111,7 +113,7 @@ class GraphglueGraphQLConfiguration(private val neo4jMappingContext: Neo4jMappin
                     val domainNodeAnnotation = nodeClass.springFindAnnotation<DomainNode>()
                     val topLevelFunctionName = domainNodeAnnotation?.topLevelQueryName
                     if (topLevelFunctionName?.isNotBlank() == true) {
-                        topLevelQueries[nodeDefinition] = de.graphglue.graphql.TopLevelQueryDefinition(
+                        topLevelQueries[nodeDefinition] = TopLevelQueryDefinition(
                             topLevelFunctionName,
                             factory.generateWrapperGraphQLType(nodeClass, nodeClass.getSimpleName())
                         )

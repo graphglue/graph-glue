@@ -1,7 +1,9 @@
 package de.graphglue.graphql.connection.filter.definition
 
+import de.graphglue.util.CacheMap
 import graphql.schema.GraphQLInputObjectType
 import graphql.schema.GraphQLInputType
+import graphql.schema.GraphQLTypeReference
 
 abstract class SimpleObjectFilterDefinitionEntry<T : FilterEntryDefinition>(
     name: String,
@@ -13,14 +15,14 @@ abstract class SimpleObjectFilterDefinitionEntry<T : FilterEntryDefinition>(
     val fields = fields.associateBy { it.name }
 
     override fun toGraphQLType(
-        objectTypeCache: MutableMap<String, GraphQLInputType>
+        inputTypeCache: CacheMap<String, GraphQLInputType>
     ): GraphQLInputType {
-        return objectTypeCache.computeIfAbsent(typeName) {
+        return inputTypeCache.computeIfAbsent(typeName, GraphQLTypeReference(typeName)) {
             val builder = GraphQLInputObjectType.newInputObject()
             builder.name(typeName)
             for (field in fields.values) {
                 builder.field {
-                    it.name(field.name).type(field.toGraphQLType(objectTypeCache))
+                    it.name(field.name).type(field.toGraphQLType(inputTypeCache))
                 }
             }
             builder.build()

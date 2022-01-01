@@ -2,7 +2,6 @@ package de.graphglue.graphql.execution.definition
 
 import de.graphglue.graphql.extensions.getSimpleName
 import de.graphglue.model.Node
-import org.neo4j.cypherdsl.core.Cypher
 import org.neo4j.cypherdsl.core.Expression
 import org.neo4j.cypherdsl.core.SymbolicName
 import org.neo4j.driver.types.MapAccessor

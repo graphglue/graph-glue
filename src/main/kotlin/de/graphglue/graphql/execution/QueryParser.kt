@@ -138,7 +138,7 @@ class QueryParser(
         for (nodesPart in selectionSet?.getFields("nodes") ?: emptyList()) {
             parts[nodesPart.resultKey] = nodesPart.selectionSet.fields
         }
-        for (edgesPart in  selectionSet?.getFields("edges") ?: emptyList()) {
+        for (edgesPart in selectionSet?.getFields("edges") ?: emptyList()) {
             for (nodePart in edgesPart.selectionSet.getFields("node")) {
                 parts["${edgesPart.resultKey}/${nodePart.resultKey}"] = nodePart.selectionSet.fields
             }

@@ -14,7 +14,8 @@ class PageInfo(
 ) {
 
     @Suppress("UNCHECKED_CAST")
-    private val orderBy: Order<Node> get() = queryOptions.orderBy as Order<Node>
+    private val orderBy: Order<Node>
+        get() = queryOptions.orderBy as Order<Node>
 
     @GraphQLDescription("When paginating forwards, the cursor to continue")
     val startCursor: String?

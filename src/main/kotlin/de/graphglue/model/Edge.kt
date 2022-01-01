@@ -3,7 +3,6 @@ package de.graphglue.model
 import com.expediagroup.graphql.generator.annotations.GraphQLIgnore
 import com.fasterxml.jackson.databind.ObjectMapper
 import de.graphglue.graphql.connection.order.Order
-import de.graphglue.graphql.execution.NodeQuery
 import de.graphglue.graphql.extensions.getDataFetcherResult
 import graphql.execution.DataFetcherResult
 import graphql.schema.DataFetchingEnvironment

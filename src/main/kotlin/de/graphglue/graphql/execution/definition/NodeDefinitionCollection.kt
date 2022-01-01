@@ -10,7 +10,6 @@ interface NodeDefinitionCollection {
 }
 
 
-
 inline fun <reified T : Node> NodeDefinitionCollection.getNodeDefinition(): NodeDefinition {
     return getNodeDefinition(T::class)
 }

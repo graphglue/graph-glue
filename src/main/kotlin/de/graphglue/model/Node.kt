@@ -37,7 +37,8 @@ abstract class Node {
     internal var id: String? = null
 
     @GraphQLIgnore
-    val rawId get() = id
+    val rawId
+        get() = id
 
     @Property("_")
     @ConvertWith(converterRef = "lazyLoadingContextConverter")
@@ -47,7 +48,8 @@ abstract class Node {
 
     @GraphQLName("id")
     @GraphQLDescription("The unique id of this node")
-    val graphQLId: ID get() = ID(id!!)
+    val graphQLId: ID
+        get() = ID(id!!)
 
     protected fun <T : Node> NodeSetProperty(value: Collection<T>? = null): PropertyDelegateProvider<Node, NodeSetProperty<T>> {
         return NodeSetPropertyProvider(value)

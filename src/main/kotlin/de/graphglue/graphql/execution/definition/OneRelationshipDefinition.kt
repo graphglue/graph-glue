@@ -7,7 +7,6 @@ import de.graphglue.neo4j.execution.NodeQueryResult
 import org.springframework.data.neo4j.core.schema.Relationship
 import kotlin.reflect.KClass
 import kotlin.reflect.KProperty1
-import kotlin.reflect.jvm.isAccessible
 import kotlin.reflect.jvm.jvmErasure
 
 class OneRelationshipDefinition(

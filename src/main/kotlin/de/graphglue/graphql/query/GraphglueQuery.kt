@@ -29,7 +29,8 @@ class GraphglueQuery(private val nodeDefinition: NodeDefinition) : Query {
         val idConditionGenerator = CypherConditionGenerator {
             it.property("id").isEqualTo(Cypher.anonParameter(id.value))
         }
-        val nodeQuery = queryParser.generateOneNodeQuery(nodeDefinition, dataFetchingEnvironment, listOf(idConditionGenerator))
+        val nodeQuery =
+            queryParser.generateOneNodeQuery(nodeDefinition, dataFetchingEnvironment, listOf(idConditionGenerator))
         val queryExecutor =
             NodeQueryExecutor(nodeQuery, lazyLoadingContext.neo4jClient, lazyLoadingContext.neo4jMappingContext)
         val queryResult = queryExecutor.execute()

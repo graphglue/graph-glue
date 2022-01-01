@@ -3,6 +3,7 @@ package de.graphglue.graphql.connection.filter.definition
 import de.graphglue.graphql.connection.filter.model.NodeSubFilter
 import de.graphglue.graphql.execution.definition.RelationshipDefinition
 import de.graphglue.model.Node
+import de.graphglue.util.CacheMap
 import graphql.schema.GraphQLInputType
 import kotlin.reflect.KClass
 import kotlin.reflect.KType
@@ -22,6 +23,6 @@ class NodeSubFilterDefinition(
 
     override fun parseEntry(value: Any?) = NodeSubFilter(this, subFilter.parseFilter(value))
 
-    override fun toGraphQLType(objectTypeCache: MutableMap<String, GraphQLInputType>) =
-        subFilter.toGraphQLType(objectTypeCache)
+    override fun toGraphQLType(inputTypeCache: CacheMap<String, GraphQLInputType>) =
+        subFilter.toGraphQLType(inputTypeCache)
 }

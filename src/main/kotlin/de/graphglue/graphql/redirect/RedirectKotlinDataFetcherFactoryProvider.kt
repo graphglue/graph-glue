@@ -13,7 +13,6 @@ import kotlin.reflect.KProperty
 import kotlin.reflect.KProperty1
 import kotlin.reflect.full.hasAnnotation
 import kotlin.reflect.full.memberFunctions
-import kotlin.reflect.jvm.isAccessible
 import kotlin.reflect.jvm.javaField
 
 class RedirectKotlinDataFetcherFactoryProvider(

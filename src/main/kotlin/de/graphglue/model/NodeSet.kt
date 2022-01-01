@@ -1,21 +1,16 @@
 package de.graphglue.model
 
 import com.expediagroup.graphql.generator.annotations.GraphQLIgnore
-import com.fasterxml.jackson.databind.ObjectMapper
-import de.graphglue.graphql.connection.order.IdOrder
 import de.graphglue.graphql.execution.NodeQuery
 import de.graphglue.graphql.execution.NodeQueryPart
 import de.graphglue.graphql.execution.QueryOptions
 import de.graphglue.graphql.execution.QueryParser
 import de.graphglue.graphql.extensions.getParentNodeDefinition
 import de.graphglue.graphql.redirect.RedirectPropertyClass
-import de.graphglue.neo4j.execution.NodeQueryExecutor
 import de.graphglue.neo4j.execution.NodeQueryResult
 import graphql.execution.DataFetcherResult
 import graphql.schema.DataFetchingEnvironment
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.data.neo4j.core.Neo4jClient
-import org.springframework.data.neo4j.core.mapping.Neo4jMappingContext
 import java.util.*
 import kotlin.reflect.KProperty1
 

@@ -1,7 +1,6 @@
 package de.graphglue.graphql.connection.filter.definition.scalars
 
 import de.graphglue.graphql.connection.filter.definition.FilterEntryDefinition
-import de.graphglue.graphql.connection.filter.model.FilterEntry
 import graphql.schema.GraphQLInputType
 import org.neo4j.cypherdsl.core.Condition
 import org.neo4j.cypherdsl.core.Expression

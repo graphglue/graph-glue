@@ -2,6 +2,7 @@ package de.graphglue.graphql.connection.filter.definition
 
 import de.graphglue.graphql.connection.filter.model.FilterEntry
 import de.graphglue.graphql.connection.filter.model.SimpleFilterEntry
+import de.graphglue.util.CacheMap
 import graphql.schema.GraphQLInputType
 import org.neo4j.cypherdsl.core.*
 
@@ -20,7 +21,7 @@ class SimpleFilterEntryDefinition<T>(
     }
 
     override fun toGraphQLType(
-        objectTypeCache: MutableMap<String, GraphQLInputType>,
+        inputTypeCache: CacheMap<String, GraphQLInputType>,
     ) = type
 
     fun generateCondition(node: Node, value: T): Condition {

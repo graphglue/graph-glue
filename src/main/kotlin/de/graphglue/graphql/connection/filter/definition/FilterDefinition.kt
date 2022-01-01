@@ -4,6 +4,7 @@ import de.graphglue.graphql.connection.filter.model.*
 import de.graphglue.graphql.extensions.getSimpleName
 import de.graphglue.graphql.generation.GraphQLInputTypeGenerator
 import de.graphglue.model.Node
+import de.graphglue.util.CacheMap
 import graphql.schema.*
 import kotlin.reflect.KClass
 
@@ -48,18 +49,18 @@ class FilterDefinition<T : Node>(private val entryType: KClass<T>, entries: List
     }
 
     override fun toGraphQLType(
-        objectTypeCache: MutableMap<String, GraphQLInputType>
+        inputTypeCache: CacheMap<String, GraphQLInputType>
     ): GraphQLInputType {
         val filterName = "${entryType.getSimpleName()}FilterInput"
         val nodeFilterName = "${entryType.getSimpleName()}NodeFilterInput"
 
-        val nodeFilter = objectTypeCache.computeIfAbsent(nodeFilterName) {
+        val nodeFilter = inputTypeCache.computeIfAbsent(nodeFilterName, GraphQLTypeReference(nodeFilterName)) {
             val builder = GraphQLInputObjectType.newInputObject()
             builder.name(nodeFilterName)
             builder.description("Filter used to filter ${entryType.getSimpleName()}")
             for (entry in entries.values) {
                 builder.field {
-                    it.name(entry.name).description(entry.description).type(entry.toGraphQLType(objectTypeCache))
+                    it.name(entry.name).description(entry.description).type(entry.toGraphQLType(inputTypeCache))
                 }
             }
             builder.build()
@@ -68,7 +69,7 @@ class FilterDefinition<T : Node>(private val entryType: KClass<T>, entries: List
         val subFilter = GraphQLTypeReference(filterName)
         val nonNullSubFilterList = GraphQLList(GraphQLNonNull(subFilter))
 
-        return objectTypeCache.computeIfAbsent(filterName) {
+        return inputTypeCache.computeIfAbsent(filterName, GraphQLTypeReference(filterName)) {
             GraphQLInputObjectType.newInputObject().name(filterName)
                 .description("Used to build propositional formula consisting of ${nodeFilterName}. Exactly one if its fields has to be provided")
                 .field {

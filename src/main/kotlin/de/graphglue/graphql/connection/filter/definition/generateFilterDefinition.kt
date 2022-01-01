@@ -4,7 +4,6 @@ import de.graphglue.graphql.connection.filter.FilterProperty
 import de.graphglue.graphql.extensions.springFindRepeatableAnnotations
 import de.graphglue.model.AdditionalFilter
 import de.graphglue.model.Node
-import org.springframework.core.annotation.AnnotatedElementUtils
 import kotlin.reflect.KClass
 import kotlin.reflect.full.hasAnnotation
 import kotlin.reflect.full.memberProperties

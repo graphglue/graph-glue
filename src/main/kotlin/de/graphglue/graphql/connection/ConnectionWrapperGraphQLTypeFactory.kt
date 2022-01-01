@@ -11,6 +11,7 @@ import de.graphglue.model.Connection
 import de.graphglue.model.Edge
 import de.graphglue.model.Node
 import de.graphglue.model.NodeSet
+import de.graphglue.util.CacheMap
 import graphql.Scalars
 import graphql.language.EnumValue
 import graphql.schema.*
@@ -22,8 +23,8 @@ import kotlin.reflect.full.memberProperties
 import kotlin.reflect.jvm.jvmErasure
 
 class ConnectionWrapperGraphQLTypeFactory(
-    private val outputTypeCache: MutableMap<String, GraphQLOutputType>,
-    private val inputTypeCache: MutableMap<String, GraphQLInputType>,
+    private val outputTypeCache: CacheMap<String, GraphQLOutputType>,
+    private val inputTypeCache: CacheMap<String, GraphQLInputType>,
     private val subFilterGenerator: SubFilterGenerator,
     private val codeRegistry: GraphQLCodeRegistry.Builder,
     private val dataFetcherFactoryProvider: KotlinDataFetcherFactoryProvider,
@@ -41,7 +42,7 @@ class ConnectionWrapperGraphQLTypeFactory(
     fun generateWrapperGraphQLType(nodeType: KClass<out Node>, nodeName: String): GraphQLOutputType {
         val name = "${nodeName}ListWrapper"
         val functionName = "getFromGraphQL"
-        return outputTypeCache.computeIfAbsent(name) {
+        return outputTypeCache.computeIfAbsent(name, GraphQLTypeReference(name)) {
             val filter = generateFilterDefinition(nodeType, subFilterGenerator)
 
             val orders = generateOrders(nodeType, mappingContext.getPersistentEntity(nodeType.java)!!)
@@ -77,7 +78,7 @@ class ConnectionWrapperGraphQLTypeFactory(
 
     private fun generateConnectionGraphQLType(returnNodeName: String): GraphQLOutputType {
         val name = "${returnNodeName}Connection"
-        return outputTypeCache.computeIfAbsent(name) {
+        return outputTypeCache.computeIfAbsent(name, GraphQLTypeReference(name)) {
             val type =
                 GraphQLObjectType.newObject().name(name).description("The connection type for ${returnNodeName}.")
                     .field {
@@ -114,7 +115,7 @@ class ConnectionWrapperGraphQLTypeFactory(
 
     private fun generateEdgeGraphQLType(returnNodeName: String): GraphQLOutputType {
         val name = "${returnNodeName}Edge"
-        return outputTypeCache.computeIfAbsent(name) {
+        return outputTypeCache.computeIfAbsent(name, GraphQLTypeReference(name)) {
             val type = GraphQLObjectType.newObject().name(name).description("An edge in a connection.").field {
                 it.name("node").description("The item at the end of the edge.")
                     .type(GraphQLNonNull(GraphQLTypeReference(returnNodeName)))
@@ -132,7 +133,7 @@ class ConnectionWrapperGraphQLTypeFactory(
 
     private fun generateOrderGraphQLType(returnNodeName: String, orders: Map<String, OrderField<*>>): GraphQLInputType {
         val name = "${returnNodeName}Order"
-        return inputTypeCache.computeIfAbsent(name) {
+        return inputTypeCache.computeIfAbsent(name, GraphQLTypeReference(name)) {
             GraphQLInputObjectType.newInputObject().name(name)
                 .description("Defines the order of a $returnNodeName list").field {
                     it.name("field").description("The field to order by, defaults to ID")
@@ -149,7 +150,7 @@ class ConnectionWrapperGraphQLTypeFactory(
         returnNodeName: String, orders: Map<String, OrderField<*>>
     ): GraphQLInputType {
         val name = "${returnNodeName}OrderField"
-        return inputTypeCache.computeIfAbsent(name) {
+        return inputTypeCache.computeIfAbsent(name, GraphQLTypeReference(name)) {
             val builder =
                 GraphQLEnumType.newEnum().name(name).description("Fields a list of $returnNodeName can be sorted by")
             for ((fieldName, fieldValue) in orders.entries) {

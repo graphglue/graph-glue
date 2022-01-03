@@ -4,12 +4,9 @@ import de.graphglue.graphql.extensions.getSimpleName
 import de.graphglue.model.Node
 import org.neo4j.cypherdsl.core.Expression
 import org.neo4j.cypherdsl.core.SymbolicName
-import org.neo4j.driver.types.MapAccessor
-import org.neo4j.driver.types.TypeSystem
 import org.springframework.data.neo4j.core.mapping.Constants
 import org.springframework.data.neo4j.core.mapping.CypherGenerator
 import org.springframework.data.neo4j.core.mapping.Neo4jPersistentEntity
-import java.util.function.BiFunction
 import kotlin.reflect.KClass
 import kotlin.reflect.KProperty1
 
@@ -21,6 +18,8 @@ class NodeDefinition(
 ) {
     val oneRelationshipDefinitions = oneRelationshipDefinitions.associateBy { it.graphQLName }
     val manyRelationshipDefinitions = manyRelationshipDefinitions.associateBy { it.graphQLName }
+    val relationshipDefinitions =
+        (oneRelationshipDefinitions + manyRelationshipDefinitions).associateBy { it.graphQLName }
     private val relationshipDefinitionsByProperty =
         (oneRelationshipDefinitions + manyRelationshipDefinitions).associateBy { it.property }
     val returnExpression: Expression

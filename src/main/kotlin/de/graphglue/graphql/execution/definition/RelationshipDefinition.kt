@@ -6,6 +6,7 @@ import de.graphglue.model.Node
 import de.graphglue.model.NodeProperty
 import de.graphglue.model.NodeRelationship
 import de.graphglue.neo4j.execution.NodeQueryResult
+import de.graphglue.neo4j.repositories.RelationshipDiff
 import org.springframework.data.neo4j.core.schema.Relationship
 import kotlin.reflect.KClass
 import kotlin.reflect.KProperty1
@@ -60,6 +61,10 @@ abstract class RelationshipDefinition(
     }
 
     internal abstract fun <T : Node> registerLocalQueryResult(node: Node, nodeQueryResult: NodeQueryResult<T>)
+
+    internal abstract fun getRelationshipDiff(node: Node, nodeIdLookup: Map<Node, String>): RelationshipDiff
+
+    internal abstract fun getRelatedNodesToSave(node: Node): Collection<Node>
 }
 
 private typealias RemotePropertySetter = (remoteNode: Node, value: Node) -> Unit

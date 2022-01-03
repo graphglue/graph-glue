@@ -8,9 +8,11 @@ import de.graphglue.graphql.execution.QueryParser
 import de.graphglue.graphql.extensions.getParentNodeDefinition
 import de.graphglue.graphql.redirect.RedirectPropertyClass
 import de.graphglue.neo4j.execution.NodeQueryResult
+import de.graphglue.neo4j.repositories.RelationshipDiff
 import graphql.execution.DataFetcherResult
 import graphql.schema.DataFetchingEnvironment
 import kotlinx.coroutines.runBlocking
+import org.neo4j.cypherdsl.core.Cypher
 import org.springframework.beans.factory.annotation.Autowired
 import java.util.*
 import kotlin.reflect.KProperty1
@@ -93,11 +95,28 @@ class NodeSet<T : Node>(
         return currentNodes!!
     }
 
+    internal fun getRelationshipDiff(nodeIdLookup: Map<Node, String>): RelationshipDiff {
+        return RelationshipDiff(
+            addedNodes.map {
+                val idParameter = Cypher.anonParameter(nodeIdLookup[it])
+                Cypher.anyNode().withProperties(mapOf("id" to idParameter))
+            },
+            removedNodes.filter { it.rawId != null }.map {
+                val idParameter = Cypher.anonParameter(it.rawId!!)
+                Cypher.anyNode().withProperties(mapOf("id" to idParameter))
+            }
+        )
+    }
+
+    internal fun getRelatedNodesToSave(): Collection<Node> {
+        return addedNodes
+    }
+
     //region list implementation
 
     override val size get() = runBlocking { getCurrentNodes().size }
 
-    override fun contains(element: T) =  runBlocking { getCurrentNodes().contains(element) }
+    override fun contains(element: T) = runBlocking { getCurrentNodes().contains(element) }
 
     override fun add(element: T): Boolean {
         return runBlocking {

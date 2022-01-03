@@ -9,9 +9,11 @@ import de.graphglue.graphql.extensions.getParentNodeDefinition
 import de.graphglue.graphql.redirect.RedirectPropertyDelegateClass
 import de.graphglue.graphql.redirect.RedirectPropertyFunction
 import de.graphglue.neo4j.execution.NodeQueryResult
+import de.graphglue.neo4j.repositories.RelationshipDiff
 import graphql.execution.DataFetcherResult
 import graphql.schema.DataFetchingEnvironment
 import kotlinx.coroutines.runBlocking
+import org.neo4j.cypherdsl.core.Cypher
 import org.springframework.beans.factory.annotation.Autowired
 import kotlin.reflect.KProperty
 import kotlin.reflect.KProperty1
@@ -107,6 +109,31 @@ class NodeProperty<T : Node?>(value: T? = null, private val parent: Node, privat
             currentNode = value
             persistedNode = value
             isLoaded = true
+        }
+    }
+
+    internal fun getRelationshipDiff(nodeIdLookup: Map<Node, String>): RelationshipDiff {
+        val current = currentNode
+        val nodesToRemove = if (current != persistedNode) {
+            listOf(Cypher.anyNode())
+        } else {
+            emptyList()
+        }
+        val nodesToAdd = if (current != persistedNode && current != null) {
+            val idParameter = Cypher.anonParameter(nodeIdLookup[current])
+            listOf(Cypher.anyNode().withProperties(mapOf("id" to idParameter)))
+        } else {
+            emptyList()
+        }
+        return RelationshipDiff(nodesToAdd, nodesToRemove)
+    }
+
+    internal fun getRelatedNodesToSave(): Collection<Node> {
+        val current = currentNode
+        return if (current != persistedNode && current != null) {
+            listOf(current)
+        } else {
+            emptyList()
         }
     }
 }

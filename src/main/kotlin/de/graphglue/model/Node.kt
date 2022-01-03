@@ -43,9 +43,9 @@ abstract class Node {
 
     @Property("_")
     @ConvertWith(converterRef = "lazyLoadingContextConverter")
-    private var lazyLoadingContextOptional: Optional<LazyLoadingContext> = Optional.empty()
+    internal var lazyLoadingContextOptional: Optional<LazyLoadingContext> = Optional.empty()
 
-    private val lazyLoadingContext: LazyLoadingContext? get() = lazyLoadingContextOptional.orElse(null)
+    internal val lazyLoadingContext: LazyLoadingContext? get() = lazyLoadingContextOptional.orElse(null)
 
     @GraphQLName("id")
     @GraphQLDescription("The unique id of this node")

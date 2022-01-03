@@ -132,12 +132,13 @@ class QueryParser(
             fetchTotalCount = selectionSet?.contains("totalCount") ?: true
         )
         val parts = HashMap<String, List<SelectedField>>()
-        for (nodesPart in selectionSet?.getFields("nodes") ?: emptyList()) {
-            parts[nodesPart.resultKey] = nodesPart.selectionSet.fields
+        val nodesParts = selectionSet?.getFields("nodes") ?: emptyList()
+        for (nodesPart in nodesParts) {
+            parts[nodesPart.resultKey] = nodesPart.selectionSet.immediateFields
         }
         for (edgesPart in selectionSet?.getFields("edges") ?: emptyList()) {
             for (nodePart in edgesPart.selectionSet.getFields("node")) {
-                parts["${edgesPart.resultKey}/${nodePart.resultKey}"] = nodePart.selectionSet.fields
+                parts["${edgesPart.resultKey}/${nodePart.resultKey}"] = nodePart.selectionSet.immediateFields
             }
         }
         return generateNodeQuery(
@@ -152,7 +153,7 @@ class QueryParser(
     ): NodeQuery {
         val subQueryOptions = QueryOptions(filters = additionalConditions, first = 1, fetchTotalCount = false)
         return generateNodeQuery(
-            nodeDefinition, mapOf(DEFAULT_PART_ID to (selectionSet?.fields ?: emptyList())), subQueryOptions
+            nodeDefinition, mapOf(DEFAULT_PART_ID to (selectionSet?.immediateFields ?: emptyList())), subQueryOptions
         )
     }
 }

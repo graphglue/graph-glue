@@ -5,44 +5,54 @@ import de.graphglue.graphql.execution.definition.NodeDefinitionCollection
 import de.graphglue.graphql.execution.definition.RelationshipDefinition
 import de.graphglue.model.Node
 import org.neo4j.cypherdsl.core.Cypher
-import org.neo4j.cypherdsl.core.Relationship
 import org.neo4j.cypherdsl.core.Statement
 import org.neo4j.cypherdsl.core.renderer.Renderer
-import org.reactivestreams.Publisher
 import org.springframework.data.neo4j.core.ReactiveNeo4jClient
 import org.springframework.data.neo4j.core.ReactiveNeo4jOperations
-import org.springframework.data.neo4j.repository.support.Neo4jEntityInformation
-import org.springframework.data.neo4j.repository.support.SimpleReactiveNeo4jRepository
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
+import java.util.*
+import kotlin.collections.ArrayDeque
+import kotlin.collections.HashSet
 
-class SimpleReactiveGraphglueRepository<T, ID>(
-    private val neo4jOperations: ReactiveNeo4jOperations,
-    entityInformation: Neo4jEntityInformation<T, ID>,
-    private val nodeDefinitionCollection: NodeDefinitionCollection,
-    private val neo4jClient: ReactiveNeo4jClient
-) : SimpleReactiveNeo4jRepository<T, ID>(neo4jOperations, entityInformation) {
-    override fun <S : T> save(entity: S): Mono<S> {
-        return if (entity is Node) {
-            saveNode(entity)
+class GraphglueNeo4jOperations(
+    private val delegate: ReactiveNeo4jOperations,
+    private val neo4jClient: ReactiveNeo4jClient,
+    private val nodeDefinitionCollection: NodeDefinitionCollection
+) : ReactiveNeo4jOperations by delegate {
+    override fun <T : Any?> save(instance: T): Mono<T> {
+        return if (instance is Node) {
+            saveNode(instance)
         } else {
-            super.save(entity)
+            delegate.save(instance)
         }
     }
 
-    private fun <S : T> saveNode(entity: Node): Mono<S> {
+    override fun <T : Any?> saveAll(instances: MutableIterable<T>): Flux<T> {
+        return Flux.fromIterable(instances).flatMap(this::save)
+    }
+
+    override fun <T : Any?, R : Any?> saveAs(instance: T, resultType: Class<R>): Mono<R> {
+        throw UnsupportedOperationException("Projections are not supported")
+    }
+
+    override fun <T : Any?, R : Any?> saveAllAs(instances: MutableIterable<T>, resultType: Class<R>): Flux<R> {
+        throw UnsupportedOperationException("Projections are not supported")
+    }
+
+    @Suppress("UNCHECKED_CAST")
+    private fun <S> saveNode(entity: Node): Mono<S> {
         val nodesToSave = getNodesToSaveRecursive(entity)
         return Flux.fromIterable(nodesToSave).flatMap { nodeToSave ->
-            neo4jOperations.save(nodeToSave).map { nodeToSave to it }
+            delegate.save(nodeToSave).map { nodeToSave to it }
         }.collectList().flatMap { saveResult ->
             val nodeIdLookup = saveResult.associate { (nodeToSave, savedNode) ->
                 nodeToSave to savedNode.rawId!!
             }
-            @Suppress("UNCHECKED_CAST") val resultNode = saveResult.toMap()[entity]!! as S
             Flux.fromIterable(nodeIdLookup.keys).flatMap { nodeToSave ->
                 val nodeDefinition = nodeDefinitionCollection.getNodeDefinition(nodeToSave::class)
                 saveAllRelationships(nodeDefinition, nodeToSave, nodeIdLookup)
-            }.then(Mono.just(resultNode))
+            }.then(findById(nodeIdLookup[entity]!!, entity::class.java) as Mono<S>)
         }
     }
 
@@ -64,16 +74,21 @@ class SimpleReactiveGraphglueRepository<T, ID>(
     private fun addRelationship(
         relationshipDefinition: RelationshipDefinition, rootNodeId: String, propertyNode: org.neo4j.cypherdsl.core.Node
     ): Mono<Void> {
-        val relationship = generateRelationship(relationshipDefinition, rootNodeId, propertyNode)
-        val statement = Cypher.match(relationship).merge(relationship).build()
+        val idParameter = Cypher.anonParameter(rootNodeId)
+        val rootNode = Cypher.anyNode().withProperties(mapOf("id" to idParameter)).named(Cypher.name("node1"))
+        val namedPropertyNode = propertyNode.named(Cypher.name("node2"))
+        val relationship = relationshipDefinition.generateRelationship(rootNode, namedPropertyNode)
+        val statement = Cypher.match(rootNode).match(namedPropertyNode).merge(relationship).build()
         return executeStatement(statement)
     }
 
     private fun deleteRelationship(
         relationshipDefinition: RelationshipDefinition, rootNodeId: String, propertyNode: org.neo4j.cypherdsl.core.Node
     ): Mono<Void> {
-        val relationship = generateRelationship(relationshipDefinition, rootNodeId, propertyNode)
-        val statement = Cypher.match(relationship).delete(relationship).build()
+        val idParameter = Cypher.anonParameter(rootNodeId)
+        val rootNode = Cypher.anyNode().withProperties(mapOf("id" to idParameter))
+        val relationship = relationshipDefinition.generateRelationship(rootNode, propertyNode).named(Cypher.name("rel"))
+        val statement = Cypher.match(relationship).delete(relationship.requiredSymbolicName).build()
         return executeStatement(statement)
     }
 
@@ -82,22 +97,16 @@ class SimpleReactiveGraphglueRepository<T, ID>(
             .then()
     }
 
-    private fun generateRelationship(
-        relationshipDefinition: RelationshipDefinition, rootNodeId: String, propertyNode: org.neo4j.cypherdsl.core.Node
-    ): Relationship {
-        val idParameter = Cypher.anonParameter(rootNodeId)
-        val rootNode = Cypher.anyNode().withProperties(mapOf("id" to idParameter))
-        return relationshipDefinition.generateRelationship(rootNode, propertyNode)
-    }
-
     private fun getNodesToSaveRecursive(node: Node): Set<Node> {
         val nodesToSave = HashSet<Node>()
-        val nodesToVisit = hashSetOf(node)
+        val nodesToVisit = ArrayDeque(listOf(node))
         while (nodesToVisit.isNotEmpty()) {
-            val nextNode = nodesToVisit.first()
-            nodesToSave.add(nextNode)
-            val nodesToAdd = getNodesToSave(nextNode).filter { !nodesToSave.contains(it) }
-            nodesToVisit.addAll(nodesToAdd)
+            val nextNode = nodesToVisit.removeFirst()
+            if (nextNode !in nodesToSave) {
+                nodesToSave.add(nextNode)
+                val nodesToAdd = getNodesToSave(nextNode).filter { !nodesToSave.contains(it) }
+                nodesToVisit.addAll(nodesToAdd)
+            }
         }
         return nodesToSave
     }
@@ -107,13 +116,5 @@ class SimpleReactiveGraphglueRepository<T, ID>(
         return nodeDefinition.relationshipDefinitions.values.flatMap {
             it.getRelatedNodesToSave(node)
         }
-    }
-
-    override fun <S : T> saveAll(entities: MutableIterable<S>): Flux<S> {
-        return Flux.fromIterable(entities).flatMap(this::save)
-    }
-
-    override fun <S : T> saveAll(entityStream: Publisher<S>): Flux<S> {
-        return Flux.from(entityStream).flatMap(this::save)
     }
 }

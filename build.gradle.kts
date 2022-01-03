@@ -19,20 +19,27 @@ dependencies {
     api("org.springframework.boot", "spring-boot-starter-data-neo4j", neo4jVersion)
 }
 
-publishing {
-    publications {
-        create<MavenPublication>("mavenJava") {
-            groupId = "de.graphglue"
-            artifactId = "graphglue"
-            version = "0.1"
-
-            from(components.getByName("java"))
-        }
-    }
-}
-
 tasks {
     jar {
         enabled = true
+    }
+
+    val jarComponent = project.components.getByName("java")
+    val sourcesJar by registering(Jar::class) {
+        archiveClassifier.set("sources")
+        from(sourceSets.main.get().allSource)
+    }
+
+    publishing {
+        publications {
+            create<MavenPublication>("mavenJava") {
+                groupId = "de.graphglue"
+                artifactId = "graphglue"
+                version = "0.1"
+
+                from(jarComponent)
+                artifact(sourcesJar.get())
+            }
+        }
     }
 }

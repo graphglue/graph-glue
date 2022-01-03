@@ -1,6 +1,8 @@
 package de.graphglue.neo4j
 
 import de.graphglue.graphql.execution.QueryParser
+import de.graphglue.graphql.execution.definition.NodeDefinitionCollection
+import de.graphglue.neo4j.repositories.GraphglueNeo4jOperations
 import org.neo4j.driver.Driver
 import org.neo4j.driver.Value
 import org.neo4j.driver.Values
@@ -9,6 +11,7 @@ import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.data.neo4j.core.ReactiveDatabaseSelectionProvider
 import org.springframework.data.neo4j.core.ReactiveNeo4jClient
+import org.springframework.data.neo4j.core.ReactiveNeo4jTemplate
 import org.springframework.data.neo4j.core.convert.Neo4jPersistentPropertyConverter
 import org.springframework.data.neo4j.core.mapping.Neo4jMappingContext
 import org.springframework.data.neo4j.core.transaction.ReactiveNeo4jTransactionManager
@@ -49,4 +52,11 @@ class GraphglueNeo4jConfiguration {
     ): ReactiveNeo4jTransactionManager? {
         return ReactiveNeo4jTransactionManager(driver, databaseNameProvider)
     }
+
+    @Bean("graphglueNeo4jOperations")
+    fun graphGlueNeo4jOperations(
+        neo4jTemplate: ReactiveNeo4jTemplate,
+        neo4jClient: ReactiveNeo4jClient,
+        nodeDefinitionCollection: NodeDefinitionCollection
+    ) = GraphglueNeo4jOperations(neo4jTemplate, neo4jClient, nodeDefinitionCollection)
 }

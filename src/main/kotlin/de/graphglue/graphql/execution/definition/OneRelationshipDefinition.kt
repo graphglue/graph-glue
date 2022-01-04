@@ -31,6 +31,7 @@ class OneRelationshipDefinition(
 
     override fun getRelatedNodesToSave(node: Node): Collection<Node> {
         val nodeProperty = property.getDelegateAccessible<NodeProperty<*>>(node)
+        nodeProperty.ensureValidSaveState()
         return nodeProperty.getRelatedNodesToSave()
     }
 }

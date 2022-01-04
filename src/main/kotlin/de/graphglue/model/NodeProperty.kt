@@ -24,6 +24,8 @@ class NodeProperty<T : Node?>(value: T? = null, private val parent: Node, privat
     private var currentNode: T? = null
     private var persistedNode: T? = null
 
+    private val supportsNull get() = property.returnType.isMarkedNullable
+
     init {
         if (value != null) {
             isLoaded = true
@@ -126,6 +128,16 @@ class NodeProperty<T : Node?>(value: T? = null, private val parent: Node, privat
             emptyList()
         }
         return RelationshipDiff(nodesToAdd, nodesToRemove)
+    }
+
+    internal fun ensureValidSaveState() {
+        if (!supportsNull) {
+            val neverSetInitialRelationship = currentNode == null && parent.rawId == null
+            val removedRequiredRelationship = currentNode == null && persistedNode != null
+            if (neverSetInitialRelationship || removedRequiredRelationship) {
+                throw IllegalStateException("Non-nullable property $property cannot be saved, as it has value null")
+            }
+        }
     }
 
     internal fun getRelatedNodesToSave(): Collection<Node> {

@@ -53,9 +53,6 @@ class NodeQueryExecutor(
         builder: StatementBuilder.OrderableOngoingReadingAndWithWithoutWhere,
         node: Node
     ): Pair<Statement, SymbolicName> {
-        val nodeDefinition = nodeQuery.definition
-        val nodeAlias = node.symbolicName.orElseThrow()
-
         // filter
         val options = nodeQuery.options
         val filteredBuilder = if (options.filters.isEmpty()) {

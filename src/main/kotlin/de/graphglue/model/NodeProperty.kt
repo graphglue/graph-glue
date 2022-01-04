@@ -50,7 +50,7 @@ class NodeProperty<T : Node?>(value: T? = null, private val parent: Node, privat
         runBlocking {
             val current = getCurrentNode()
             if (value != current) {
-                currentNode = current
+                currentNode = value
             }
         }
     }
@@ -86,7 +86,7 @@ class NodeProperty<T : Node?>(value: T? = null, private val parent: Node, privat
     private suspend fun getCurrentNodeInternal(dataFetchingEnvironment: DataFetchingEnvironment? = null): Pair<T?, NodeQuery?> {
         return if (!isLoaded) {
             val (result, nodeQuery) = parent.loadNodesOfRelationship<T>(property, dataFetchingEnvironment)
-            currentNode = result.nodes.first()
+            currentNode = result.nodes.firstOrNull()
             currentNode to nodeQuery
         } else {
             currentNode to null

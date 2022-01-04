@@ -10,7 +10,6 @@ import de.graphglue.neo4j.LazyLoadingContext
 import de.graphglue.neo4j.execution.NodeQueryExecutor
 import de.graphglue.neo4j.execution.NodeQueryResult
 import graphql.schema.DataFetchingEnvironment
-import org.springframework.cache.annotation.Cacheable
 import org.springframework.data.neo4j.core.convert.ConvertWith
 import org.springframework.data.neo4j.core.schema.GeneratedValue
 import org.springframework.data.neo4j.core.schema.Id

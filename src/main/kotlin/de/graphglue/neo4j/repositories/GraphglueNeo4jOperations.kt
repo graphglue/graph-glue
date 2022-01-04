@@ -11,9 +11,6 @@ import org.springframework.data.neo4j.core.ReactiveNeo4jClient
 import org.springframework.data.neo4j.core.ReactiveNeo4jOperations
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
-import java.util.*
-import kotlin.collections.ArrayDeque
-import kotlin.collections.HashSet
 
 class GraphglueNeo4jOperations(
     private val delegate: ReactiveNeo4jOperations,

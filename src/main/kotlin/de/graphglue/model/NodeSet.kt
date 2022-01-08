@@ -46,19 +46,18 @@ class NodeSet<T : Node>(
     ): DataFetcherResult<Connection<T>> {
         val parentNodeQueryPart = dataFetchingEnvironment.getLocalContext<NodeQueryPart>()
         val result: NodeQueryResult<T>
-        val localContext: NodeQuery?
-        if (parentNodeQueryPart != null) {
+        val localContext = if (parentNodeQueryPart != null) {
             val providedNodeQuery =
                 parentNodeQueryPart.getSubQuery(dataFetchingEnvironment.executionStepInfo.resultKey) {
                     dataFetchingEnvironment.getParentNodeDefinition(queryParser.nodeDefinitionCollection)
                 }.query
             val options = providedNodeQuery.options
             result = cache[options] ?: throw IllegalStateException("Result not found in cache")
-            localContext = providedNodeQuery
+            providedNodeQuery
         } else {
             val (loadResult, nodeQuery) = parent.loadNodesOfRelationship<T>(property, dataFetchingEnvironment)
             result = loadResult
-            localContext = nodeQuery
+            nodeQuery
         }
         val connection = Connection.fromQueryResult(result, queryParser.objectMapper)
         return DataFetcherResult.newResult<Connection<T>>()

@@ -1,7 +1,7 @@
 package de.graphglue.graphql.connection.filter.definition
 
 import de.graphglue.graphql.connection.filter.TypeFilterDefinitionEntry
-import de.graphglue.graphql.execution.definition.MutableNodeDefinitionCollection
+import de.graphglue.graphql.execution.definition.NodeDefinitionCache
 import de.graphglue.graphql.execution.definition.NodeDefinition
 import de.graphglue.graphql.extensions.getPropertyName
 import kotlin.reflect.KProperty1
@@ -11,7 +11,7 @@ import kotlin.reflect.jvm.jvmErasure
 class SubFilterGenerator(
     private val filters: List<TypeFilterDefinitionEntry>,
     val filterDefinitionCache: FilterDefinitionCache,
-    val nodeDefinitionCollection: MutableNodeDefinitionCollection,
+    val nodeDefinitionCollection: NodeDefinitionCache,
     val additionalFilterBeans: Map<String, FilterEntryDefinition>
 ) {
     /**

@@ -20,7 +20,7 @@ abstract class RelationshipDefinition(
     val nodeKClass: KClass<out Node>,
     val type: String,
     val direction: Relationship.Direction,
-    private val parentKClass: KClass<*>
+    val parentKClass: KClass<*>
 ) {
     val graphQLName get() = property.getPropertyName(parentKClass)
     private val remotePropertySetter: RemotePropertySetter? = generateRemotePropertySetter()

@@ -7,6 +7,7 @@ import de.graphglue.model.Node
 import org.neo4j.cypherdsl.core.Cypher
 import org.neo4j.cypherdsl.core.Statement
 import org.neo4j.cypherdsl.core.renderer.Renderer
+import org.springframework.beans.factory.BeanFactory
 import org.springframework.data.neo4j.core.ReactiveNeo4jClient
 import org.springframework.data.neo4j.core.ReactiveNeo4jOperations
 import reactor.core.publisher.Flux
@@ -15,8 +16,10 @@ import reactor.core.publisher.Mono
 class GraphglueNeo4jOperations(
     private val delegate: ReactiveNeo4jOperations,
     private val neo4jClient: ReactiveNeo4jClient,
-    private val nodeDefinitionCollection: NodeDefinitionCollection
+    private val beanFactory: BeanFactory
 ) : ReactiveNeo4jOperations by delegate {
+    private val nodeDefinitionCollection by lazy { beanFactory.getBean(NodeDefinitionCollection::class.java) }
+
     override fun <T : Any?> save(instance: T): Mono<T> {
         return if (instance is Node) {
             saveNode(instance)

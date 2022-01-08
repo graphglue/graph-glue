@@ -6,6 +6,7 @@ import de.graphglue.neo4j.repositories.GraphglueNeo4jOperations
 import org.neo4j.driver.Driver
 import org.neo4j.driver.Value
 import org.neo4j.driver.Values
+import org.springframework.beans.factory.BeanFactory
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
@@ -57,6 +58,6 @@ class GraphglueNeo4jConfiguration {
     fun graphGlueNeo4jOperations(
         neo4jTemplate: ReactiveNeo4jTemplate,
         neo4jClient: ReactiveNeo4jClient,
-        nodeDefinitionCollection: NodeDefinitionCollection
-    ) = GraphglueNeo4jOperations(neo4jTemplate, neo4jClient, nodeDefinitionCollection)
+        beanFactory: BeanFactory
+    ) = GraphglueNeo4jOperations(neo4jTemplate, neo4jClient, beanFactory)
 }

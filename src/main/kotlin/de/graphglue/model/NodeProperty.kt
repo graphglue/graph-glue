@@ -1,10 +1,7 @@
 package de.graphglue.model
 
 import com.expediagroup.graphql.generator.annotations.GraphQLIgnore
-import de.graphglue.graphql.execution.DEFAULT_PART_ID
-import de.graphglue.graphql.execution.NodeQuery
-import de.graphglue.graphql.execution.NodeQueryPart
-import de.graphglue.graphql.execution.QueryParser
+import de.graphglue.graphql.execution.*
 import de.graphglue.graphql.extensions.getParentNodeDefinition
 import de.graphglue.graphql.redirect.RedirectPropertyDelegateClass
 import de.graphglue.graphql.redirect.RedirectPropertyFunction
@@ -15,6 +12,7 @@ import graphql.schema.DataFetchingEnvironment
 import kotlinx.coroutines.runBlocking
 import org.neo4j.cypherdsl.core.Cypher
 import org.springframework.beans.factory.annotation.Autowired
+import java.util.*
 import kotlin.reflect.KProperty
 import kotlin.reflect.KProperty1
 
@@ -23,6 +21,7 @@ class NodeProperty<T : Node?>(value: T? = null, private val parent: Node, privat
     private var isLoaded = false
     private var currentNode: T? = null
     private var persistedNode: T? = null
+    private val cache = IdentityHashMap<QueryOptions, NodeQueryResult<T>>()
 
     private val supportsNull get() = property.returnType.isMarkedNullable
 
@@ -37,7 +36,7 @@ class NodeProperty<T : Node?>(value: T? = null, private val parent: Node, privat
     operator fun getValue(thisRef: Node, property: KProperty<*>): T {
         return runBlocking {
             val value = getCurrentNode()
-            if (property.returnType.isMarkedNullable) {
+            if (supportsNull) {
                 value as T
             } else {
                 if (value == null) {
@@ -64,39 +63,40 @@ class NodeProperty<T : Node?>(value: T? = null, private val parent: Node, privat
         dataFetchingEnvironment: DataFetchingEnvironment
     ): DataFetcherResult<T> {
         val parentNodeQueryPart = dataFetchingEnvironment.getLocalContext<NodeQueryPart>()
-        var localContext = if (parentNodeQueryPart != null) {
-            parentNodeQueryPart.getSubQuery(dataFetchingEnvironment.executionStepInfo.resultKey) {
-                dataFetchingEnvironment.getParentNodeDefinition(queryParser.nodeDefinitionCollection)
-            }.query.parts[DEFAULT_PART_ID]
+        val result: NodeQueryResult<T>
+        val localContext = if (parentNodeQueryPart != null) {
+            val providedNodeQuery =
+                parentNodeQueryPart.getSubQuery(dataFetchingEnvironment.executionStepInfo.resultKey) {
+                    dataFetchingEnvironment.getParentNodeDefinition(queryParser.nodeDefinitionCollection)
+                }.query
+            val options = providedNodeQuery.options
+            result = cache[options] ?: throw IllegalStateException("Result not found in cache")
+            providedNodeQuery
         } else {
-            null
+            val (loadResult, nodeQuery) = parent.loadNodesOfRelationship<T>(property, dataFetchingEnvironment)
+            result = loadResult
+            nodeQuery
         }
-        val (result, nodeQuery) = getCurrentNodeInternal(dataFetchingEnvironment)
-        if (localContext == null && nodeQuery != null) {
-            localContext = nodeQuery.parts[DEFAULT_PART_ID]
-        }
+
         return DataFetcherResult.newResult<T>()
-            .data(result)
-            .localContext(localContext)
+            .data(result.nodes.firstOrNull())
+            .localContext(localContext?.parts?.get(DEFAULT_PART_ID))
             .build()
     }
 
     private suspend fun getCurrentNode(): T? {
-        return getCurrentNodeInternal().first
-    }
-
-    private suspend fun getCurrentNodeInternal(dataFetchingEnvironment: DataFetchingEnvironment? = null): Pair<T?, NodeQuery?> {
         return if (!isLoaded) {
-            val (result, nodeQuery) = parent.loadNodesOfRelationship<T>(property, dataFetchingEnvironment)
+            val (result, _) = parent.loadNodesOfRelationship<T>(property)
             currentNode = result.nodes.firstOrNull()
-            currentNode to nodeQuery
+            currentNode
         } else {
-            currentNode to null
+            currentNode
         }
     }
 
     internal fun registerQueryResult(nodeQueryResult: NodeQueryResult<T>) {
-        if (!isLoaded) {
+        cache[nodeQueryResult.options] = nodeQueryResult
+        if (!isLoaded && nodeQueryResult.options.isAllQuery) {
             if (nodeQueryResult.nodes.size > 1) {
                 throw IllegalArgumentException("Too many  nodes for one side of relation")
             }

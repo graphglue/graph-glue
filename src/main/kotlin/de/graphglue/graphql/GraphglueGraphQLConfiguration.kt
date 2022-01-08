@@ -23,8 +23,8 @@ import de.graphglue.graphql.connection.filter.definition.SubFilterGenerator
 import de.graphglue.graphql.connection.order.OrderDirection
 import de.graphglue.graphql.execution.QueryParser
 import de.graphglue.graphql.execution.definition.NodeDefinition
+import de.graphglue.graphql.execution.definition.NodeDefinitionCache
 import de.graphglue.graphql.execution.definition.NodeDefinitionCollection
-import de.graphglue.graphql.execution.definition.NodeDefinitionCollectionImpl
 import de.graphglue.graphql.extensions.getSimpleName
 import de.graphglue.graphql.extensions.springFindAnnotation
 import de.graphglue.graphql.extensions.toTopLevelObjects
@@ -67,9 +67,7 @@ class GraphglueGraphQLConfiguration(private val neo4jMappingContext: Neo4jMappin
     private val outputTypeCache = CacheMap<String, GraphQLOutputType>()
     private val filterDefinitions: FilterDefinitionCache = CacheMap()
     private val nodeDefinitions = CacheMap<KClass<out Node>, NodeDefinition>()
-    private val supertypeNodeDefinitionLookup = HashMap<Set<String>, NodeDefinition>()
-    private val nodeDefinitionCollection =
-        NodeDefinitionCollectionImpl(nodeDefinitions, supertypeNodeDefinitionLookup, neo4jMappingContext)
+    private val nodeDefinitionCache = NodeDefinitionCache(nodeDefinitions, neo4jMappingContext)
     private val topLevelQueries = HashMap<NodeDefinition, TopLevelQueryDefinition>()
 
     /**
@@ -109,7 +107,7 @@ class GraphglueGraphQLConfiguration(private val neo4jMappingContext: Neo4jMappin
             override fun willGenerateGraphQLType(type: KType): GraphQLType? {
                 if (type.isSubtypeOf(Node::class.createType())) {
                     @Suppress("UNCHECKED_CAST") val nodeClass = type.jvmErasure as KClass<out Node>
-                    val nodeDefinition = nodeDefinitionCollection.getOrCreate(nodeClass)
+                    val nodeDefinition = nodeDefinitionCache.getOrCreate(nodeClass)
                     val domainNodeAnnotation = nodeClass.springFindAnnotation<DomainNode>()
                     val topLevelFunctionName = domainNodeAnnotation?.topLevelQueryName
                     if (topLevelFunctionName?.isNotBlank() == true) {
@@ -127,14 +125,6 @@ class GraphglueGraphQLConfiguration(private val neo4jMappingContext: Neo4jMappin
             }
 
             override fun willBuildSchema(builder: GraphQLSchema.Builder): GraphQLSchema.Builder {
-                for ((nodeClass, nodeDefinition) in nodeDefinitions) {
-                    val subTypes = nodeDefinitions.keys.filter { it.isSubclassOf(nodeClass) }
-                        .filter { !it.isAbstract }
-                        .map { it.getSimpleName() }
-                        .toSet()
-                    supertypeNodeDefinitionLookup[subTypes] = nodeDefinition
-                }
-
                 return super.willBuildSchema(completeSchema(builder))
             }
 
@@ -180,14 +170,7 @@ class GraphglueGraphQLConfiguration(private val neo4jMappingContext: Neo4jMappin
      */
     @Bean
     @ConditionalOnMissingBean
-    fun filterDefinitions() = FilterDefinitionCollection(filterDefinitions)
-
-    /**
-     * Gets a list of all node definitions
-     */
-    @Bean
-    @ConditionalOnMissingBean
-    fun nodeDefinitions() = nodeDefinitionCollection
+    fun filterDefinitionCollection() = FilterDefinitionCollection(filterDefinitions)
 
     @Bean
     @ConditionalOnMissingBean
@@ -217,14 +200,14 @@ class GraphglueGraphQLConfiguration(private val neo4jMappingContext: Neo4jMappin
 
     @Bean
     @ConditionalOnMissingBean
-    fun schema(
+    fun schemaAndNodeDefinitionCollection(
         queries: Optional<List<Query>>,
         mutations: Optional<List<Mutation>>,
         subscriptions: Optional<List<Subscription>>,
         schemaConfig: SchemaGeneratorConfig
-    ): GraphQLSchema {
+    ): SchemaAndNodeDefinitionCollection {
         val generator = SchemaGenerator(schemaConfig)
-        val nodeDefinition = nodeDefinitionCollection.getOrCreate(Node::class)
+        val nodeDefinition = nodeDefinitionCache.getOrCreate(Node::class)
         val schema = generator.use {
             it.generateSchema(
                 queries.orElse(emptyList()).toTopLevelObjects() + TopLevelObject(GraphglueQuery(nodeDefinition)),
@@ -234,10 +217,20 @@ class GraphglueGraphQLConfiguration(private val neo4jMappingContext: Neo4jMappin
                 additionalInputTypes = setOf(OrderDirection::class.createType()),
             )
         }
-
         logger.info("\n${schema.print()}")
-        return schema
+
+        val nodeDefinitionCollection = NodeDefinitionCollection(nodeDefinitions)
+
+        return SchemaAndNodeDefinitionCollection(schema, nodeDefinitionCollection)
     }
+
+    @Bean
+    fun schema(schemaAndNodeDefinitionCollection: SchemaAndNodeDefinitionCollection): GraphQLSchema =
+        schemaAndNodeDefinitionCollection.schema
+
+    @Bean
+    fun nodeDefinitionCollection(schemaAndNodeDefinitionCollection: SchemaAndNodeDefinitionCollection): NodeDefinitionCollection =
+        schemaAndNodeDefinitionCollection.nodeDefinitionCollection
 
     @Bean
     @ConditionalOnMissingBean
@@ -256,7 +249,7 @@ class GraphglueGraphQLConfiguration(private val neo4jMappingContext: Neo4jMappin
         return ConnectionWrapperGraphQLTypeFactory(
             outputTypeCache,
             inputTypeCache,
-            SubFilterGenerator(filters, filterDefinitions, nodeDefinitionCollection, additionalFilterBeans),
+            SubFilterGenerator(filters, filterDefinitions, nodeDefinitionCache, additionalFilterBeans),
             tempCodeRegistry,
             dataFetcherFactoryProvider,
             neo4jMappingContext
@@ -265,3 +258,8 @@ class GraphglueGraphQLConfiguration(private val neo4jMappingContext: Neo4jMappin
 }
 
 private data class TopLevelQueryDefinition(val name: String, val graphQLWrapperType: GraphQLOutputType)
+
+data class SchemaAndNodeDefinitionCollection(
+    val schema: GraphQLSchema,
+    val nodeDefinitionCollection: NodeDefinitionCollection
+)

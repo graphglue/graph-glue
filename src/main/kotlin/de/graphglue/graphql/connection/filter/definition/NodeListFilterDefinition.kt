@@ -1,7 +1,7 @@
 package de.graphglue.graphql.connection.filter.definition
 
 import de.graphglue.graphql.connection.filter.model.*
-import de.graphglue.graphql.execution.definition.RelationshipDefinition
+import de.graphglue.neo4j.execution.definition.RelationshipDefinition
 import de.graphglue.graphql.extensions.getSimpleName
 import kotlin.reflect.KType
 import kotlin.reflect.jvm.jvmErasure

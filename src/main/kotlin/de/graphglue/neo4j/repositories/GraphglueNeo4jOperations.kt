@@ -1,8 +1,8 @@
 package de.graphglue.neo4j.repositories
 
-import de.graphglue.graphql.execution.definition.NodeDefinition
-import de.graphglue.graphql.execution.definition.NodeDefinitionCollection
-import de.graphglue.graphql.execution.definition.RelationshipDefinition
+import de.graphglue.neo4j.execution.definition.NodeDefinition
+import de.graphglue.neo4j.execution.definition.NodeDefinitionCollection
+import de.graphglue.neo4j.execution.definition.RelationshipDefinition
 import de.graphglue.model.Node
 import org.neo4j.cypherdsl.core.Cypher
 import org.neo4j.cypherdsl.core.Statement

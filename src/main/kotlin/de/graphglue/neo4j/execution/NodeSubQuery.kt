@@ -1,7 +1,7 @@
-package de.graphglue.graphql.execution
+package de.graphglue.neo4j.execution
 
-import de.graphglue.graphql.execution.definition.NodeDefinition
-import de.graphglue.graphql.execution.definition.RelationshipDefinition
+import de.graphglue.neo4j.execution.definition.NodeDefinition
+import de.graphglue.neo4j.execution.definition.RelationshipDefinition
 
 data class NodeSubQuery(
     val query: NodeQuery,

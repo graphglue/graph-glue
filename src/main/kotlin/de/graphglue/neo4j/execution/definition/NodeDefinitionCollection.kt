@@ -1,16 +1,14 @@
-package de.graphglue.graphql.execution.definition
+package de.graphglue.neo4j.execution.definition
 
 import de.graphglue.graphql.extensions.getSimpleName
 import de.graphglue.model.Node
-import de.graphglue.util.CacheMap
-import org.springframework.data.neo4j.core.mapping.Neo4jMappingContext
 import kotlin.reflect.KClass
 import kotlin.reflect.full.isSubclassOf
 
 class NodeDefinitionCollection(
     backingCollection: Map<KClass<out Node>, NodeDefinition>,
 
-) {
+    ) {
     private val backingCollection = HashMap(backingCollection)
     private val definitionsByGraphQLName = backingCollection.mapKeys { it.key.getSimpleName() }
     private val supertypeNodeDefinitionLookup: Map<Set<String>, NodeDefinition>

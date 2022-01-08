@@ -1,9 +1,9 @@
 package de.graphglue.graphql.extensions
 
 import com.expediagroup.graphql.generator.extensions.deepName
-import de.graphglue.graphql.execution.NodeQuery
-import de.graphglue.graphql.execution.definition.NodeDefinition
-import de.graphglue.graphql.execution.definition.NodeDefinitionCollection
+import de.graphglue.neo4j.execution.NodeQuery
+import de.graphglue.neo4j.execution.definition.NodeDefinition
+import de.graphglue.neo4j.execution.definition.NodeDefinitionCollection
 import graphql.execution.DataFetcherResult
 import graphql.schema.DataFetchingEnvironment
 

@@ -4,8 +4,8 @@ import com.expediagroup.graphql.generator.annotations.GraphQLDescription
 import com.expediagroup.graphql.generator.annotations.GraphQLIgnore
 import com.expediagroup.graphql.generator.annotations.GraphQLName
 import com.expediagroup.graphql.generator.scalars.ID
-import de.graphglue.graphql.execution.NodeQuery
-import de.graphglue.graphql.execution.QueryOptions
+import de.graphglue.neo4j.execution.NodeQuery
+import de.graphglue.neo4j.execution.QueryOptions
 import de.graphglue.neo4j.LazyLoadingContext
 import de.graphglue.neo4j.execution.NodeQueryExecutor
 import de.graphglue.neo4j.execution.NodeQueryResult

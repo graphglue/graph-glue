@@ -21,10 +21,10 @@ import de.graphglue.graphql.connection.filter.definition.FilterDefinitionCollect
 import de.graphglue.graphql.connection.filter.definition.FilterEntryDefinition
 import de.graphglue.graphql.connection.filter.definition.SubFilterGenerator
 import de.graphglue.graphql.connection.order.OrderDirection
-import de.graphglue.graphql.execution.QueryParser
-import de.graphglue.graphql.execution.definition.NodeDefinition
-import de.graphglue.graphql.execution.definition.NodeDefinitionCache
-import de.graphglue.graphql.execution.definition.NodeDefinitionCollection
+import de.graphglue.neo4j.execution.QueryParser
+import de.graphglue.neo4j.execution.definition.NodeDefinition
+import de.graphglue.neo4j.execution.definition.NodeDefinitionCache
+import de.graphglue.neo4j.execution.definition.NodeDefinitionCollection
 import de.graphglue.graphql.extensions.getSimpleName
 import de.graphglue.graphql.extensions.springFindAnnotation
 import de.graphglue.graphql.extensions.toTopLevelObjects
@@ -49,7 +49,6 @@ import java.util.*
 import kotlin.reflect.KClass
 import kotlin.reflect.KType
 import kotlin.reflect.full.createType
-import kotlin.reflect.full.isSubclassOf
 import kotlin.reflect.full.isSubtypeOf
 import kotlin.reflect.full.memberFunctions
 import kotlin.reflect.jvm.jvmErasure

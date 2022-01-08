@@ -1,6 +1,6 @@
 package de.graphglue.model
 
-import de.graphglue.graphql.execution.NodeQuery
+import de.graphglue.neo4j.execution.NodeQuery
 import org.springframework.stereotype.Service
 
 @Service

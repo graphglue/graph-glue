@@ -1,6 +1,6 @@
-package de.graphglue.graphql.execution
+package de.graphglue.neo4j.execution
 
-import de.graphglue.graphql.execution.definition.NodeDefinition
+import de.graphglue.neo4j.execution.definition.NodeDefinition
 
 class NodeQueryPart(val subQueries: List<NodeSubQuery>) {
     private val subQueryLookup = subQueries.groupBy { it.resultKey }

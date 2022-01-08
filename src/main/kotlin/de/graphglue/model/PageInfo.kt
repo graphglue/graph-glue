@@ -3,7 +3,7 @@ package de.graphglue.model
 import com.expediagroup.graphql.generator.annotations.GraphQLDescription
 import com.fasterxml.jackson.databind.ObjectMapper
 import de.graphglue.graphql.connection.order.Order
-import de.graphglue.graphql.execution.QueryOptions
+import de.graphglue.neo4j.execution.QueryOptions
 
 @GraphQLDescription("Information about the current page in a connection")
 class PageInfo(

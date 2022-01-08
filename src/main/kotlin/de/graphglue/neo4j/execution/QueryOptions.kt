@@ -1,4 +1,4 @@
-package de.graphglue.graphql.execution
+package de.graphglue.neo4j.execution
 
 import de.graphglue.graphql.connection.order.IdOrder
 import de.graphglue.graphql.connection.order.Order

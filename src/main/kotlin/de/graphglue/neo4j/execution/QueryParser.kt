@@ -1,13 +1,13 @@
-package de.graphglue.graphql.execution
+package de.graphglue.neo4j.execution
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import de.graphglue.graphql.connection.filter.definition.FilterDefinitionCollection
 import de.graphglue.graphql.connection.order.IdOrder
 import de.graphglue.graphql.connection.order.parseOrder
-import de.graphglue.graphql.execution.definition.*
 import de.graphglue.model.NODE_RELATIONSHIP_DIRECTIVE
 import de.graphglue.model.Node
 import de.graphglue.neo4j.CypherConditionGenerator
+import de.graphglue.neo4j.execution.definition.*
 import graphql.schema.DataFetchingEnvironment
 import graphql.schema.DataFetchingFieldSelectionSet
 import graphql.schema.SelectedField

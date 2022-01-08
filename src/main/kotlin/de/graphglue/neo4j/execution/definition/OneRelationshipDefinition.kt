@@ -1,4 +1,4 @@
-package de.graphglue.graphql.execution.definition
+package de.graphglue.neo4j.execution.definition
 
 import de.graphglue.graphql.extensions.getDelegateAccessible
 import de.graphglue.model.Direction

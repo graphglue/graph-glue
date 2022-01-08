@@ -2,9 +2,7 @@ package de.graphglue.neo4j.execution
 
 import de.graphglue.graphql.connection.order.Order
 import de.graphglue.graphql.connection.order.OrderDirection
-import de.graphglue.graphql.execution.NodeQuery
-import de.graphglue.graphql.execution.NodeSubQuery
-import de.graphglue.graphql.execution.definition.NodeDefinition
+import de.graphglue.neo4j.execution.definition.NodeDefinition
 import kotlinx.coroutines.reactor.awaitSingle
 import org.neo4j.cypherdsl.core.*
 import org.neo4j.cypherdsl.core.renderer.Configuration

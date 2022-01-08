@@ -1,10 +1,9 @@
 package de.graphglue.model
 
 import com.expediagroup.graphql.generator.annotations.GraphQLIgnore
-import de.graphglue.graphql.execution.NodeQuery
-import de.graphglue.graphql.execution.NodeQueryPart
-import de.graphglue.graphql.execution.QueryOptions
-import de.graphglue.graphql.execution.QueryParser
+import de.graphglue.neo4j.execution.NodeQueryPart
+import de.graphglue.neo4j.execution.QueryOptions
+import de.graphglue.neo4j.execution.QueryParser
 import de.graphglue.graphql.extensions.getParentNodeDefinition
 import de.graphglue.graphql.redirect.RedirectPropertyClass
 import de.graphglue.neo4j.execution.NodeQueryResult

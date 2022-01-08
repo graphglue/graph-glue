@@ -2,8 +2,8 @@ package de.graphglue.graphql.query
 
 import com.expediagroup.graphql.generator.annotations.GraphQLIgnore
 import com.fasterxml.jackson.databind.ObjectMapper
-import de.graphglue.graphql.execution.QueryParser
-import de.graphglue.graphql.execution.definition.NodeDefinition
+import de.graphglue.neo4j.execution.QueryParser
+import de.graphglue.neo4j.execution.definition.NodeDefinition
 import de.graphglue.model.Connection
 import de.graphglue.model.Node
 import de.graphglue.neo4j.LazyLoadingContext

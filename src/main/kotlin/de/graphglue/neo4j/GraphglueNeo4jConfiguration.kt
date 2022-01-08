@@ -1,7 +1,6 @@
 package de.graphglue.neo4j
 
-import de.graphglue.graphql.execution.QueryParser
-import de.graphglue.graphql.execution.definition.NodeDefinitionCollection
+import de.graphglue.neo4j.execution.QueryParser
 import de.graphglue.neo4j.repositories.GraphglueNeo4jOperations
 import org.neo4j.driver.Driver
 import org.neo4j.driver.Value

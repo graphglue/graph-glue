@@ -1,3 +1,3 @@
-package de.graphglue.graphql.execution.definition
+package de.graphglue.neo4j.execution.definition
 
 class NodeSchemaException(message: String) : RuntimeException(message)

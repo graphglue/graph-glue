@@ -1,11 +1,10 @@
 package de.graphglue.model
 
 import com.expediagroup.graphql.generator.annotations.GraphQLIgnore
-import de.graphglue.graphql.execution.*
 import de.graphglue.graphql.extensions.getParentNodeDefinition
 import de.graphglue.graphql.redirect.RedirectPropertyDelegateClass
 import de.graphglue.graphql.redirect.RedirectPropertyFunction
-import de.graphglue.neo4j.execution.NodeQueryResult
+import de.graphglue.neo4j.execution.*
 import de.graphglue.neo4j.repositories.RelationshipDiff
 import graphql.execution.DataFetcherResult
 import graphql.schema.DataFetchingEnvironment

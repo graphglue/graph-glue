@@ -4,9 +4,9 @@ import com.expediagroup.graphql.generator.annotations.GraphQLDescription
 import com.expediagroup.graphql.generator.annotations.GraphQLIgnore
 import com.expediagroup.graphql.generator.scalars.ID
 import com.expediagroup.graphql.server.operations.Query
-import de.graphglue.graphql.execution.DEFAULT_PART_ID
-import de.graphglue.graphql.execution.QueryParser
-import de.graphglue.graphql.execution.definition.NodeDefinition
+import de.graphglue.neo4j.execution.DEFAULT_PART_ID
+import de.graphglue.neo4j.execution.QueryParser
+import de.graphglue.neo4j.execution.definition.NodeDefinition
 import de.graphglue.model.Node
 import de.graphglue.neo4j.CypherConditionGenerator
 import de.graphglue.neo4j.LazyLoadingContext

@@ -2,12 +2,12 @@ package de.graphglue.graphql.execution.definition
 
 import de.graphglue.graphql.extensions.getDelegateAccessible
 import de.graphglue.graphql.extensions.getPropertyName
+import de.graphglue.model.Direction
 import de.graphglue.model.Node
 import de.graphglue.model.NodeProperty
 import de.graphglue.model.NodeRelationship
 import de.graphglue.neo4j.execution.NodeQueryResult
 import de.graphglue.neo4j.repositories.RelationshipDiff
-import org.springframework.data.neo4j.core.schema.Relationship
 import kotlin.reflect.KClass
 import kotlin.reflect.KProperty1
 import kotlin.reflect.full.createType
@@ -19,7 +19,7 @@ abstract class RelationshipDefinition(
     val property: KProperty1<*, *>,
     val nodeKClass: KClass<out Node>,
     val type: String,
-    val direction: Relationship.Direction,
+    val direction: Direction,
     val parentKClass: KClass<*>
 ) {
     val graphQLName get() = property.getPropertyName(parentKClass)
@@ -45,8 +45,8 @@ abstract class RelationshipDefinition(
         propertyNode: org.neo4j.cypherdsl.core.Node
     ): org.neo4j.cypherdsl.core.Relationship {
         return when (direction) {
-            Relationship.Direction.OUTGOING -> rootNode.relationshipTo(propertyNode, type)
-            Relationship.Direction.INCOMING -> rootNode.relationshipFrom(propertyNode, type)
+            Direction.OUTGOING -> rootNode.relationshipTo(propertyNode, type)
+            Direction.INCOMING -> rootNode.relationshipFrom(propertyNode, type)
         }
     }
 

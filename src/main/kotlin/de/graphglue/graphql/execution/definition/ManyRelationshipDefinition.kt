@@ -1,10 +1,10 @@
 package de.graphglue.graphql.execution.definition
 
+import de.graphglue.model.Direction
 import de.graphglue.model.Node
 import de.graphglue.model.NodeSet
 import de.graphglue.neo4j.execution.NodeQueryResult
 import de.graphglue.neo4j.repositories.RelationshipDiff
-import org.springframework.data.neo4j.core.schema.Relationship
 import kotlin.reflect.KClass
 import kotlin.reflect.KProperty1
 import kotlin.reflect.jvm.jvmErasure
@@ -12,7 +12,7 @@ import kotlin.reflect.jvm.jvmErasure
 class ManyRelationshipDefinition(
     property: KProperty1<*, *>,
     type: String,
-    direction: Relationship.Direction,
+    direction: Direction,
     parentKClass: KClass<*>
 ) : RelationshipDefinition(
     property,

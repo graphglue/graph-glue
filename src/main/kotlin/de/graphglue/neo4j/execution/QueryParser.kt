@@ -61,7 +61,7 @@ class QueryParser(
         authorizationContext: AuthorizationContext?
     ): NodeQuery {
         val authorizationCondition = getAuthorizationCondition(authorizationContext, definition)
-        return generateManyNodeQuery(
+        return generateOneNodeQuery(
             definition,
             dataFetchingEnvironment,
             additionalConditions,
@@ -157,7 +157,7 @@ class QueryParser(
         authorizationContext: AuthorizationContext?,
         onlyOnTypes: List<NodeDefinition>
     ) = when (relationshipDefinition) {
-        is OneRelationshipDefinition -> {
+        is ManyRelationshipDefinition -> {
             NodeSubQuery(
                 generateManyNodeQuery(
                     nodeDefinitionCollection.getNodeDefinition(relationshipDefinition.nodeKClass),
@@ -168,7 +168,7 @@ class QueryParser(
                 ), onlyOnTypes, relationshipDefinition, field.resultKey
             )
         }
-        is ManyRelationshipDefinition -> {
+        is OneRelationshipDefinition -> {
             NodeSubQuery(
                 generateOneNodeQuery(
                     nodeDefinitionCollection.getNodeDefinition(relationshipDefinition.nodeKClass),

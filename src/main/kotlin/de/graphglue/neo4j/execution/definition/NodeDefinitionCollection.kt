@@ -241,9 +241,13 @@ class NodeDefinitionCollection(
         authorization: MergedAuthorization,
         authorizationContext: AuthorizationContext
     ): Condition {
-        return authorization.disallow.fold(Conditions.noCondition()) { condition, rule ->
-            condition.or(ruleToCondition(rule, node, authorizationContext))
-        }.not()
+        return if (authorization.disallow.isNotEmpty()) {
+            authorization.disallow.fold(Conditions.noCondition()) { condition, rule ->
+                condition.or(ruleToCondition(rule, node, authorizationContext))
+            }.not()
+        } else {
+            Conditions.noCondition()
+        }
     }
 
     private fun ruleToCondition(

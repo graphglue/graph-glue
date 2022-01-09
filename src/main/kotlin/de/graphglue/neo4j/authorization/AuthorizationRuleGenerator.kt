@@ -4,8 +4,6 @@ import de.graphglue.model.Rule
 import org.neo4j.cypherdsl.core.Condition
 import org.neo4j.cypherdsl.core.Node
 
-interface AuthorizationRuleGenerator {
-    val ruleName: String
-
+fun interface AuthorizationRuleGenerator {
     fun generateCondition(node: Node, rule: Rule, authorizationContext: AuthorizationContext): Condition
 }

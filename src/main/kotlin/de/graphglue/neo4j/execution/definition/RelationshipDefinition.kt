@@ -8,6 +8,9 @@ import de.graphglue.model.NodeProperty
 import de.graphglue.model.NodeRelationship
 import de.graphglue.neo4j.execution.NodeQueryResult
 import de.graphglue.neo4j.repositories.RelationshipDiff
+import org.neo4j.cypherdsl.core.ExposesPatternLengthAccessors
+import org.neo4j.cypherdsl.core.ExposesRelationships
+import org.neo4j.cypherdsl.core.RelationshipPattern
 import kotlin.reflect.KClass
 import kotlin.reflect.KProperty1
 import kotlin.reflect.full.createType
@@ -20,7 +23,7 @@ abstract class RelationshipDefinition(
     val nodeKClass: KClass<out Node>,
     val type: String,
     val direction: Direction,
-    val parentKClass: KClass<*>
+    val parentKClass: KClass<out Node>
 ) {
     val graphQLName get() = property.getPropertyName(parentKClass)
     private val remotePropertySetter: RemotePropertySetter? = generateRemotePropertySetter()
@@ -40,10 +43,10 @@ abstract class RelationshipDefinition(
         return null
     }
 
-    fun generateRelationship(
-        rootNode: org.neo4j.cypherdsl.core.Node,
+    fun <T> generateRelationship(
+        rootNode: ExposesRelationships<T>,
         propertyNode: org.neo4j.cypherdsl.core.Node
-    ): org.neo4j.cypherdsl.core.Relationship {
+    ): T where T: RelationshipPattern, T: ExposesPatternLengthAccessors<*> {
         return when (direction) {
             Direction.OUTGOING -> rootNode.relationshipTo(propertyNode, type)
             Direction.INCOMING -> rootNode.relationshipFrom(propertyNode, type)

@@ -7,5 +7,5 @@ import org.neo4j.cypherdsl.core.Node
 interface AuthorizationRuleGenerator {
     val ruleName: String
 
-    fun generateCondition(node: Node, authorizationName: String, rule: Rule): Condition
+    fun generateCondition(node: Node, rule: Rule, authorizationContext: AuthorizationContext): Condition
 }

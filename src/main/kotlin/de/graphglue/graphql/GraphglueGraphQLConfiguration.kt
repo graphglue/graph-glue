@@ -39,6 +39,7 @@ import de.graphglue.model.PageInfo
 import de.graphglue.util.CacheMap
 import graphql.schema.*
 import org.slf4j.LoggerFactory
+import org.springframework.beans.factory.BeanFactory
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
 import org.springframework.context.ApplicationContext
 import org.springframework.context.annotation.Bean
@@ -203,7 +204,8 @@ class GraphglueGraphQLConfiguration(private val neo4jMappingContext: Neo4jMappin
         queries: Optional<List<Query>>,
         mutations: Optional<List<Mutation>>,
         subscriptions: Optional<List<Subscription>>,
-        schemaConfig: SchemaGeneratorConfig
+        schemaConfig: SchemaGeneratorConfig,
+        beanFactory: BeanFactory
     ): SchemaAndNodeDefinitionCollection {
         val generator = SchemaGenerator(schemaConfig)
         val nodeDefinition = nodeDefinitionCache.getOrCreate(Node::class)
@@ -218,7 +220,7 @@ class GraphglueGraphQLConfiguration(private val neo4jMappingContext: Neo4jMappin
         }
         logger.info("\n${schema.print()}")
 
-        val nodeDefinitionCollection = NodeDefinitionCollection(nodeDefinitions)
+        val nodeDefinitionCollection = NodeDefinitionCollection(nodeDefinitions, beanFactory)
 
         return SchemaAndNodeDefinitionCollection(schema, nodeDefinitionCollection)
     }

@@ -40,7 +40,7 @@ class NodeQueryExecutor(
             }.one().awaitSingle()
     }
 
-    private fun createRootNodeQuery(): Pair<Statement, SymbolicName> {
+    private fun createRootNodeQuery(): StatementWithSymbolicName {
         val rootNode = createNodeDefinitionNode(nodeQuery.definition).named(generateUniqueName().value)
         val builder = Cypher.match(rootNode).with(rootNode)
         return createNodeQuery(nodeQuery, builder, rootNode)
@@ -50,7 +50,7 @@ class NodeQueryExecutor(
         nodeQuery: NodeQuery,
         builder: StatementBuilder.OrderableOngoingReadingAndWithWithoutWhere,
         node: Node
-    ): Pair<Statement, SymbolicName> {
+    ): StatementWithSymbolicName {
         // filter
         val options = nodeQuery.options
         val filteredBuilder = if (options.filters.isEmpty()) {
@@ -93,14 +93,14 @@ class NodeQueryExecutor(
                 )
             ).`as`(returnAlias)
         )
-        return returnBuilder.build() to returnAlias
+        return StatementWithSymbolicName(returnBuilder.build(), returnAlias)
     }
 
     private fun generateMainSubQuery(
         nodeQuery: NodeQuery,
         node: Node,
         allNodesCollected: SymbolicName
-    ): Pair<Statement, SymbolicName> {
+    ): StatementWithSymbolicName {
         val options = nodeQuery.options
         val nodeAlias = node.requiredSymbolicName
         val nodeDefinition = nodeQuery.definition
@@ -182,7 +182,7 @@ class NodeQueryExecutor(
         val statement =
             resultBuilder.orderBy(generateOrderFields(options.orderBy, nodeAlias))
                 .with(listOf(Functions.collect(resultNode).`as`(collectedNodes))).returning(collectedNodes).build()
-        return statement to collectedNodes
+        return StatementWithSymbolicName(statement, collectedNodes)
     }
 
     private fun generateCursorFilterExpression(
@@ -217,10 +217,10 @@ class NodeQueryExecutor(
         return order.field.parts.map { Cypher.sort(node.property(it.neo4jPropertyName), direction) }
     }
 
-    private fun createSubQuery(subQuery: NodeSubQuery, node: Node): Pair<Statement, SymbolicName> {
+    private fun createSubQuery(subQuery: NodeSubQuery, node: Node): StatementWithSymbolicName {
         var labelCondition = Conditions.noCondition()
         for (nodeDefinition in subQuery.onlyOnTypes) {
-            labelCondition = labelCondition.or(node.hasLabels(getNodeDefinitionPrimaryLabel(nodeDefinition)))
+            labelCondition = labelCondition.or(node.hasLabels(nodeDefinition.primaryLabel))
         }
         val nodeQuery = subQuery.query
         val relatedNode = createNodeDefinitionNode(nodeQuery.definition).named(generateUniqueName().value)
@@ -235,13 +235,8 @@ class NodeQueryExecutor(
 
     private fun generateUniqueName() = Cypher.name("a_${nameCounter++}")
 
-    private fun getNodeDefinitionPrimaryLabel(nodeDefinition: NodeDefinition): String {
-        val persistentEntity = nodeDefinition.persistentEntity
-        return persistentEntity.primaryLabel
-    }
-
     private fun createNodeDefinitionNode(nodeDefinition: NodeDefinition): Node {
-        return Cypher.node(getNodeDefinitionPrimaryLabel(nodeDefinition))
+        return Cypher.node(nodeDefinition.primaryLabel)
     }
 
     private fun parseQueryResult(
@@ -282,3 +277,5 @@ class NodeQueryExecutor(
         return node
     }
 }
+
+private data class StatementWithSymbolicName(val statement: Statement, val symbolicName: SymbolicName)

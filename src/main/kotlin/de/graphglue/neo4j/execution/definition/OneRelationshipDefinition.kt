@@ -11,7 +11,7 @@ import kotlin.reflect.KProperty1
 import kotlin.reflect.jvm.jvmErasure
 
 class OneRelationshipDefinition(
-    property: KProperty1<*, *>, type: String, direction: Direction, parentKClass: KClass<*>
+    property: KProperty1<*, *>, type: String, direction: Direction, parentKClass: KClass<out Node>
 ) : RelationshipDefinition(
     property,
     @Suppress("UNCHECKED_CAST") (property.returnType.jvmErasure as KClass<out Node>),

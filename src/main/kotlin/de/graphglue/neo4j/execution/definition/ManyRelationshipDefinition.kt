@@ -13,7 +13,7 @@ class ManyRelationshipDefinition(
     property: KProperty1<*, *>,
     type: String,
     direction: Direction,
-    parentKClass: KClass<*>
+    parentKClass: KClass<out Node>
 ) : RelationshipDefinition(
     property,
     @Suppress("UNCHECKED_CAST") (property.returnType.arguments.first().type!!.jvmErasure as KClass<out Node>),

@@ -7,6 +7,7 @@ import de.graphglue.graphql.connection.order.parseOrder
 import de.graphglue.model.NODE_RELATIONSHIP_DIRECTIVE
 import de.graphglue.model.Node
 import de.graphglue.neo4j.CypherConditionGenerator
+import de.graphglue.neo4j.authorization.AuthorizationContext
 import de.graphglue.neo4j.execution.definition.*
 import graphql.schema.DataFetchingEnvironment
 import graphql.schema.DataFetchingFieldSelectionSet
@@ -27,25 +28,27 @@ class QueryParser(
         definition: NodeDefinition,
         dataFetchingEnvironment: DataFetchingEnvironment?,
         relationshipDefinition: RelationshipDefinition,
-        parentNode: Node
+        parentNode: Node,
+        authorizationContext: AuthorizationContext?
     ): NodeQuery {
         val idParameter = Cypher.anonParameter(parentNode.rawId)
         val rootCypherNode = Cypher.anyNode().withProperties(mapOf("id" to idParameter))
-        val relationshipCondition = CypherConditionGenerator { node ->
+        val additionalConditions = listOf(CypherConditionGenerator { node ->
             Predicates.any(rootCypherNode.requiredSymbolicName).`in`(
-                Cypher.listBasedOn(
-                    relationshipDefinition.generateRelationship(
-                        rootCypherNode, node
-                    )
-                ).returning(rootCypherNode)
+                Cypher.listBasedOn(relationshipDefinition.generateRelationship(rootCypherNode, node))
+                    .returning(rootCypherNode)
             ).where(Conditions.isTrue())
-        }
+        })
+        val authorizationCondition = getAuthorizationConditionWithRelationshipDefinition(
+            authorizationContext, relationshipDefinition
+        )
+
         return when (relationshipDefinition) {
             is OneRelationshipDefinition -> generateOneNodeQuery(
-                definition, dataFetchingEnvironment, listOf(relationshipCondition)
+                definition, dataFetchingEnvironment, additionalConditions, authorizationContext, authorizationCondition
             )
             is ManyRelationshipDefinition -> generateManyNodeQuery(
-                definition, dataFetchingEnvironment, listOf(relationshipCondition)
+                definition, dataFetchingEnvironment, additionalConditions, authorizationContext, authorizationCondition
             )
             else -> throw IllegalStateException("Unknown relationship type")
         }
@@ -54,67 +57,156 @@ class QueryParser(
     fun generateOneNodeQuery(
         definition: NodeDefinition,
         dataFetchingEnvironment: DataFetchingEnvironment?,
-        additionalConditions: List<CypherConditionGenerator>
+        additionalConditions: List<CypherConditionGenerator>,
+        authorizationContext: AuthorizationContext?
     ): NodeQuery {
-        return generateOneNodeQuery(definition, dataFetchingEnvironment?.selectionSet, additionalConditions)
+        val authorizationCondition = getAuthorizationCondition(authorizationContext, definition)
+        return generateManyNodeQuery(
+            definition,
+            dataFetchingEnvironment,
+            additionalConditions,
+            authorizationContext,
+            authorizationCondition
+        )
     }
 
     fun generateManyNodeQuery(
         definition: NodeDefinition,
         dataFetchingEnvironment: DataFetchingEnvironment?,
-        additionalConditions: List<CypherConditionGenerator>
+        additionalConditions: List<CypherConditionGenerator>,
+        authorizationContext: AuthorizationContext?
+    ): NodeQuery {
+        val authorizationCondition = getAuthorizationCondition(authorizationContext, definition)
+        return generateManyNodeQuery(
+            definition,
+            dataFetchingEnvironment,
+            additionalConditions,
+            authorizationContext,
+            authorizationCondition
+        )
+    }
+
+    private fun generateOneNodeQuery(
+        definition: NodeDefinition,
+        dataFetchingEnvironment: DataFetchingEnvironment?,
+        additionalConditions: List<CypherConditionGenerator>,
+        authorizationContext: AuthorizationContext?,
+        authorizationCondition: CypherConditionGenerator?
+    ): NodeQuery {
+        return generateOneNodeQuery(
+            definition,
+            dataFetchingEnvironment?.selectionSet,
+            additionalConditions + listOfNotNull(authorizationCondition),
+            authorizationContext
+        )
+    }
+
+    private fun generateManyNodeQuery(
+        definition: NodeDefinition,
+        dataFetchingEnvironment: DataFetchingEnvironment?,
+        additionalConditions: List<CypherConditionGenerator>,
+        authorizationContext: AuthorizationContext?,
+        authorizationCondition: CypherConditionGenerator?
     ): NodeQuery {
         return generateManyNodeQuery(
             definition,
             dataFetchingEnvironment?.selectionSet,
             dataFetchingEnvironment?.arguments ?: emptyMap(),
-            additionalConditions
+            additionalConditions + listOfNotNull(authorizationCondition),
+            authorizationContext
         )
     }
 
     private fun generateNodeQuery(
-        definition: NodeDefinition, fieldParts: Map<String, List<SelectedField>>, queryOptions: QueryOptions
+        definition: NodeDefinition,
+        fieldParts: Map<String, List<SelectedField>>,
+        queryOptions: QueryOptions,
+        authorizationContext: AuthorizationContext?
     ): NodeQuery {
-        val oneSubQueries = ArrayList<NodeSubQuery>()
-        val manySubQueries = ArrayList<NodeSubQuery>()
+        val subQueries = ArrayList<NodeSubQuery>()
         val parts = fieldParts.mapValues {
             val (_, fields) = it
             for (field in fields) {
                 if (field.fieldDefinitions.first().hasDirective(NODE_RELATIONSHIP_DIRECTIVE)) {
                     val onlyOnTypes = nodeDefinitionCollection.getNodeDefinitionsFromGraphQLNames(field.objectTypeNames)
                     val firstPossibleType = onlyOnTypes.first()
-                    val manyRelationshipDefinition = firstPossibleType.manyRelationshipDefinitions[field.name]
-                    if (manyRelationshipDefinition != null) {
-                        val subQuery = NodeSubQuery(
-                            generateManyNodeQuery(
-                                nodeDefinitionCollection.getNodeDefinition(manyRelationshipDefinition.nodeKClass),
-                                field.selectionSet,
-                                field.arguments
-                            ), onlyOnTypes, manyRelationshipDefinition, field.resultKey
-                        )
-                        manySubQueries.add(subQuery)
-                    } else {
-                        val oneRelationshipDefinition = firstPossibleType.oneRelationshipDefinitions[field.name]!!
-                        val subQuery = NodeSubQuery(
-                            generateOneNodeQuery(
-                                nodeDefinitionCollection.getNodeDefinition(oneRelationshipDefinition.nodeKClass),
-                                field.selectionSet
-                            ), onlyOnTypes, oneRelationshipDefinition, field.resultKey
-                        )
-                        oneSubQueries.add(subQuery)
-                    }
+                    val relationshipDefinition = firstPossibleType.relationshipDefinitions[field.name]!!
+                    val authorizationCondition = getAuthorizationConditionWithRelationshipDefinition(
+                        authorizationContext,
+                        relationshipDefinition
+                    )
+                    val subQuery = generateSubQuery(
+                        relationshipDefinition,
+                        field,
+                        authorizationCondition,
+                        authorizationContext,
+                        onlyOnTypes
+                    )
+                    subQueries.add(subQuery)
                 }
             }
-            NodeQueryPart(oneSubQueries + manySubQueries)
+            NodeQueryPart(subQueries)
         }
         return NodeQuery(definition, queryOptions, parts)
+    }
+
+    private fun generateSubQuery(
+        relationshipDefinition: RelationshipDefinition,
+        field: SelectedField,
+        authorizationCondition: CypherConditionGenerator?,
+        authorizationContext: AuthorizationContext?,
+        onlyOnTypes: List<NodeDefinition>
+    ) = when (relationshipDefinition) {
+        is OneRelationshipDefinition -> {
+            NodeSubQuery(
+                generateManyNodeQuery(
+                    nodeDefinitionCollection.getNodeDefinition(relationshipDefinition.nodeKClass),
+                    field.selectionSet,
+                    field.arguments,
+                    listOfNotNull(authorizationCondition),
+                    authorizationContext
+                ), onlyOnTypes, relationshipDefinition, field.resultKey
+            )
+        }
+        is ManyRelationshipDefinition -> {
+            NodeSubQuery(
+                generateOneNodeQuery(
+                    nodeDefinitionCollection.getNodeDefinition(relationshipDefinition.nodeKClass),
+                    field.selectionSet,
+                    listOfNotNull(authorizationCondition),
+                    authorizationContext
+                ), onlyOnTypes, relationshipDefinition, field.resultKey
+            )
+        }
+        else -> throw IllegalStateException("unknown RelationshipDefinition type")
+    }
+
+    private fun getAuthorizationConditionWithRelationshipDefinition(
+        authorizationContext: AuthorizationContext?,
+        relationshipDefinition: RelationshipDefinition
+    ): CypherConditionGenerator? {
+        return authorizationContext?.let {
+            nodeDefinitionCollection.generateRelationshipAuthorizationCondition(
+                relationshipDefinition, it
+            )
+        }
+    }
+
+    private fun getAuthorizationCondition(
+        authorizationContext: AuthorizationContext?,
+        nodeDefinition: NodeDefinition
+    ): CypherConditionGenerator? {
+        return authorizationContext?.let {
+            nodeDefinitionCollection.generateAuthorizationCondition(nodeDefinition, authorizationContext)
+        }
     }
 
     private fun generateManyNodeQuery(
         nodeDefinition: NodeDefinition,
         selectionSet: DataFetchingFieldSelectionSet?,
         arguments: Map<String, Any>,
-        additionalConditions: List<CypherConditionGenerator> = emptyList()
+        additionalConditions: List<CypherConditionGenerator>,
+        authorizationContext: AuthorizationContext?
     ): NodeQuery {
         val filterDefinition = filterDefinitionCollection.getFilterDefinition<Node>(nodeDefinition.nodeType)
         val filters = ArrayList(additionalConditions)
@@ -142,18 +234,22 @@ class QueryParser(
             }
         }
         return generateNodeQuery(
-            nodeDefinition, parts, subQueryOptions
+            nodeDefinition, parts, subQueryOptions, authorizationContext
         )
     }
 
     private fun generateOneNodeQuery(
         nodeDefinition: NodeDefinition,
         selectionSet: DataFetchingFieldSelectionSet?,
-        additionalConditions: List<CypherConditionGenerator> = emptyList()
+        additionalConditions: List<CypherConditionGenerator>,
+        authorizationContext: AuthorizationContext?
     ): NodeQuery {
         val subQueryOptions = QueryOptions(filters = additionalConditions, first = 1, fetchTotalCount = false)
         return generateNodeQuery(
-            nodeDefinition, mapOf(DEFAULT_PART_ID to (selectionSet?.immediateFields ?: emptyList())), subQueryOptions
+            nodeDefinition,
+            mapOf(DEFAULT_PART_ID to (selectionSet?.immediateFields ?: emptyList())),
+            subQueryOptions,
+            authorizationContext
         )
     }
 }

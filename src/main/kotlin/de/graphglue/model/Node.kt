@@ -4,11 +4,12 @@ import com.expediagroup.graphql.generator.annotations.GraphQLDescription
 import com.expediagroup.graphql.generator.annotations.GraphQLIgnore
 import com.expediagroup.graphql.generator.annotations.GraphQLName
 import com.expediagroup.graphql.generator.scalars.ID
-import de.graphglue.neo4j.execution.NodeQuery
-import de.graphglue.neo4j.execution.QueryOptions
+import de.graphglue.graphql.extensions.authorizationContext
 import de.graphglue.neo4j.LazyLoadingContext
+import de.graphglue.neo4j.execution.NodeQuery
 import de.graphglue.neo4j.execution.NodeQueryExecutor
 import de.graphglue.neo4j.execution.NodeQueryResult
+import de.graphglue.neo4j.execution.QueryOptions
 import graphql.schema.DataFetchingEnvironment
 import org.springframework.data.neo4j.core.convert.ConvertWith
 import org.springframework.data.neo4j.core.schema.GeneratedValue
@@ -44,7 +45,7 @@ abstract class Node {
     @ConvertWith(converterRef = "lazyLoadingContextConverter")
     internal var lazyLoadingContextOptional: Optional<LazyLoadingContext> = Optional.empty()
 
-    internal val lazyLoadingContext: LazyLoadingContext? get() = lazyLoadingContextOptional.orElse(null)
+    private val lazyLoadingContext: LazyLoadingContext? get() = lazyLoadingContextOptional.orElse(null)
 
     @GraphQLName("id")
     @GraphQLDescription("The unique id of this node")
@@ -70,16 +71,19 @@ abstract class Node {
             val queryParser = lazyLoadingContext.queryParser
             val parentNodeDefinition = queryParser.nodeDefinitionCollection.getNodeDefinition(this::class)
             val relationshipDefinition = parentNodeDefinition.getRelationshipDefinitionOfProperty(property)
-            val nodeDefinition =
-                queryParser.nodeDefinitionCollection.getNodeDefinition(relationshipDefinition.nodeKClass)
+            val nodeDefinition = queryParser.nodeDefinitionCollection.getNodeDefinition(
+                relationshipDefinition.nodeKClass
+            )
             val query = queryParser.generateRelationshipNodeQuery(
                 nodeDefinition,
                 dataFetchingEnvironment,
                 relationshipDefinition,
-                this
+                this,
+                dataFetchingEnvironment?.authorizationContext
             )
-            val queryExecutor =
-                NodeQueryExecutor(query, lazyLoadingContext.neo4jClient, lazyLoadingContext.neo4jMappingContext)
+            val queryExecutor = NodeQueryExecutor(
+                query, lazyLoadingContext.neo4jClient, lazyLoadingContext.neo4jMappingContext
+            )
             @Suppress("UNCHECKED_CAST")
             return queryExecutor.execute() as NodeQueryResult<T> to query
         }

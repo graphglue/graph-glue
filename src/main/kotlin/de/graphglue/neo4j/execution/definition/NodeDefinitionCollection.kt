@@ -19,11 +19,11 @@ class NodeDefinitionCollection(
     private val backingCollection = HashMap(backingCollection)
     private val definitionsByGraphQLName = backingCollection.mapKeys { it.key.getSimpleName() }
     private val supertypeNodeDefinitionLookup: Map<Set<String>, NodeDefinition>
-    private val subtypeNodeDefinitionLookup: Map<NodeDefinition, Set<NodeDefinition>>
+    private val authorizationSubtypeNodeDefinitionLookup: Map<NodeDefinition, Set<NodeDefinition>>
 
     init {
         this.supertypeNodeDefinitionLookup = generateSupertypeNodeDefinitionLookup()
-        this.subtypeNodeDefinitionLookup = generateSubtypeNodeDefinitionLookup()
+        this.authorizationSubtypeNodeDefinitionLookup = generateAuthorizationSubtypeNodeDefinitionLookup()
     }
 
     private fun generateSupertypeNodeDefinitionLookup(): Map<Set<String>, NodeDefinition> {
@@ -38,10 +38,12 @@ class NodeDefinitionCollection(
         return supertypeNodeDefinitionLookup
     }
 
-    private fun generateSubtypeNodeDefinitionLookup(): Map<NodeDefinition, Set<NodeDefinition>> {
+    private fun generateAuthorizationSubtypeNodeDefinitionLookup(): Map<NodeDefinition, Set<NodeDefinition>> {
         return backingCollection.values.associateWith { nodeDefinition ->
             backingCollection.values.filter {
-                it != nodeDefinition && it.nodeType.isSubclassOf(nodeDefinition.nodeType)
+                it != nodeDefinition
+                        && it.nodeType.isSubclassOf(nodeDefinition.nodeType)
+                        && it.authorizations != nodeDefinition.authorizations
             }.toSet()
         }
     }
@@ -105,7 +107,9 @@ class NodeDefinitionCollection(
         } else if (relationshipDefinition is OneRelationshipDefinition) {
             val parentNodeDefinition = getNodeDefinition(relationshipDefinition.parentKClass)
             val parentAuthorization = parentNodeDefinition.authorizations[authorizationName]!!
-            relationshipDefinition in parentAuthorization.allowFromRelated
+            parentAuthorization.allow.isEmpty()
+                    && parentAuthorization.allowFromRelated.size == 1
+                    && relationshipDefinition in parentAuthorization.allowFromRelated
         } else {
             false
         }
@@ -125,7 +129,7 @@ class NodeDefinitionCollection(
         authorizationContext: AuthorizationContext,
         isAllowed: Boolean
     ): AuthorizationConditionPart {
-        val subNodeDefinitions = subtypeNodeDefinitionLookup[nodeDefinition]!!
+        val subNodeDefinitions = authorizationSubtypeNodeDefinitionLookup[nodeDefinition]!!
         return if (subNodeDefinitions.isNotEmpty()) {
             val subNodesCondition = subNodeDefinitions.fold(Conditions.noCondition()) { condition, subNodeDefinition ->
                 val typeCondition = node.hasLabels(subNodeDefinition.primaryLabel)

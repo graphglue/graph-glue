@@ -12,6 +12,7 @@ import org.springframework.context.annotation.Import
 
 /**
  * Manages Spring boot autoconfiguration for all Graphglue related nodes
+ * Imports the GraphglueGraphQLConfiguration and GraphglueNeo4jConfiguration
  */
 @Configuration
 @Import(GraphglueGraphQLConfiguration::class, GraphglueNeo4jConfiguration::class)

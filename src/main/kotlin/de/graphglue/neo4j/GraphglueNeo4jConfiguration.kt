@@ -1,6 +1,7 @@
 package de.graphglue.neo4j
 
 import de.graphglue.neo4j.execution.QueryParser
+import de.graphglue.neo4j.execution.definition.NodeDefinitionCollection
 import de.graphglue.neo4j.repositories.GraphglueNeo4jOperations
 import org.neo4j.driver.Driver
 import org.neo4j.driver.Value
@@ -9,6 +10,7 @@ import org.springframework.beans.factory.BeanFactory
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
+import org.springframework.data.neo4j.core.Neo4jOperations
 import org.springframework.data.neo4j.core.ReactiveDatabaseSelectionProvider
 import org.springframework.data.neo4j.core.ReactiveNeo4jClient
 import org.springframework.data.neo4j.core.ReactiveNeo4jTemplate
@@ -18,9 +20,18 @@ import org.springframework.data.neo4j.core.transaction.ReactiveNeo4jTransactionM
 import java.util.*
 
 
+/***
+ * Autoconfiguration associated with Neo4j part of library
+ */
 @Configuration
 class GraphglueNeo4jConfiguration {
 
+    /**
+     * Generates the converter which is used to inject the [LazyLoadingContext] into nodes
+     *
+     * @param lazyLoadingContext the context used for lazy loading
+     * @return the converter
+     */
     @Bean("lazyLoadingContextConverter")
     fun lazyLoadingContextConverter(lazyLoadingContext: LazyLoadingContext): Neo4jPersistentPropertyConverter<Optional<LazyLoadingContext>> {
         return object : Neo4jPersistentPropertyConverter<Optional<LazyLoadingContext>> {
@@ -35,6 +46,14 @@ class GraphglueNeo4jConfiguration {
         }
     }
 
+    /**
+     * Creates a new [LazyLoadingContext]
+     *
+     * @param neo4jClient client used to perform Cypher queries
+     * @param neo4jMappingContext context used to get mapping functions
+     * @param queryParser used to generate the Cypher query
+     * @return the generated [LazyLoadingContext]
+     */
     @Bean
     fun lazyLoadingContext(
         neo4jClient: ReactiveNeo4jClient,
@@ -44,15 +63,29 @@ class GraphglueNeo4jConfiguration {
         return LazyLoadingContext(neo4jClient, neo4jMappingContext, queryParser)
     }
 
+    /**
+     * Creates a [ReactiveNeo4jTransactionManager] to provide transaction functionality
+     *
+     * @param driver the driver for the Neo4j database
+     * @param databaseNameProvider provides the name of the database
+     */
     @Bean
     @ConditionalOnMissingBean
     fun reactiveTransactionManager(
         driver: Driver,
         databaseNameProvider: ReactiveDatabaseSelectionProvider
-    ): ReactiveNeo4jTransactionManager? {
+    ): ReactiveNeo4jTransactionManager {
         return ReactiveNeo4jTransactionManager(driver, databaseNameProvider)
     }
 
+    /***
+     * Bean to provide [Neo4jOperations] which support save over lazy loaded relations
+     *
+     * @param neo4jTemplate template which provides base operation functionality
+     * @param neo4jClient client used to execute queries
+     * @param beanFactory used to get the [NodeDefinitionCollection]
+     * @return the created [GraphglueNeo4jOperations] which supports save of lazy loaded relations
+     */
     @Bean("graphglueNeo4jOperations")
     fun graphGlueNeo4jOperations(
         neo4jTemplate: ReactiveNeo4jTemplate,

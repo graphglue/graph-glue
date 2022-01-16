@@ -1,6 +1,7 @@
 package de.graphglue.neo4j.execution
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import de.graphglue.graphql.connection.filter.definition.FilterDefinition
 import de.graphglue.graphql.connection.filter.definition.FilterDefinitionCollection
 import de.graphglue.graphql.connection.order.IdOrder
 import de.graphglue.graphql.connection.order.parseOrder
@@ -16,14 +17,36 @@ import org.neo4j.cypherdsl.core.Conditions
 import org.neo4j.cypherdsl.core.Cypher
 import org.neo4j.cypherdsl.core.Predicates
 
+/**
+ * the id of the default part
+ */
 const val DEFAULT_PART_ID = "default"
 
+/**
+ * Parser to get [NodeQuery]s
+ * Can be used to create queries which load a subtree of nodes in one query
+ *
+ * @property nodeDefinitionCollection used to get the [NodeDefinition] for a specific [Node]
+ * @property filterDefinitionCollection used to get the [FilterDefinition] for a specific [Node]
+ * @property objectMapper used to parse cursors
+ */
 class QueryParser(
     val nodeDefinitionCollection: NodeDefinitionCollection,
     val filterDefinitionCollection: FilterDefinitionCollection,
     val objectMapper: ObjectMapper
 ) {
 
+    /**
+     * Generates a [NodeQuery] for a specific relationship
+     * Can use the `dataFetchingEnvironment` to fetch a subtree of node
+     *
+     * @param definition the [NodeDefinition] of the related nodes to load
+     * @param dataFetchingEnvironment can optionally be provided to fetch a subtree of nodes
+     * @param relationshipDefinition defines the relationship to load related nodes of
+     * @param parentNode root [Node] of the relationship to load related nodes of
+     * @param authorizationContext optional context to add authorization filter conditions
+     * @return the generated [NodeQuery] to load related nodes of `rootNode`
+     */
     fun generateRelationshipNodeQuery(
         definition: NodeDefinition,
         dataFetchingEnvironment: DataFetchingEnvironment?,
@@ -54,6 +77,16 @@ class QueryParser(
         }
     }
 
+    /**
+     * Generates a [NodeQuery] which loads a single [Node]
+     * Can use the `dataFetchingEnvironment` to fetch a subtree of node
+     *
+     * @param definition [NodeDefinition] of the node to load
+     * @param dataFetchingEnvironment can optionally be provided to fetch a subtree of nodes
+     * @param additionalConditions list of conditions which are applied to filter the returned node
+     * @param authorizationContext optional context to add authorization filter conditions
+     * @return the generated [NodeQuery] to load the node
+     */
     fun generateOneNodeQuery(
         definition: NodeDefinition,
         dataFetchingEnvironment: DataFetchingEnvironment?,
@@ -70,6 +103,16 @@ class QueryParser(
         )
     }
 
+    /**
+     * Generates a [NodeQuery] which loads multiple [Node]s
+     * Can use the `dataFetchingEnvironment` to fetch a subtree of node
+     *
+     * @param definition [NodeDefinition] of the nodes to load
+     * @param dataFetchingEnvironment can optionally be provided to fetch a subtree of nodes
+     * @param additionalConditions list of conditions which are applied to filter the returned node
+     * @param authorizationContext optional context to add authorization filter conditions
+     * @return the generated [NodeQuery] to load the node
+     */
     fun generateManyNodeQuery(
         definition: NodeDefinition,
         dataFetchingEnvironment: DataFetchingEnvironment?,
@@ -86,6 +129,17 @@ class QueryParser(
         )
     }
 
+    /**
+     * Generates a [NodeQuery] which loads a single [Node]
+     * Can use the `dataFetchingEnvironment` to fetch a subtree of node
+     *
+     * @param definition [NodeDefinition] of the node to load
+     * @param dataFetchingEnvironment can optionally be provided to fetch a subtree of nodes
+     * @param additionalConditions list of conditions which are applied to filter the returned node
+     * @param authorizationContext optional context to add authorization filter conditions
+     * @param authorizationCondition optional authorization condition generated for the current query
+     * @return the generated [NodeQuery] to load the node
+     */
     private fun generateOneNodeQuery(
         definition: NodeDefinition,
         dataFetchingEnvironment: DataFetchingEnvironment?,
@@ -101,6 +155,17 @@ class QueryParser(
         )
     }
 
+    /**
+     * Generates a [NodeQuery] which loads multiple [Node]s
+     * Can use the `dataFetchingEnvironment` to fetch a subtree of node
+     *
+     * @param definition [NodeDefinition] of the nodes to load
+     * @param dataFetchingEnvironment can optionally be provided to fetch a subtree of nodes
+     * @param additionalConditions list of conditions which are applied to filter the returned node
+     * @param authorizationContext optional context to add authorization filter conditions
+     * @param authorizationCondition optional authorization condition generated for the current query
+     * @return the generated [NodeQuery] to load the node
+     */
     private fun generateManyNodeQuery(
         definition: NodeDefinition,
         dataFetchingEnvironment: DataFetchingEnvironment?,
@@ -117,6 +182,15 @@ class QueryParser(
         )
     }
 
+    /**
+     * Generates a NodeQuery for a [NodeDefinition]
+     * Creates subqueries for the provided `fieldParts`
+     *
+     * @param definition definition for the [Node] to load
+     * @param fieldParts parts which are used to create subqueries
+     * @param queryOptions options for this [NodeQuery]
+     * @param authorizationContext authorization context for subqueries
+     */
     private fun generateNodeQuery(
         definition: NodeDefinition,
         fieldParts: Map<String, List<SelectedField>>,
@@ -150,6 +224,16 @@ class QueryParser(
         return NodeQuery(definition, queryOptions, parts)
     }
 
+    /**
+     * Generates a SubQuery based on a [RelationshipDefinition]
+     *
+     * @param relationshipDefinition defines the relationship to load
+     * @param field defines which nodes to load from the relationship
+     * @param authorizationCondition optional additional condition for authorization
+     * @param authorizationContext optional authorization context for subqueries
+     * @param onlyOnTypes types for which the subquery is active
+     * @return the generated [NodeSubQuery]
+     */
     private fun generateSubQuery(
         relationshipDefinition: RelationshipDefinition,
         field: SelectedField,
@@ -181,6 +265,13 @@ class QueryParser(
         else -> throw IllegalStateException("unknown RelationshipDefinition type")
     }
 
+    /**
+     * Gets the authorization condition for the related nodes of a [RelationshipDefinition]
+     *
+     * @param authorizationContext optional context used to get authorization name and parameters
+     * @param relationshipDefinition defines the relationship
+     * @return a condition generator which can be used as filter condition or null if `authorizationContext == null`
+     */
     private fun getAuthorizationConditionWithRelationshipDefinition(
         authorizationContext: AuthorizationContext?,
         relationshipDefinition: RelationshipDefinition
@@ -192,6 +283,13 @@ class QueryParser(
         }
     }
 
+    /**
+     * Gets the authorization condition for a [NodeDefinition] and an [AuthorizationContext]
+     *
+     * @param authorizationContext optional context used to get authorization name and parameters
+     * @param nodeDefinition represents the [Node]s to get the authorization condition for
+     * @return a condition generator which can be used as filter condition or null if `authorizationContext == null`
+     */
     private fun getAuthorizationCondition(
         authorizationContext: AuthorizationContext?,
         nodeDefinition: NodeDefinition
@@ -201,6 +299,18 @@ class QueryParser(
         }
     }
 
+    /**
+     * Generates a [NodeQuery] which loads multiple [Node]s
+     * Can use the `dataFetchingEnvironment` to fetch a subtree of node
+     *
+     * @param nodeDefinition definition of the nodes to load
+     * @param selectionSet optional, used to generate subqueries
+     * @param arguments used to get pagination arguments
+     * @param additionalConditions list of conditions which are applied to filter the returned node
+     * @param authorizationContext optional context to add authorization filter conditions,
+     *                             including authorization condition
+     * @return the generated [NodeQuery] to load the node
+     */
     private fun generateManyNodeQuery(
         nodeDefinition: NodeDefinition,
         selectionSet: DataFetchingFieldSelectionSet?,
@@ -238,6 +348,17 @@ class QueryParser(
         )
     }
 
+    /**
+     * Generates a [NodeQuery] which loads a single [Node]
+     * Can use the `dataFetchingEnvironment` to fetch a subtree of node
+     *
+     * @param nodeDefinition definition of the node to load
+     * @param selectionSet optional, used to generate subqueries
+     * @param additionalConditions list of conditions which are applied to filter the returned node, including
+     *                             authorization condition
+     * @param authorizationContext optional context to add authorization filter conditions
+     * @return the generated [NodeQuery] to load the node
+     */
     private fun generateOneNodeQuery(
         nodeDefinition: NodeDefinition,
         selectionSet: DataFetchingFieldSelectionSet?,

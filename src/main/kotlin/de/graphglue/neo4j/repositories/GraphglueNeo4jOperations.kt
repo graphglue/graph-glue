@@ -20,6 +20,15 @@ class GraphglueNeo4jOperations(
 ) : ReactiveNeo4jOperations by delegate {
     private val nodeDefinitionCollection by lazy { beanFactory.getBean(NodeDefinitionCollection::class.java) }
 
+    /**
+     * Saves an instance of an entity
+     * For relations managed by SDN: saves all the related entities of the entity.
+     * For relations managed by GraphGlue: saves only added related entities
+     *
+     * @param instance the entity to be saved. Must not be `null`.
+     * @param T the type of the entity.
+     * @return the saved instance.
+     */
     override fun <T : Any?> save(instance: T): Mono<T> {
         return if (instance is Node) {
             saveNode(instance)
@@ -28,18 +37,38 @@ class GraphglueNeo4jOperations(
         }
     }
 
+    /**
+     * Saves several instances of an entity
+     * Implemented by calling [save] for each instance
+     *
+     * @param instances the instances to be saved. Must not be `null`.
+     * @param T the type of the entity.
+     * @return the saved instances.
+     */
     override fun <T : Any?> saveAll(instances: MutableIterable<T>): Flux<T> {
         return Flux.fromIterable(instances).flatMap(this::save)
     }
 
+    /**
+     * Save via projections is not supported
+     */
     override fun <T : Any?, R : Any?> saveAs(instance: T, resultType: Class<R>): Mono<R> {
         throw UnsupportedOperationException("Projections are not supported")
     }
 
+    /**
+     * Save via projections is not supported
+     */
     override fun <T : Any?, R : Any?> saveAllAs(instances: MutableIterable<T>, resultType: Class<R>): Flux<R> {
         throw UnsupportedOperationException("Projections are not supported")
     }
 
+    /**
+     * Saves a single Node including all lazy loaded relations
+     *
+     * @param entity the [Node] to save
+     * @return the newly from the database loaded entity
+     */
     @Suppress("UNCHECKED_CAST")
     private fun <S> saveNode(entity: Node): Mono<S> {
         val nodesToSave = getNodesToSaveRecursive(entity)
@@ -56,6 +85,14 @@ class GraphglueNeo4jOperations(
         }
     }
 
+    /**
+     * Saves all relationships of `nodeToSave`
+     *
+     * @param nodeDefinition the [NodeDefinition] associated with `nodeToSave`
+     * @param nodeToSave the [Node] of which lazy loaded relations should be saved
+     * @param nodeIdLookup assigns an id to each [Node], used so that newly created nodes have an id
+     * @return an empty [Mono] to wait for the end of the operation
+     */
     private fun saveAllRelationships(
         nodeDefinition: NodeDefinition,
         nodeToSave: Node,
@@ -71,6 +108,14 @@ class GraphglueNeo4jOperations(
         deleteMono.then(addMono)
     }.then()
 
+    /**
+     * Adds a relationship
+     *
+     * @param relationshipDefinition defines the relationship between the nodes
+     * @param rootNodeId the id of the [Node] from which the relationship starts
+     * @param propertyNode the related `Node`, might stand for multiple [Node]s
+     * @return an empty [Mono] to wait for the end of the operation
+     */
     private fun addRelationship(
         relationshipDefinition: RelationshipDefinition, rootNodeId: String, propertyNode: org.neo4j.cypherdsl.core.Node
     ): Mono<Void> {
@@ -82,6 +127,14 @@ class GraphglueNeo4jOperations(
         return executeStatement(statement)
     }
 
+    /**
+     * Removes a relationship
+     *
+     * @param relationshipDefinition defines the relationship between the nodes
+     * @param rootNodeId the id of the [Node] from which the relationship starts
+     * @param propertyNode the related `Node`, might stand for multiple [Node]s
+     * @return an empty [Mono] to wait for the end of the operation
+     */
     private fun deleteRelationship(
         relationshipDefinition: RelationshipDefinition, rootNodeId: String, propertyNode: org.neo4j.cypherdsl.core.Node
     ): Mono<Void> {
@@ -92,11 +145,23 @@ class GraphglueNeo4jOperations(
         return executeStatement(statement)
     }
 
+    /**
+     * Executes a Neo4J Statement using the client
+     *
+     * @param statement the [Statement] to execute
+     * @return an empty [Mono] to wait for the end of the operation
+     */
     private fun executeStatement(statement: Statement): Mono<Void> {
         return neo4jClient.query(Renderer.getDefaultRenderer().render(statement)).bindAll(statement.parameters).run()
             .then()
     }
 
+    /**
+     * Gets a set of nodes which should be saved
+     *
+     * @param node the node to traverse the relationships from
+     * @return the set of [Node]s to be saved
+     */
     private fun getNodesToSaveRecursive(node: Node): Set<Node> {
         val nodesToSave = HashSet<Node>()
         val nodesToVisit = ArrayDeque(listOf(node))
@@ -111,6 +176,12 @@ class GraphglueNeo4jOperations(
         return nodesToSave
     }
 
+    /**
+     * Gets the related nodes to save of a node
+     *
+     * @param node the [Node] to get the related nodes to save of
+     * @return a collection with all related nodes to save
+     */
     private fun getNodesToSave(node: Node): Collection<Node> {
         val nodeDefinition = nodeDefinitionCollection.getNodeDefinition(node::class)
         return nodeDefinition.relationshipDefinitions.values.flatMap {

@@ -13,11 +13,21 @@ import org.springframework.data.neo4j.core.ReactiveNeo4jOperations
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
+/**
+ * [ReactiveNeo4jOperations] which supports save of lazy loaded relations
+ *
+ * @property delegate provides [ReactiveNeo4jOperations] functionality
+ * @property neo4jClient used to execute Cypher queries
+ * @property beanFactory used to get [NodeDefinitionCollection]
+ */
 class GraphglueNeo4jOperations(
     private val delegate: ReactiveNeo4jOperations,
     private val neo4jClient: ReactiveNeo4jClient,
     private val beanFactory: BeanFactory
 ) : ReactiveNeo4jOperations by delegate {
+    /**
+     * used to get [NodeDefinition] by type
+     */
     private val nodeDefinitionCollection by lazy { beanFactory.getBean(NodeDefinitionCollection::class.java) }
 
     /**

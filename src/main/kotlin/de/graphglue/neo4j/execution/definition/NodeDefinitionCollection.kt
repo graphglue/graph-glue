@@ -12,13 +12,40 @@ import org.springframework.beans.factory.BeanFactory
 import kotlin.reflect.KClass
 import kotlin.reflect.full.isSubclassOf
 
+/**
+ * Stores a collection of [NodeDefinition]s
+ * Also handles generation and storage of authorization conditions
+ *
+ * @param backingCollection the provided list of [NodeDefinition]s
+ * @property beanFactory used to get condition defining beans for authorization
+ */
 class NodeDefinitionCollection(
     backingCollection: Map<KClass<out Node>, NodeDefinition>,
     private val beanFactory: BeanFactory
 ) {
+    /**
+     * Defensive copy of provided `backingCollection`, used to store [NodeDefinition]s
+     */
     private val backingCollection = HashMap(backingCollection)
+
+    /**
+     * [NodeDefinition]s by GraphQL name lookup
+     */
     private val definitionsByGraphQLName = backingCollection.mapKeys { it.key.getSimpleName() }
+
+    /**
+     * Lookup from set of all subtype GraphQL names to common parent type [NodeDefinition]
+     * Can be used to generate Cypher queries and conditions more efficiently by not having to check for
+     * multiple different labels, but only for a common label
+     * Keys contain only GraphQL names of [NodeDefinition]s which are object types in the schema (no interfaces)
+     */
     private val supertypeNodeDefinitionLookup: Map<Set<String>, NodeDefinition>
+
+    /**
+     * lookup for all subtype [NodeDefinition]s for a specific [NodeDefinition]
+     * Contains only subtypes with declare (new) authorizations
+     * Used to generate authorization
+     */
     private val authorizationSubtypeNodeDefinitionLookup: Map<NodeDefinition, Set<NodeDefinition>>
 
     init {
@@ -26,6 +53,11 @@ class NodeDefinitionCollection(
         this.authorizationSubtypeNodeDefinitionLookup = generateAuthorizationSubtypeNodeDefinitionLookup()
     }
 
+    /**
+     * Generates the supertype node definition lookup
+     *
+     * @return the generated supertype node definition lookup
+     */
     private fun generateSupertypeNodeDefinitionLookup(): Map<Set<String>, NodeDefinition> {
         val supertypeNodeDefinitionLookup = mutableMapOf<Set<String>, NodeDefinition>()
         for ((nodeClass, nodeDefinition) in backingCollection) {
@@ -38,6 +70,11 @@ class NodeDefinitionCollection(
         return supertypeNodeDefinitionLookup
     }
 
+    /**
+     * generates the authorization subtype node definition lookup
+     *
+     * @return the generated authorization supertype node definition lookup
+     */
     private fun generateAuthorizationSubtypeNodeDefinitionLookup(): Map<NodeDefinition, Set<NodeDefinition>> {
         return backingCollection.values.associateWith { nodeDefinition ->
             backingCollection.values.filter {
@@ -48,15 +85,38 @@ class NodeDefinitionCollection(
         }
     }
 
+    /**
+     * Gets the list of [NodeDefinition]s associated with names
+     * If a common supertype is found (and the provided names include all subtypes),
+     * returns that supertype
+     * Otherwise the provied list is mapped to [NodeDefinition]s
+     *
+     * @param names the list of GraphQL names
+     * @return the found [NodeDefinition]s
+     */
     fun getNodeDefinitionsFromGraphQLNames(names: List<String>): List<NodeDefinition> {
         return supertypeNodeDefinitionLookup[names.toSet()]?.let { listOf(it) }
             ?: names.map { definitionsByGraphQLName[it]!! }
     }
 
+    /**
+     * Gets a [NodeDefinition] by defining class
+     *
+     * @param nodeType the defining class
+     * @return the found [NodeDefinition]
+     * @throws Exception if the provided type does not define a [NodeDefinition]
+     */
     fun getNodeDefinition(nodeType: KClass<out Node>): NodeDefinition {
         return backingCollection[nodeType]!!
     }
 
+    /**
+     * Gets a [NodeDefinition] by defining class
+     *
+     * @param T the defining type
+     * @return the found [NodeDefinition]
+     * @throws Exception if the provided type does not define a [NodeDefinition]
+     */
     inline fun <reified T : Node> getNodeDefinition(): NodeDefinition {
         return getNodeDefinition(T::class)
     }
@@ -274,4 +334,10 @@ class NodeDefinitionCollection(
     }
 }
 
+/**
+ * Part of an authorization condition
+ *
+ * @property optionalPattern optional associated [PatternElement]
+ * @property condition associated [Condition]
+ */
 private data class AuthorizationConditionPart(val optionalPattern: PatternElement?, val condition: Condition)

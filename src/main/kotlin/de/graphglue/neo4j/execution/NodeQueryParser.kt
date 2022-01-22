@@ -30,7 +30,7 @@ const val DEFAULT_PART_ID = "default"
  * @property filterDefinitionCollection used to get the [FilterDefinition] for a specific [Node]
  * @property objectMapper used to parse cursors
  */
-class QueryParser(
+class NodeQueryParser(
     val nodeDefinitionCollection: NodeDefinitionCollection,
     val filterDefinitionCollection: FilterDefinitionCollection,
     val objectMapper: ObjectMapper
@@ -188,13 +188,13 @@ class QueryParser(
      *
      * @param definition definition for the [Node] to load
      * @param fieldParts parts which are used to create subqueries
-     * @param queryOptions options for this [NodeQuery]
+     * @param nodeQueryOptions options for this [NodeQuery]
      * @param authorizationContext authorization context for subqueries
      */
     private fun generateNodeQuery(
         definition: NodeDefinition,
         fieldParts: Map<String, List<SelectedField>>,
-        queryOptions: QueryOptions,
+        nodeQueryOptions: NodeQueryOptions,
         authorizationContext: AuthorizationContext?
     ): NodeQuery {
         val subQueries = ArrayList<NodeSubQuery>()
@@ -221,7 +221,7 @@ class QueryParser(
             }
             NodeQueryPart(subQueries)
         }
-        return NodeQuery(definition, queryOptions, parts)
+        return NodeQuery(definition, nodeQueryOptions, parts)
     }
 
     /**
@@ -324,7 +324,7 @@ class QueryParser(
             filters.add(filterDefinition.parseFilter(it))
         }
         val orderBy = arguments["orderBy"]?.let { parseOrder(it) } ?: IdOrder
-        val subQueryOptions = QueryOptions(
+        val subNodeQueryOptions = NodeQueryOptions(
             filters = filters,
             orderBy = orderBy,
             after = arguments["after"]?.let { orderBy.parseCursor(it as String, objectMapper) },
@@ -344,7 +344,7 @@ class QueryParser(
             }
         }
         return generateNodeQuery(
-            nodeDefinition, parts, subQueryOptions, authorizationContext
+            nodeDefinition, parts, subNodeQueryOptions, authorizationContext
         )
     }
 
@@ -365,11 +365,11 @@ class QueryParser(
         additionalConditions: List<CypherConditionGenerator>,
         authorizationContext: AuthorizationContext?
     ): NodeQuery {
-        val subQueryOptions = QueryOptions(filters = additionalConditions, first = 1, fetchTotalCount = false)
+        val subNodeQueryOptions = NodeQueryOptions(filters = additionalConditions, first = 1, fetchTotalCount = false)
         return generateNodeQuery(
             nodeDefinition,
             mapOf(DEFAULT_PART_ID to (selectionSet?.immediateFields ?: emptyList())),
-            subQueryOptions,
+            subNodeQueryOptions,
             authorizationContext
         )
     }

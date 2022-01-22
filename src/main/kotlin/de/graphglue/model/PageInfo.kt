@@ -3,11 +3,11 @@ package de.graphglue.model
 import com.expediagroup.graphql.generator.annotations.GraphQLDescription
 import com.fasterxml.jackson.databind.ObjectMapper
 import de.graphglue.graphql.connection.order.Order
-import de.graphglue.neo4j.execution.QueryOptions
+import de.graphglue.neo4j.execution.NodeQueryOptions
 
 @GraphQLDescription("Information about the current page in a connection")
 class PageInfo(
-    private val queryOptions: QueryOptions,
+    private val nodeQueryOptions: NodeQueryOptions,
     private val allNodes: List<Node>,
     private val nodes: List<Node>,
     private val objectMapper: ObjectMapper
@@ -15,7 +15,7 @@ class PageInfo(
 
     @Suppress("UNCHECKED_CAST")
     private val orderBy: Order<Node>
-        get() = queryOptions.orderBy as Order<Node>
+        get() = nodeQueryOptions.orderBy as Order<Node>
 
     @GraphQLDescription("When paginating forwards, the cursor to continue")
     val startCursor: String?
@@ -40,8 +40,8 @@ class PageInfo(
     @GraphQLDescription("When paginating forwards, are there more items?")
     val hasNextPage: Boolean
         get() {
-            return if (queryOptions.first != null) {
-                allNodes.size > (queryOptions.first - 1)
+            return if (nodeQueryOptions.first != null) {
+                allNodes.size > (nodeQueryOptions.first - 1)
             } else {
                 false
             }
@@ -50,8 +50,8 @@ class PageInfo(
     @GraphQLDescription("When paginating backwards, are there more items?")
     val hasPreviousPage: Boolean
         get() {
-            return if (queryOptions.last != null) {
-                allNodes.size > (queryOptions.last - 1)
+            return if (nodeQueryOptions.last != null) {
+                allNodes.size > (nodeQueryOptions.last - 1)
             } else {
                 false
             }

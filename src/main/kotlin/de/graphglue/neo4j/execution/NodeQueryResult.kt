@@ -9,4 +9,4 @@ import de.graphglue.model.Node
  * @property nodes the fetched nodes
  * @property totalCount if fetched, the total amount of nodes before pagination defined in `options`
  */
-data class NodeQueryResult<T : Node?>(val options: QueryOptions, val nodes: List<T>, val totalCount: Int?)
+data class NodeQueryResult<T : Node?>(val options: NodeQueryOptions, val nodes: List<T>, val totalCount: Int?)

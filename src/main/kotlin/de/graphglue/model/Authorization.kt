@@ -7,5 +7,5 @@ annotation class Authorization(
     val name: String,
     val allow: Array<Rule> = [],
     val allowFromRelated: Array<String> = [],
-    val disallow: Array<Rule>  = []
+    val disallow: Array<Rule> = []
 )

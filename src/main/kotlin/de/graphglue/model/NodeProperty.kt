@@ -20,7 +20,7 @@ class NodeProperty<T : Node?>(value: T? = null, private val parent: Node, privat
     private var isLoaded = false
     private var currentNode: T? = null
     private var persistedNode: T? = null
-    private val cache = IdentityHashMap<QueryOptions, NodeQueryResult<T>>()
+    private val cache = IdentityHashMap<NodeQueryOptions, NodeQueryResult<T>>()
 
     private val supportsNull get() = property.returnType.isMarkedNullable
 
@@ -58,7 +58,7 @@ class NodeProperty<T : Node?>(value: T? = null, private val parent: Node, privat
     @RedirectPropertyFunction
     suspend fun getFromGraphQL(
         @GraphQLIgnore @Autowired
-        queryParser: QueryParser,
+        nodeQueryParser: NodeQueryParser,
         dataFetchingEnvironment: DataFetchingEnvironment
     ): DataFetcherResult<T> {
         val parentNodeQueryPart = dataFetchingEnvironment.getLocalContext<NodeQueryPart>()
@@ -66,7 +66,7 @@ class NodeProperty<T : Node?>(value: T? = null, private val parent: Node, privat
         val localContext = if (parentNodeQueryPart != null) {
             val providedNodeQuery =
                 parentNodeQueryPart.getSubQuery(dataFetchingEnvironment.executionStepInfo.resultKey) {
-                    dataFetchingEnvironment.getParentNodeDefinition(queryParser.nodeDefinitionCollection)
+                    dataFetchingEnvironment.getParentNodeDefinition(nodeQueryParser.nodeDefinitionCollection)
                 }.query
             val options = providedNodeQuery.options
             result = cache[options] ?: throw IllegalStateException("Result not found in cache")

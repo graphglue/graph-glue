@@ -30,6 +30,7 @@ fun <R> DataFetchingEnvironment.getDataFetcherResult(
     }
 }
 
-val DataFetchingEnvironment.authorizationContext: AuthorizationContext? get() {
-    return this.graphQlContext.get<AuthorizationContext?>(AuthorizationContext::class)
-}
+val DataFetchingEnvironment.authorizationContext: AuthorizationContext?
+    get() {
+        return this.graphQlContext.get<AuthorizationContext?>(AuthorizationContext::class)
+    }

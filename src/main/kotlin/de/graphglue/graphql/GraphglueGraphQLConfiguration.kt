@@ -21,10 +21,6 @@ import de.graphglue.graphql.connection.filter.definition.FilterDefinitionCollect
 import de.graphglue.graphql.connection.filter.definition.FilterEntryDefinition
 import de.graphglue.graphql.connection.filter.definition.SubFilterGenerator
 import de.graphglue.graphql.connection.order.OrderDirection
-import de.graphglue.neo4j.execution.QueryParser
-import de.graphglue.neo4j.execution.definition.NodeDefinition
-import de.graphglue.neo4j.execution.definition.NodeDefinitionCache
-import de.graphglue.neo4j.execution.definition.NodeDefinitionCollection
 import de.graphglue.graphql.extensions.getSimpleName
 import de.graphglue.graphql.extensions.springFindAnnotation
 import de.graphglue.graphql.extensions.toTopLevelObjects
@@ -36,6 +32,10 @@ import de.graphglue.model.DomainNode
 import de.graphglue.model.Node
 import de.graphglue.model.NodeSet
 import de.graphglue.model.PageInfo
+import de.graphglue.neo4j.execution.NodeQueryParser
+import de.graphglue.neo4j.execution.definition.NodeDefinition
+import de.graphglue.neo4j.execution.definition.NodeDefinitionCache
+import de.graphglue.neo4j.execution.definition.NodeDefinitionCollection
 import de.graphglue.util.CacheMap
 import graphql.schema.*
 import org.slf4j.LoggerFactory
@@ -178,7 +178,7 @@ class GraphglueGraphQLConfiguration(private val neo4jMappingContext: Neo4jMappin
         nodeDefinitionCollection: NodeDefinitionCollection,
         filterDefinitionCollection: FilterDefinitionCollection,
         objectMapper: ObjectMapper
-    ) = QueryParser(nodeDefinitionCollection, filterDefinitionCollection, objectMapper)
+    ) = NodeQueryParser(nodeDefinitionCollection, filterDefinitionCollection, objectMapper)
 
     @Bean
     @ConditionalOnMissingBean

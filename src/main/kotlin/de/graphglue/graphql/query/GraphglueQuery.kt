@@ -10,7 +10,7 @@ import de.graphglue.neo4j.CypherConditionGenerator
 import de.graphglue.neo4j.LazyLoadingContext
 import de.graphglue.neo4j.execution.DEFAULT_PART_ID
 import de.graphglue.neo4j.execution.NodeQueryExecutor
-import de.graphglue.neo4j.execution.QueryParser
+import de.graphglue.neo4j.execution.NodeQueryParser
 import de.graphglue.neo4j.execution.definition.NodeDefinition
 import graphql.execution.DataFetcherResult
 import graphql.schema.DataFetchingEnvironment
@@ -22,7 +22,7 @@ class GraphglueQuery(private val nodeDefinition: NodeDefinition) : Query {
     suspend fun node(
         @GraphQLDescription("The id of the node to get") id: ID,
         @Autowired @GraphQLIgnore
-        queryParser: QueryParser,
+        nodeQueryParser: NodeQueryParser,
         dataFetchingEnvironment: DataFetchingEnvironment,
         @Autowired @GraphQLIgnore
         lazyLoadingContext: LazyLoadingContext
@@ -30,7 +30,7 @@ class GraphglueQuery(private val nodeDefinition: NodeDefinition) : Query {
         val idConditionGenerator = CypherConditionGenerator {
             it.property("id").isEqualTo(Cypher.anonParameter(id.value))
         }
-        val nodeQuery = queryParser.generateOneNodeQuery(
+        val nodeQuery = nodeQueryParser.generateOneNodeQuery(
             nodeDefinition,
             dataFetchingEnvironment,
             listOf(idConditionGenerator),

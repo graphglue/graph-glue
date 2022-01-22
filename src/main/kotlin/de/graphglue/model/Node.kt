@@ -8,8 +8,8 @@ import de.graphglue.graphql.extensions.authorizationContext
 import de.graphglue.neo4j.LazyLoadingContext
 import de.graphglue.neo4j.execution.NodeQuery
 import de.graphglue.neo4j.execution.NodeQueryExecutor
+import de.graphglue.neo4j.execution.NodeQueryOptions
 import de.graphglue.neo4j.execution.NodeQueryResult
-import de.graphglue.neo4j.execution.QueryOptions
 import graphql.schema.DataFetchingEnvironment
 import org.springframework.data.neo4j.core.convert.ConvertWith
 import org.springframework.data.neo4j.core.schema.GeneratedValue
@@ -66,9 +66,9 @@ abstract class Node {
     ): Pair<NodeQueryResult<T>, NodeQuery?> {
         val lazyLoadingContext = lazyLoadingContext
         if (lazyLoadingContext == null) {
-            return NodeQueryResult<T>(QueryOptions(), emptyList(), null) to null
+            return NodeQueryResult<T>(NodeQueryOptions(), emptyList(), null) to null
         } else {
-            val queryParser = lazyLoadingContext.queryParser
+            val queryParser = lazyLoadingContext.nodeQueryParser
             val parentNodeDefinition = queryParser.nodeDefinitionCollection.getNodeDefinition(this::class)
             val relationshipDefinition = parentNodeDefinition.getRelationshipDefinitionOfProperty(property)
             val nodeDefinition = queryParser.nodeDefinitionCollection.getNodeDefinition(

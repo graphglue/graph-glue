@@ -1,6 +1,6 @@
 package de.graphglue.neo4j
 
-import de.graphglue.neo4j.execution.QueryParser
+import de.graphglue.neo4j.execution.NodeQueryParser
 import de.graphglue.neo4j.execution.definition.NodeDefinitionCollection
 import de.graphglue.neo4j.repositories.GraphglueNeo4jOperations
 import org.neo4j.driver.Driver
@@ -51,16 +51,16 @@ class GraphglueNeo4jConfiguration {
      *
      * @param neo4jClient client used to perform Cypher queries
      * @param neo4jMappingContext context used to get mapping functions
-     * @param queryParser used to generate the Cypher query
+     * @param nodeQueryParser used to generate the Cypher query
      * @return the generated [LazyLoadingContext]
      */
     @Bean
     fun lazyLoadingContext(
         neo4jClient: ReactiveNeo4jClient,
         neo4jMappingContext: Neo4jMappingContext,
-        queryParser: QueryParser
+        nodeQueryParser: NodeQueryParser
     ): LazyLoadingContext {
-        return LazyLoadingContext(neo4jClient, neo4jMappingContext, queryParser)
+        return LazyLoadingContext(neo4jClient, neo4jMappingContext, nodeQueryParser)
     }
 
     /**

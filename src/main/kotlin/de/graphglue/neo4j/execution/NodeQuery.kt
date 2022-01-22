@@ -12,6 +12,6 @@ import de.graphglue.neo4j.execution.definition.NodeDefinition
  */
 class NodeQuery(
     val definition: NodeDefinition,
-    val options: QueryOptions,
+    val options: NodeQueryOptions,
     val parts: Map<String, NodeQueryPart>
 )

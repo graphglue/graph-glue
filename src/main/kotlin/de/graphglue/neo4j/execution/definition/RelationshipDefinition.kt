@@ -82,7 +82,7 @@ abstract class RelationshipDefinition(
     fun <T> generateRelationship(
         rootNode: ExposesRelationships<T>,
         propertyNode: org.neo4j.cypherdsl.core.Node
-    ): T where T: RelationshipPattern, T: ExposesPatternLengthAccessors<*> {
+    ): T where T : RelationshipPattern, T : ExposesPatternLengthAccessors<*> {
         return when (direction) {
             Direction.OUTGOING -> rootNode.relationshipTo(propertyNode, type)
             Direction.INCOMING -> rootNode.relationshipFrom(propertyNode, type)

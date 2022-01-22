@@ -15,7 +15,7 @@ import de.graphglue.neo4j.CypherConditionGenerator
  * @property last if present, only the last n nodes are fetched
  * @property fetchTotalCount totalCount is only fetched if `true`
  */
-data class QueryOptions(
+data class NodeQueryOptions(
     val filters: List<CypherConditionGenerator> = emptyList(),
     val orderBy: Order<*> = IdOrder,
     val after: Map<String, Any?>? = null,

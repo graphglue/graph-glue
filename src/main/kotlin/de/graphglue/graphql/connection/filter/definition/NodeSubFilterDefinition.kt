@@ -1,8 +1,8 @@
 package de.graphglue.graphql.connection.filter.definition
 
 import de.graphglue.graphql.connection.filter.model.NodeSubFilter
-import de.graphglue.neo4j.execution.definition.RelationshipDefinition
 import de.graphglue.model.Node
+import de.graphglue.neo4j.execution.definition.RelationshipDefinition
 import de.graphglue.util.CacheMap
 import graphql.schema.GraphQLInputType
 import kotlin.reflect.KClass

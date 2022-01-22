@@ -1,11 +1,11 @@
 package de.graphglue.model
 
 import com.expediagroup.graphql.generator.annotations.GraphQLIgnore
-import de.graphglue.neo4j.execution.NodeQueryPart
-import de.graphglue.neo4j.execution.QueryOptions
-import de.graphglue.neo4j.execution.QueryParser
 import de.graphglue.graphql.extensions.getParentNodeDefinition
 import de.graphglue.graphql.redirect.RedirectPropertyClass
+import de.graphglue.neo4j.execution.NodeQueryOptions
+import de.graphglue.neo4j.execution.NodeQueryParser
+import de.graphglue.neo4j.execution.NodeQueryPart
 import de.graphglue.neo4j.execution.NodeQueryResult
 import de.graphglue.neo4j.repositories.RelationshipDiff
 import graphql.execution.DataFetcherResult
@@ -23,7 +23,7 @@ class NodeSet<T : Node>(
     val property: KProperty1<*, *>
 ) : AbstractSet<T>(), MutableSet<T> {
 
-    private val cache = IdentityHashMap<QueryOptions, NodeQueryResult<T>>()
+    private val cache = IdentityHashMap<NodeQueryOptions, NodeQueryResult<T>>()
     private val addedNodes = HashSet<T>()
     private val removedNodes = HashSet<T>()
     private var currentNodes: MutableSet<T>? = null
@@ -40,7 +40,7 @@ class NodeSet<T : Node>(
 
     suspend fun getFromGraphQL(
         @GraphQLIgnore @Autowired
-        queryParser: QueryParser,
+        nodeQueryParser: NodeQueryParser,
         dataFetchingEnvironment: DataFetchingEnvironment
     ): DataFetcherResult<Connection<T>> {
         val parentNodeQueryPart = dataFetchingEnvironment.getLocalContext<NodeQueryPart>()
@@ -48,7 +48,7 @@ class NodeSet<T : Node>(
         val localContext = if (parentNodeQueryPart != null) {
             val providedNodeQuery =
                 parentNodeQueryPart.getSubQuery(dataFetchingEnvironment.executionStepInfo.resultKey) {
-                    dataFetchingEnvironment.getParentNodeDefinition(queryParser.nodeDefinitionCollection)
+                    dataFetchingEnvironment.getParentNodeDefinition(nodeQueryParser.nodeDefinitionCollection)
                 }.query
             val options = providedNodeQuery.options
             result = cache[options] ?: throw IllegalStateException("Result not found in cache")
@@ -58,7 +58,7 @@ class NodeSet<T : Node>(
             result = loadResult
             nodeQuery
         }
-        val connection = Connection.fromQueryResult(result, queryParser.objectMapper)
+        val connection = Connection.fromQueryResult(result, nodeQueryParser.objectMapper)
         return DataFetcherResult.newResult<Connection<T>>()
             .data(connection)
             .localContext(localContext)

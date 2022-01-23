@@ -32,21 +32,41 @@ import kotlin.reflect.KProperty1
 @GraphQLDescription("Base class of all nodes")
 abstract class Node {
 
+    /**
+     * Id of this node, `null` if not persisted in the database yet
+     */
     @GraphQLIgnore
     @Id
     @GeneratedValue(UUIDStringGenerator::class)
     internal var id: String? = null
 
+    /**
+     * Readonly wrapper for the id
+     * If `null`, the node has not been persisted in the database yet
+     */
     @GraphQLIgnore
     val rawId
         get() = id
 
+    /**
+     * Workaround property to ensure that the [lazyLoadingContext] is injected
+     * Uses a converter to inject the context
+     * If the context is not present, the node was not loaded from the database, meaning the node is
+     * not persisted yet and therefore lazy loading is not supported
+     */
     @Property("_")
     @ConvertWith(converterRef = "lazyLoadingContextConverter")
     internal var lazyLoadingContextOptional: Optional<LazyLoadingContext> = Optional.empty()
 
+    /**
+     * Unwrapped [lazyLoadingContextOptional]
+     */
     private val lazyLoadingContext: LazyLoadingContext? get() = lazyLoadingContextOptional.orElse(null)
 
+    /**
+     * The id of the node as seen in the GraphQL API
+     * @throws Exception if this node has not been persisted yet and therefore has no id
+     */
     @GraphQLName("id")
     @GraphQLDescription("The unique id of this node")
     val graphQLId: ID

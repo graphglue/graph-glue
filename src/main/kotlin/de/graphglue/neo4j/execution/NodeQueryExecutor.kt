@@ -196,7 +196,7 @@ class NodeQueryExecutor(
         val subQueryBuilder = Cypher.with(allNodesCollected).unwind(allNodesCollected).`as`(nodeAlias)
         val afterAndBeforeBuilder = applyAfterAndBefore(options, nodeAlias, subQueryBuilder)
         val limitedBuilder = applyResultLimiters(options, afterAndBeforeBuilder, nodeAlias)
-        val (callBuilder, subQueryResultList) = applyPartsSubqueries(limitedBuilder, node)
+        val (callBuilder, subQueryResultList) = applyPartsSubqueries(limitedBuilder, node, nodeQuery)
         return generateMainSubQueryResultStatement(nodeDefinition, subQueryResultList, callBuilder, nodeAlias, options)
     }
 
@@ -293,11 +293,13 @@ class NodeQueryExecutor(
      *
      * @param builder ongoing statement builder
      * @param node the current node, necessary to build relation condition for subquery
+     * @param nodeQuery the query for which all subqueries should be applied
      * @return the new builder and a list of the names of all subquery result variables
      */
     private fun applyPartsSubqueries(
         builder: StatementBuilder.OngoingReading,
-        node: Node
+        node: Node,
+        nodeQuery: NodeQuery
     ): Pair<StatementBuilder.OngoingReading, List<SymbolicName>> {
         var callBuilder = builder
         val subQueryResultList = ArrayList<SymbolicName>()

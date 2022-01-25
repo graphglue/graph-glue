@@ -11,6 +11,7 @@ import de.graphglue.neo4j.execution.NodeQueryExecutor
 import de.graphglue.neo4j.execution.NodeQueryOptions
 import de.graphglue.neo4j.execution.NodeQueryResult
 import graphql.schema.DataFetchingEnvironment
+import org.springframework.data.annotation.Transient
 import org.springframework.data.neo4j.core.convert.ConvertWith
 import org.springframework.data.neo4j.core.schema.GeneratedValue
 import org.springframework.data.neo4j.core.schema.Id
@@ -35,7 +36,6 @@ abstract class Node {
     /**
      * Id of this node, `null` if not persisted in the database yet
      */
-    @GraphQLIgnore
     @Id
     @GeneratedValue(UUIDStringGenerator::class)
     internal var id: String? = null
@@ -47,6 +47,15 @@ abstract class Node {
     @GraphQLIgnore
     val rawId
         get() = id
+
+    /**
+     * The id of the node as seen in the GraphQL API
+     * @throws Exception if this node has not been persisted yet and therefore has no id
+     */
+    @GraphQLName("id")
+    @GraphQLDescription("The unique id of this node")
+    val graphQLId: ID
+        get() = ID(id!!)
 
     /**
      * Workaround property to ensure that the [lazyLoadingContext] is injected
@@ -63,14 +72,8 @@ abstract class Node {
      */
     private val lazyLoadingContext: LazyLoadingContext? get() = lazyLoadingContextOptional.orElse(null)
 
-    /**
-     * The id of the node as seen in the GraphQL API
-     * @throws Exception if this node has not been persisted yet and therefore has no id
-     */
-    @GraphQLName("id")
-    @GraphQLDescription("The unique id of this node")
-    val graphQLId: ID
-        get() = ID(id!!)
+    @Transient
+    internal val propertyLookup: MutableMap<KProperty<*>, BaseProperty<*>> = mutableMapOf()
 
     protected fun <T : Node> NodeSetProperty(value: Collection<T>? = null): PropertyDelegateProvider<Node, NodeSetProperty<T>> {
         return NodeSetPropertyProvider(value)
@@ -108,20 +111,33 @@ abstract class Node {
             return queryExecutor.execute() as NodeQueryResult<T> to query
         }
     }
+
+    @Suppress("UNCHECKED_CAST")
+    internal fun <T: Node?> getProperty(property: KProperty<*>): BaseProperty<T> {
+        return propertyLookup[property]!! as BaseProperty<T>
+    }
 }
 
 
 private class NodePropertyProvider<T : Node?>(private val value: T?) : PropertyDelegateProvider<Node, NodeProperty<T>> {
-    override operator fun provideDelegate(thisRef: Node, property: KProperty<*>) = NodeProperty(
-        value, thisRef,
-        property as KProperty1<*, *>
-    )
+    override operator fun provideDelegate(thisRef: Node, property: KProperty<*>): NodeProperty<T> {
+        val nodeProperty =  NodeProperty(
+            value, thisRef,
+            property as KProperty1<*, *>
+        )
+        thisRef.propertyLookup[property] = nodeProperty
+        return nodeProperty
+    }
 }
 
 private class NodeSetPropertyProvider<T : Node>(private val value: Collection<T>?) :
     PropertyDelegateProvider<Node, NodeSetProperty<T>> {
-    override operator fun provideDelegate(thisRef: Node, property: KProperty<*>) = NodeSetProperty(
-        value, thisRef,
-        property as KProperty1<*, *>
-    )
+    override operator fun provideDelegate(thisRef: Node, property: KProperty<*>): NodeSetProperty<T> {
+        val nodeSetProperty =  NodeSetProperty(
+            value, thisRef,
+            property as KProperty1<*, *>
+        )
+        thisRef.propertyLookup[property] = nodeSetProperty
+        return nodeSetProperty
+    }
 }

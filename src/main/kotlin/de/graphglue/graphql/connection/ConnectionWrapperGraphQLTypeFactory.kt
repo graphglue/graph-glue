@@ -6,11 +6,7 @@ import de.graphglue.graphql.connection.filter.definition.generateFilterDefinitio
 import de.graphglue.graphql.connection.order.OrderField
 import de.graphglue.graphql.connection.order.generateOrders
 import de.graphglue.graphql.extensions.getSimpleName
-import de.graphglue.graphql.redirect.REDIRECT_PROPERTY_DIRECTIVE
-import de.graphglue.model.Connection
-import de.graphglue.model.Edge
-import de.graphglue.model.Node
-import de.graphglue.model.NodeSet
+import de.graphglue.model.*
 import de.graphglue.util.CacheMap
 import graphql.Scalars
 import graphql.language.EnumValue
@@ -47,9 +43,9 @@ class ConnectionWrapperGraphQLTypeFactory(
 
             val orders = generateOrders(nodeType, mappingContext.getPersistentEntity(nodeType.java)!!)
 
-            val type = GraphQLObjectType.newObject().name(name).withDirective(REDIRECT_PROPERTY_DIRECTIVE)
+            val type = GraphQLObjectType.newObject().name(name)
                 .field { fieldBuilder ->
-                    fieldBuilder.name(functionName).withDirective(REDIRECT_PROPERTY_DIRECTIVE).argument {
+                    fieldBuilder.name(functionName).argument {
                         it.name("filter").description("Filter for specific items in the connection")
                             .type(filter.toGraphQLType(inputTypeCache))
                     }.argument {
@@ -67,11 +63,6 @@ class ConnectionWrapperGraphQLTypeFactory(
                             .type(Scalars.GraphQLInt)
                     }.type(GraphQLNonNull(generateConnectionGraphQLType(nodeName)))
                 }.build()
-
-            val function = NodeSet::class.memberFunctions.first { it.name == functionName }
-            val dataFetcherFactory = dataFetcherFactoryProvider.functionDataFetcherFactory(null, function)
-            registerDataFetcher(type, functionName, dataFetcherFactory)
-
             type
         }
     }

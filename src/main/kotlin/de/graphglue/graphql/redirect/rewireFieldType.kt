@@ -1,42 +1,24 @@
 package de.graphglue.graphql.redirect
 
+import com.expediagroup.graphql.generator.extensions.unwrapType
+import de.graphglue.model.NODE_RELATIONSHIP_DIRECTIVE
 import graphql.schema.*
 
 /**
- * Redirects a field type is necessary
- * Does currently not handle the necessary DataFetcher adoption
+ * Redirects fields used for NodeSetProperties
  *
  * @param fieldDefinition the field to maybe redirect
- * @param coordinates the coordinates of the field to maybe redirect
- * @param codeRegistry used to get and set data fetching environments
  * @return the new field definition
  */
-fun rewireFieldType(
-    fieldDefinition: GraphQLFieldDefinition,
-    coordinates: FieldCoordinates?,
-    codeRegistry: GraphQLCodeRegistry.Builder
-): GraphQLFieldDefinition {
-    val fieldType = fieldDefinition.type
-    if (fieldType is GraphQLNonNull) {
-        val originalType = fieldType.wrappedType
-        if (originalType is GraphQLObjectType) {
-            if (originalType.hasDirective(REDIRECT_DIRECTIVE_NAME) || originalType.hasDirective(
-                    REDIRECT_DIRECTIVE_NAME_ALTERNATIVE
-                )
-            ) {
-                val redirectedFunction = originalType.fields.first {
-                    it.hasDirective(REDIRECT_DIRECTIVE_NAME) || it.hasDirective(REDIRECT_DIRECTIVE_NAME_ALTERNATIVE)
-                }
-                val redirectedField = fieldDefinition.transform {
-                    it.type(redirectedFunction.type)
-                    it.replaceArguments(redirectedFunction.arguments)
-                }
-                val functionDataFetcher = codeRegistry.getDataFetcher(originalType, redirectedFunction)
-                val propertyDataFetcher = codeRegistry.getDataFetcher(coordinates, fieldDefinition)
-                codeRegistry.dataFetcher(coordinates, DataFetcher {
-                    functionDataFetcher.get(RedirectDataFetchingEnvironment(it, propertyDataFetcher))
-                })
-                return redirectedField
+fun rewireFieldType(fieldDefinition: GraphQLFieldDefinition): GraphQLFieldDefinition {
+    if (fieldDefinition.hasDirective(NODE_RELATIONSHIP_DIRECTIVE)) {
+        val fieldType = fieldDefinition.type
+        val originalType = fieldType.unwrapType() as GraphQLObjectType
+        val redirectedFunction = originalType.getField("getFromGraphQL")
+        if (redirectedFunction != null) {
+            return fieldDefinition.transform {
+                it.type(redirectedFunction.type)
+                it.replaceArguments(redirectedFunction.arguments)
             }
         }
     }

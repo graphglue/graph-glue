@@ -1,11 +1,7 @@
 package de.graphglue.neo4j.execution.definition
 
-import de.graphglue.graphql.extensions.getDelegateAccessible
 import de.graphglue.graphql.extensions.getPropertyName
-import de.graphglue.model.Direction
-import de.graphglue.model.Node
-import de.graphglue.model.NodeProperty
-import de.graphglue.model.NodeRelationship
+import de.graphglue.model.*
 import de.graphglue.neo4j.execution.NodeQueryResult
 import de.graphglue.neo4j.repositories.RelationshipDiff
 import org.neo4j.cypherdsl.core.ExposesPatternLengthAccessors
@@ -62,7 +58,7 @@ abstract class RelationshipDefinition(
             if (annotation?.type == type && annotation.direction != direction) {
                 if (remoteProperty.returnType.isSubtypeOf(Node::class.createType())) {
                     return { remoteNode, value ->
-                        val nodeProperty = remoteProperty.getDelegateAccessible<NodeProperty<Node>>(remoteNode)
+                        val nodeProperty = remoteNode.getProperty<Node?>(remoteProperty) as NodeProperty<Node?>
                         nodeProperty.setFromRemote(value)
                     }
                 }
@@ -115,7 +111,9 @@ abstract class RelationshipDefinition(
      * @param nodeQueryResult the result of the query
      * @param T the type of nodes of the result
      */
-    internal abstract fun <T : Node> registerLocalQueryResult(node: Node, nodeQueryResult: NodeQueryResult<T>)
+    private fun <T : Node> registerLocalQueryResult(node: Node, nodeQueryResult: NodeQueryResult<T>) {
+        node.getProperty<T>(property).registerQueryResult(nodeQueryResult)
+    }
 
     /**
      * Gets the diff describing updates of the property
@@ -124,7 +122,9 @@ abstract class RelationshipDefinition(
      * @param nodeIdLookup node to id lookup, can be used to get id of unpersisted nodes
      * @return the diff describing added and removed nodes
      */
-    internal abstract fun getRelationshipDiff(node: Node, nodeIdLookup: Map<Node, String>): RelationshipDiff
+    internal fun getRelationshipDiff(node: Node, nodeIdLookup: Map<Node, String>): RelationshipDiff {
+        return node.getProperty<Node>(property).getRelationshipDiff(nodeIdLookup)
+    }
 
     /**
      * Gets related nodes to save
@@ -132,7 +132,9 @@ abstract class RelationshipDefinition(
      * @param node the node which contains the property to get the related nodes to save
      * @return a list of nodes to save
      */
-    internal abstract fun getRelatedNodesToSave(node: Node): Collection<Node>
+    internal fun getRelatedNodesToSave(node: Node): Collection<Node> {
+        return node.getProperty<Node>(property).getRelatedNodesToSave()
+    }
 }
 
 /**

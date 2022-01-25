@@ -30,7 +30,7 @@ import de.graphglue.graphql.redirect.RedirectKotlinDataFetcherFactoryProvider
 import de.graphglue.graphql.redirect.rewireFieldType
 import de.graphglue.model.DomainNode
 import de.graphglue.model.Node
-import de.graphglue.model.NodeSet
+import de.graphglue.model.NodeSetProperty
 import de.graphglue.model.PageInfo
 import de.graphglue.neo4j.execution.NodeQueryParser
 import de.graphglue.neo4j.execution.definition.NodeDefinition
@@ -98,7 +98,7 @@ class GraphglueGraphQLConfiguration(private val neo4jMappingContext: Neo4jMappin
                 tempCodeRegistry.clearDataFetchers()
                 val rewiredType = super.onRewireGraphQLType(generatedType, coordinates, codeRegistry)
                 return if (rewiredType is GraphQLFieldDefinition) {
-                    rewireFieldType(rewiredType, coordinates, codeRegistry)
+                    rewireFieldType(rewiredType)
                 } else {
                     return rewiredType
                 }
@@ -117,7 +117,7 @@ class GraphglueGraphQLConfiguration(private val neo4jMappingContext: Neo4jMappin
                         )
                     }
                 }
-                return if (type.jvmErasure == NodeSet::class) {
+                return if (type.jvmErasure == NodeSetProperty.NodeSet::class) {
                     factory.generateWrapperGraphQLType(type)
                 } else {
                     super.willGenerateGraphQLType(type)

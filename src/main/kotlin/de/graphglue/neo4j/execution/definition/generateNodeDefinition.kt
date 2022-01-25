@@ -3,7 +3,7 @@ package de.graphglue.neo4j.execution.definition
 import de.graphglue.model.Node
 import de.graphglue.model.NodeProperty
 import de.graphglue.model.NodeRelationship
-import de.graphglue.model.NodeSet
+import de.graphglue.model.NodeSetProperty
 import org.springframework.data.neo4j.core.mapping.Neo4jMappingContext
 import org.springframework.data.neo4j.core.mapping.Neo4jPersistentEntity
 import kotlin.reflect.KClass
@@ -53,7 +53,7 @@ private fun generateOneRelationshipDefinitions(nodeClass: KClass<out Node>): Lis
  * @return the list of generated relationship definitions
  */
 private fun generateManyRelationshipDefinitions(nodeClass: KClass<out Node>): List<ManyRelationshipDefinition> {
-    val nodeListType = NodeSet::class.createType(listOf(KTypeProjection.covariant(Node::class.createType())))
+    val nodeListType = NodeSetProperty.NodeSet::class.createType(listOf(KTypeProjection.covariant(Node::class.createType())))
     val properties = nodeClass.memberProperties.filter { it.returnType.isSubtypeOf(nodeListType) }
     return properties.map {
         val annotation = it.findAnnotation<NodeRelationship>()

@@ -15,8 +15,8 @@ import org.springframework.beans.factory.annotation.Autowired
  * Cursors can only be used, if the ordering of nodes is not changed.
  * Cursors should not be used for long term storage.
  *
- * @property node the [Node] at the start of the edge
- * @property order necessary for Cursor generation
+ * @param node the [Node] at the start of the edge
+ * @param order necessary for Cursor generation
  */
 class Edge<T : Node>(private val node: T, private val order: Order<T>) {
 

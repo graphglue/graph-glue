@@ -16,9 +16,9 @@ import reactor.core.publisher.Mono
 /**
  * [ReactiveNeo4jOperations] which supports save of lazy loaded relations
  *
- * @property delegate provides [ReactiveNeo4jOperations] functionality
- * @property neo4jClient used to execute Cypher queries
- * @property beanFactory used to get [NodeDefinitionCollection]
+ * @param delegate provides [ReactiveNeo4jOperations] functionality
+ * @param neo4jClient used to execute Cypher queries
+ * @param beanFactory used to get [NodeDefinitionCollection]
  */
 class GraphglueNeo4jOperations(
     private val delegate: ReactiveNeo4jOperations,

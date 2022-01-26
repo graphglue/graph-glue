@@ -8,10 +8,10 @@ import de.graphglue.neo4j.execution.NodeQueryOptions
 /**
  * Page info used in GraphQL connection to provide general pagination information
  *
- * @property nodeQueryOptions options used for querying the connection
- * @property allNodes the list of all nodes returned from the query, before first or last was applied to limit results
- * @property nodes the list of nodes which is returned
- * @property objectMapper used for cursor generation
+ * @param nodeQueryOptions options used for querying the connection
+ * @param allNodes the list of all nodes returned from the query, before first or last was applied to limit results
+ * @param nodes the list of nodes which is returned
+ * @param objectMapper used for cursor generation
  */
 @GraphQLDescription("Information about the current page in a connection")
 class PageInfo(

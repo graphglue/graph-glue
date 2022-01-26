@@ -6,7 +6,7 @@ import de.graphglue.neo4j.execution.definition.NodeDefinition
  * Part of a [NodeQuery], consisting of a list of [NodeSubQuery]s
  * Used to partition the total list of subqueries
  *
- * @property subQueries the list of [NodeSubQuery]s
+ * @param subQueries the list of [NodeSubQuery]s
  */
 class NodeQueryPart(val subQueries: List<NodeSubQuery>) {
     /**

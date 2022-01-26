@@ -30,9 +30,9 @@ const val TOTAL_COUNT_KEY = "total_count"
 /**
  * Generates Cypher-DSL queries based on a [NodeQuery], executes it and parses the result
  *
- * @property nodeQuery the query to execute
- * @property client used to execute the query
- * @property mappingContext used to transform the result into a node
+ * @param nodeQuery the query to execute
+ * @param client used to execute the query
+ * @param mappingContext used to transform the result into a node
  */
 class NodeQueryExecutor(
     private val nodeQuery: NodeQuery,
@@ -459,7 +459,7 @@ class NodeQueryExecutor(
 /**
  * Wrapper for a [Statement] and an associated name
  *
- * @property statement the Cypher-DSL statement of the query
- * @property symbolicName the result column name
+ * @param statement the Cypher-DSL statement of the query
+ * @param symbolicName the result column name
  */
 private data class StatementWithSymbolicName(val statement: Statement, val symbolicName: SymbolicName)

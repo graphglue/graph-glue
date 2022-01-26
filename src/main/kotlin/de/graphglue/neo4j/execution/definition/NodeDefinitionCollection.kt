@@ -17,7 +17,7 @@ import kotlin.reflect.full.isSubclassOf
  * Also handles generation and storage of authorization conditions
  *
  * @param backingCollection the provided list of [NodeDefinition]s
- * @property beanFactory used to get condition defining beans for authorization
+ * @param beanFactory used to get condition defining beans for authorization
  */
 class NodeDefinitionCollection(
     backingCollection: Map<KClass<out Node>, NodeDefinition>,
@@ -450,8 +450,8 @@ class NodeDefinitionCollection(
 /**
  * Part of an authorization condition
  *
- * @property optionalPattern optional associated [PatternElement]
- * @property condition associated [Condition]
+ * @param optionalPattern optional associated [PatternElement]
+ * @param condition associated [Condition]
  */
 private data class AuthorizationConditionPart(val optionalPattern: PatternElement?, val condition: Condition) {
 

@@ -26,9 +26,9 @@ const val DEFAULT_PART_ID = "default"
  * Parser to get [NodeQuery]s
  * Can be used to create queries which load a subtree of nodes in one query
  *
- * @property nodeDefinitionCollection used to get the [NodeDefinition] for a specific [Node]
- * @property filterDefinitionCollection used to get the [FilterDefinition] for a specific [Node]
- * @property objectMapper used to parse cursors
+ * @param nodeDefinitionCollection used to get the [NodeDefinition] for a specific [Node]
+ * @param filterDefinitionCollection used to get the [FilterDefinition] for a specific [Node]
+ * @param objectMapper used to parse cursors
  */
 class NodeQueryParser(
     val nodeDefinitionCollection: NodeDefinitionCollection,

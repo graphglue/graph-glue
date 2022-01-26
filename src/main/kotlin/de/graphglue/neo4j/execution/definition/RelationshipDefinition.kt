@@ -18,11 +18,11 @@ import kotlin.reflect.full.memberProperties
  * Defines a relationship between two [Node]s
  * There may or may not be an inverse relation on the foreign node
  *
- * @property property the property on the class which defines the relationship
- * @property nodeKClass the class associated with the item nodes
- * @property type the type of the relation (label associated with Neo4j relationship)
- * @property direction direction of the relation (direction associated with Neo4j relationship)
- * @property parentKClass the class associated with the [NodeDefinition] this is used as part of,
+ * @param property the property on the class which defines the relationship
+ * @param nodeKClass the class associated with the item nodes
+ * @param type the type of the relation (label associated with Neo4j relationship)
+ * @param direction direction of the relation (direction associated with Neo4j relationship)
+ * @param parentKClass the class associated with the [NodeDefinition] this is used as part of,
  *                        must be a subclass of the property defining class
  */
 abstract class RelationshipDefinition(

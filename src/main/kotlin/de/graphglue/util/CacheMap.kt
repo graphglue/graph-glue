@@ -6,7 +6,7 @@ import java.util.function.Function
  * Cache which can be used to cache and compute entities
  * @param K the type of the keys under which cached entities are saved
  * @param V the type of the cached entities
- * @property backingMap the map which is used to cache the entities, defaults to a Hashmap
+ * @param backingMap the map which is used to cache the entities, defaults to a Hashmap
  */
 class CacheMap<K, V>(private val backingMap: MutableMap<K, V> = HashMap()) : Map<K, V> by backingMap {
 

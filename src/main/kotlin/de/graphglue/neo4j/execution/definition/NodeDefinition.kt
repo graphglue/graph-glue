@@ -18,8 +18,8 @@ import kotlin.reflect.full.memberProperties
  * Definition of a [Node]
  * Used to find relationships, get the priamry label, create a Cypher-DSL return expressions
  *
- * @property nodeType the class associated with the definition
- * @property persistentEntity defines Neo4j's view on the node
+ * @param nodeType the class associated with the definition
+ * @param persistentEntity defines Neo4j's view on the node
  * @param oneRelationshipDefinitions list of all one relationship definitions
  * @param manyRelationshipDefinitions list of all many relationship definitions
  */

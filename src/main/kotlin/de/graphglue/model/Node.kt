@@ -63,7 +63,7 @@ abstract class Node {
      * If the context is not present, the node was not loaded from the database, meaning the node is
      * not persisted yet and therefore lazy loading is not supported
      */
-    @Property("_")
+    @param("_")
     @ConvertWith(converterRef = "lazyLoadingContextConverter")
     internal var lazyLoadingContextOptional: Optional<LazyLoadingContext> = Optional.empty()
 

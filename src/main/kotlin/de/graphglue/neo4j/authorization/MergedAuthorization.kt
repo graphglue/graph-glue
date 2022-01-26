@@ -7,10 +7,10 @@ import de.graphglue.neo4j.execution.definition.RelationshipDefinition
 /**
  * A merged authorization composed of any amount of [Authorization]s
  *
- * @property name see [Authorization.name]
- * @property allow see [Authorization.allow]
- * @property allowFromRelated see [Authorization.allowFromRelated]
- * @property disallow see [Authorization.disallow]
+ * @param name see [Authorization.name]
+ * @param allow see [Authorization.allow]
+ * @param allowFromRelated see [Authorization.allowFromRelated]
+ * @param disallow see [Authorization.disallow]
  */
 data class MergedAuthorization(
     val name: String,

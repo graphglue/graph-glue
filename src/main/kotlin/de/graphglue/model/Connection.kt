@@ -11,10 +11,10 @@ import graphql.schema.DataFetchingEnvironment
  * Connection used as ObjectType in the GraphQL API
  * Represents the many side of a relation and supports filtering, ordering and pagination
  *
- * @property nodes all related nodes
- * @property pageInfo general connection information
- * @property totalCount if fetched, the total amount of items in the relation
- * @property order defines how the items are ordered in the connection, necessary for cursor definition
+ * @param nodes all related nodes
+ * @param pageInfo general connection information
+ * @param totalCount if fetched, the total amount of items in the relation
+ * @param order defines how the items are ordered in the connection, necessary for cursor definition
  */
 class Connection<T : Node>(
     private val nodes: List<T>,

@@ -6,9 +6,9 @@ import de.graphglue.neo4j.execution.definition.NodeDefinition
 /**
  * Defines a query which fetches Nodes of type `definition`
  *
- * @property definition defines which type of [Node] is fetched
- * @property options options for the query, e.g. pagination
- * @property parts subqueries partitioned into parts
+ * @param definition defines which type of [Node] is fetched
+ * @param options options for the query, e.g. pagination
+ * @param parts subqueries partitioned into parts
  */
 class NodeQuery(
     val definition: NodeDefinition,

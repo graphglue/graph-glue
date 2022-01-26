@@ -16,8 +16,8 @@ import kotlin.reflect.KProperty1
  * Base class for many and one node properties
  * Provides cache based graphql functionality, and abstract methods with allow persistence
  *
- * @property parent the node which hosts this property
- * @property property the property on the class
+ * @param parent the node which hosts this property
+ * @param property the property on the class
  * @param T the type of the value [Node] (s)
  */
 abstract class BaseProperty<T : Node?>(protected val parent: Node, protected val property: KProperty1<*, *>) {

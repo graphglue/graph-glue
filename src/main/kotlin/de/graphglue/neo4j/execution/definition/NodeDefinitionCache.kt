@@ -9,8 +9,8 @@ import kotlin.reflect.KClass
  * Cache of [NodeDefinition]s
  * Used to initially construct all definitions
  *
- * @property backingCollection cache which stores the already created definitions
- * @property neo4jMappingContext used to generate [NodeDefinition]s
+ * @param backingCollection cache which stores the already created definitions
+ * @param neo4jMappingContext used to generate [NodeDefinition]s
  */
 class NodeDefinitionCache(
     private val backingCollection: CacheMap<KClass<out Node>, NodeDefinition>,

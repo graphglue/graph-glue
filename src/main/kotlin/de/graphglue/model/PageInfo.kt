@@ -5,6 +5,14 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import de.graphglue.graphql.connection.order.Order
 import de.graphglue.neo4j.execution.NodeQueryOptions
 
+/**
+ * Page info used in GraphQL connection to provide general pagination information
+ *
+ * @property nodeQueryOptions options used for querying the connection
+ * @property allNodes the list of all nodes returned from the query, before first or last was applied to limit results
+ * @property nodes the list of nodes which is returned
+ * @property objectMapper used for cursor generation
+ */
 @GraphQLDescription("Information about the current page in a connection")
 class PageInfo(
     private val nodeQueryOptions: NodeQueryOptions,
@@ -13,10 +21,17 @@ class PageInfo(
     private val objectMapper: ObjectMapper
 ) {
 
+    /**
+     * Order in which nodes are sorted, used for cursor generation
+     */
     @Suppress("UNCHECKED_CAST")
     private val orderBy: Order<Node>
         get() = nodeQueryOptions.orderBy as Order<Node>
 
+    /**
+     * Cursor of the first [Node] in [nodes]
+     * When paginating forwards, the cursor to continue
+     */
     @GraphQLDescription("When paginating forwards, the cursor to continue")
     val startCursor: String?
         get() {
@@ -27,6 +42,10 @@ class PageInfo(
             }
         }
 
+    /**
+     * Cursor of the last [Node] in [nodes]
+     * When paginating backwards, the cursor to continue
+     */
     @GraphQLDescription("When paginating backwards, the cursor to continue")
     val endCursor: String?
         get() {
@@ -37,6 +56,10 @@ class PageInfo(
             }
         }
 
+    /**
+     * When paginating forwards, are there more items?
+     * Calculating using [allNodes] and [nodes]
+     */
     @GraphQLDescription("When paginating forwards, are there more items?")
     val hasNextPage: Boolean
         get() {
@@ -47,6 +70,10 @@ class PageInfo(
             }
         }
 
+    /**
+     * When paginating backwards, are there more items?
+     * Calculating using [allNodes] and [nodes]
+     */
     @GraphQLDescription("When paginating backwards, are there more items?")
     val hasPreviousPage: Boolean
         get() {

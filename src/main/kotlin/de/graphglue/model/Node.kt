@@ -72,17 +72,44 @@ abstract class Node {
      */
     private val lazyLoadingContext: LazyLoadingContext? get() = lazyLoadingContextOptional.orElse(null)
 
+    /**
+     * Lookup for all node properties
+     * Trades memory (additional HashMap) for a cleaner and more extensible way to lookup the delegates
+     * (compared to reflection)
+     */
     @Transient
     internal val propertyLookup: MutableMap<KProperty<*>, BaseProperty<*>> = mutableMapOf()
 
+    /**
+     * Creates a new node property used for many sides
+     *
+     * @param value the current value
+     * @param T value type
+     * @return a provider for the property delegate
+     */
     protected fun <T : Node> NodeSetProperty(value: Collection<T>? = null): PropertyDelegateProvider<Node, NodeSetProperty<T>> {
         return NodeSetPropertyProvider(value)
     }
 
+    /**
+     * Creates a new node property used for one sides
+     *
+     * @param value the current value
+     * @param T value type
+     * @return a provider for the property delegate
+     */
     protected fun <T : Node> NodeProperty(value: T? = null): PropertyDelegateProvider<Node, NodeProperty<T>> {
         return NodePropertyProvider(value)
     }
 
+    /**
+     * Loads all nodes of a relationship
+     * If the `dataFetchingEnvironment` is provided, required nested nodes are loaded too
+     *
+     * @param property defines the relation to load the nodes of
+     * @param dataFetchingEnvironment if provided used to define nested nodes to load
+     * @return the result of the query and the query itself
+     */
     internal suspend fun <T : Node?> loadNodesOfRelationship(
         property: KProperty1<*, *>,
         dataFetchingEnvironment: DataFetchingEnvironment? = null
@@ -112,16 +139,33 @@ abstract class Node {
         }
     }
 
+    /**
+     * Gets a node property from the lookup
+     * May be changed in future to support extensibility
+     *
+     * @param property the property to lookup
+     * @return the found property
+     */
     @Suppress("UNCHECKED_CAST")
-    internal fun <T: Node?> getProperty(property: KProperty<*>): BaseProperty<T> {
+    internal fun <T : Node?> getProperty(property: KProperty<*>): BaseProperty<T> {
         return propertyLookup[property]!! as BaseProperty<T>
     }
 }
 
-
+/**
+ * Provider for [NodeProperty]s
+ */
 private class NodePropertyProvider<T : Node?>(private val value: T?) : PropertyDelegateProvider<Node, NodeProperty<T>> {
+
+    /**
+     * Creates a new [NodeProperty] and registers it to the [Node.propertyLookup]
+     *
+     * @param thisRef the parent node
+     * @param property the property to delegate
+     * @return the generated property delegate
+     */
     override operator fun provideDelegate(thisRef: Node, property: KProperty<*>): NodeProperty<T> {
-        val nodeProperty =  NodeProperty(
+        val nodeProperty = NodeProperty(
             value, thisRef,
             property as KProperty1<*, *>
         )
@@ -130,10 +174,21 @@ private class NodePropertyProvider<T : Node?>(private val value: T?) : PropertyD
     }
 }
 
+/**
+ * Provider for [NodeSetProperty]s
+ */
 private class NodeSetPropertyProvider<T : Node>(private val value: Collection<T>?) :
     PropertyDelegateProvider<Node, NodeSetProperty<T>> {
+
+    /**
+     * Creates a new [NodeSetProperty] and registers it to the [Node.propertyLookup]
+     *
+     * @param thisRef the parent node
+     * @param property the property to delegate
+     * @return the generated property delegate
+     */
     override operator fun provideDelegate(thisRef: Node, property: KProperty<*>): NodeSetProperty<T> {
-        val nodeSetProperty =  NodeSetProperty(
+        val nodeSetProperty = NodeSetProperty(
             value, thisRef,
             property as KProperty1<*, *>
         )

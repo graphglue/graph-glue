@@ -8,16 +8,39 @@ import org.neo4j.cypherdsl.core.Cypher
 import kotlin.reflect.KProperty
 import kotlin.reflect.KProperty1
 
+/**
+ * Property for the one side of a relation
+ * Depending on the type of `property` may be an optional property
+ *
+ * @param value the current value of the property, `null` meaning not loaded
+ * @param parent see [BaseProperty.parent]
+ * @param property see [BaseProperty.property]
+ */
 class NodeProperty<T : Node?>(
     value: T? = null,
     parent: Node,
     property: KProperty1<*, *>
 ) : BaseProperty<T>(parent, property) {
 
+    /**
+     * If `true`, the value of this property is already loaded (either from the database or from another value)
+     */
     private var isLoaded = false
+
+    /**
+     * The current value of this property, may or may not be persisted to the database
+     */
     private var currentNode: T? = null
+
+    /**
+     * The related node as in the database
+     * `null` if not loaded or no relation present in the database
+     */
     private var persistedNode: T? = null
 
+    /**
+     * True if the [T] is marked nullable
+     */
     private val supportsNull get() = property.returnType.isMarkedNullable
 
     init {
@@ -27,6 +50,14 @@ class NodeProperty<T : Node?>(
         }
     }
 
+    /**
+     * Gets the value of the property
+     * loads if from the database if necessary
+     *
+     * @param thisRef the node which has this property
+     * @param property the represented property
+     * @return the current value
+     */
     @Suppress("UNCHECKED_CAST")
     operator fun getValue(thisRef: Node, property: KProperty<*>): T {
         return runBlocking {
@@ -42,6 +73,13 @@ class NodeProperty<T : Node?>(
         }
     }
 
+    /**
+     * Sets the current value
+     * Loads the one from the database first
+     *
+     * @param thisRef the node which has this property
+     * @param property the represented property
+     */
     operator fun setValue(thisRef: Node, property: KProperty<*>, value: T) {
         runBlocking {
             val current = getCurrentNode()
@@ -100,6 +138,12 @@ class NodeProperty<T : Node?>(
             .build()
     }
 
+    /**
+     * Gets the current node
+     * If not loaded, loads it from the database
+     *
+     * @return the current node
+     */
     private suspend fun getCurrentNode(): T? {
         return if (!isLoaded) {
             val (result, _) = parent.loadNodesOfRelationship<T>(property)
@@ -110,6 +154,12 @@ class NodeProperty<T : Node?>(
         }
     }
 
+    /**
+     * Sets the node from the remote side
+     * Used to prevent unnecessary lazy loaded queries
+     *
+     * @param value the value loaded from the database
+     */
     internal fun setFromRemote(value: T) {
         if (!isLoaded) {
             currentNode = value
@@ -118,6 +168,11 @@ class NodeProperty<T : Node?>(
         }
     }
 
+    /**
+     * Ensures that this property is in a valid state
+     *
+     * @throws IllegalStateException if in an invalid state
+     */
     private fun ensureValidSaveState() {
         if (!supportsNull) {
             val neverSetInitialRelationship = currentNode == null && parent.rawId == null

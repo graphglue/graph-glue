@@ -75,7 +75,8 @@ class GraphglueNeo4jOperations(
 
     /**
      * Saves a single Node including all lazy loaded relations
-     * Important: it has to be
+     * Important: it has to be ensured that the returned node is newly loaded from the database
+     * Sometimes, the internal save method does not reload it. In this case, we have to find it by id manually
      *
      * @param entity the [Node] to save
      * @return the newly from the database loaded entity

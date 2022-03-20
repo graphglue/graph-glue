@@ -7,6 +7,8 @@ import de.graphglue.neo4j.repositories.RelationshipDiff
 import graphql.execution.DataFetcherResult
 import kotlinx.coroutines.runBlocking
 import org.neo4j.cypherdsl.core.Cypher
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.beans.factory.annotation.Value
 import java.util.*
 import kotlin.collections.HashSet
 import kotlin.reflect.KProperty

@@ -75,6 +75,7 @@ class GraphglueNeo4jOperations(
 
     /**
      * Saves a single Node including all lazy loaded relations
+     * Important: it has to be
      *
      * @param entity the [Node] to save
      * @return the newly from the database loaded entity
@@ -85,13 +86,20 @@ class GraphglueNeo4jOperations(
         return Flux.fromIterable(nodesToSave).flatMap { nodeToSave ->
             delegate.save(nodeToSave).map { nodeToSave to it }
         }.collectList().flatMap { saveResult ->
-            val nodeIdLookup = saveResult.associate { (nodeToSave, savedNode) ->
-                nodeToSave to savedNode.rawId!!
+            val savedNodeLookup = saveResult.associate { (nodeToSave, savedNode) ->
+                nodeToSave to savedNode
             }
+            val nodeIdLookup = savedNodeLookup.mapValues { it.value.rawId!! }
             Flux.fromIterable(nodeIdLookup.keys).flatMap { nodeToSave ->
                 val nodeDefinition = nodeDefinitionCollection.getNodeDefinition(nodeToSave::class)
                 saveAllRelationships(nodeDefinition, nodeToSave, nodeIdLookup)
-            }.then(findById(nodeIdLookup[entity]!!, entity::class.java) as Mono<S>)
+            }.then(savedNodeLookup[entity].let {
+                if (it === entity) {
+                    findById(nodeIdLookup[entity]!!, entity::class.java) as Mono<S>
+                } else {
+                    Mono.just(it as S)
+                }
+            })
         }
     }
 

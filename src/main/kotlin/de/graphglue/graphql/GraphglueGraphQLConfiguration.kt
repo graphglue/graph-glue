@@ -89,6 +89,11 @@ class GraphglueGraphQLConfiguration(private val neo4jMappingContext: Neo4jMappin
         dataFetcherFactoryProvider: KotlinDataFetcherFactoryProvider
     ): SchemaGeneratorHooks {
         return object : SchemaGeneratorHooks {
+            /**
+             * Called after `willGenerateGraphQLType` and before `didGenerateGraphQLType`.
+             * Enables you to change the wiring, e.g. apply directives to alter the target type.
+             * Used to rewire relations
+             */
             override fun onRewireGraphQLType(
                 generatedType: GraphQLSchemaElement,
                 coordinates: FieldCoordinates?,
@@ -104,6 +109,10 @@ class GraphglueGraphQLConfiguration(private val neo4jMappingContext: Neo4jMappin
                 }
             }
 
+            /**
+             * Called before using reflection to generate the graphql object type for the given KType.
+             * This allows supporting objects that the caller does not want to use reflection on for special handling
+             */
             override fun willGenerateGraphQLType(type: KType): GraphQLType? {
                 if (type.isSubtypeOf(Node::class.createType())) {
                     @Suppress("UNCHECKED_CAST") val nodeClass = type.jvmErasure as KClass<out Node>

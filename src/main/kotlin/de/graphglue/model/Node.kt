@@ -22,6 +22,8 @@ import kotlin.properties.PropertyDelegateProvider
 import kotlin.reflect.KProperty
 import kotlin.reflect.KProperty1
 
+const val NODE_ID_GENERATOR_BEAN = "nodeIdGenerator"
+
 /**
  * Base class for all Nodes
  * This is always added to the schema
@@ -37,7 +39,7 @@ abstract class Node {
      * Id of this node, `null` if not persisted in the database yet
      */
     @Id
-    @GeneratedValue(UUIDStringGenerator::class)
+    @GeneratedValue(generatorRef = NODE_ID_GENERATOR_BEAN)
     internal var id: String? = null
 
     /**

@@ -59,7 +59,7 @@ tasks {
     publishing {
         publications {
             create<MavenPublication>("mavenJava") {
-                groupId = "de.graphglue"
+                groupId = "io.github.graphglue"
                 artifactId = "graphglue"
                 version = "0.1"
 

@@ -3,7 +3,7 @@ package de.graphglue.graphql.connection.filter.definition.scalars
 import graphql.Scalars
 
 class StringFilterDefinition(name: String, neo4jName: String) :
-    ScalarFilterDefinition<String>(
+    ComparableFilterDefinition<String>(
         name,
         "Filter which can be used to filter for Nodes with a specific String field",
         "StringFilterInput",

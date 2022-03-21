@@ -12,7 +12,7 @@ abstract class ScalarFilterDefinition<T>(
     typeName: String,
     scalarType: GraphQLInputType,
     neo4jName: String,
-    entries: List<ScalarFilterEntry<T>>
+    entries: List<ScalarFilterEntryBase<T>>
 ) : SimpleObjectFilterDefinitionEntry<FilterEntryDefinition>(
     name,
     description,
@@ -32,17 +32,17 @@ abstract class ScalarFilterDefinition<T>(
     }
 }
 
-fun <T> getDefaultFilterEntries(): List<ScalarFilterEntryBase<T>> {
+private fun <T> getDefaultFilterEntries(): List<ScalarFilterEntryBase<T>> {
     return listOf(
         ScalarFilterEntry(
-            "equals",
-            "Matches values which are identical to the provided value"
+            "eq",
+            "Matches values which are equal to the provided value"
         ) { property, value ->
             property.isEqualTo(value)
         },
         ScalarListFilterEntry(
             "in",
-            "Matches values which are identical to any of the provided values"
+            "Matches values which are equal to any of the provided values"
         ) { property, value ->
             property.`in`(value)
         }

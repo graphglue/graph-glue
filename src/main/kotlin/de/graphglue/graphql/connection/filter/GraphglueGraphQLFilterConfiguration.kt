@@ -3,8 +3,7 @@ package de.graphglue.graphql.connection.filter
 import com.expediagroup.graphql.generator.scalars.ID
 import de.graphglue.graphql.connection.filter.definition.NodeListFilterDefinition
 import de.graphglue.graphql.connection.filter.definition.NodeSubFilterDefinition
-import de.graphglue.graphql.connection.filter.definition.scalars.IDFilterDefinition
-import de.graphglue.graphql.connection.filter.definition.scalars.StringFilterDefinition
+import de.graphglue.graphql.connection.filter.definition.scalars.*
 import de.graphglue.model.Node
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
@@ -18,6 +17,24 @@ class GraphglueGraphQLFilterConfiguration {
     fun stringFilter() =
         TypeFilterDefinitionEntry(String::class.createType()) { name, property, parentNodeDefinition, _ ->
             StringFilterDefinition(name, parentNodeDefinition.getNeo4jNameOfProperty(property))
+        }
+
+    @Bean
+    fun intFilter() =
+        TypeFilterDefinitionEntry(Int::class.createType()) { name, property, parentNodeDefinition, _ ->
+            IntFilterDefinition(name, parentNodeDefinition.getNeo4jNameOfProperty(property))
+        }
+
+    @Bean
+    fun floatFilter() =
+        TypeFilterDefinitionEntry(Float::class.createType()) { name, property, parentNodeDefinition, _ ->
+            FloatFilterDefinition(name, parentNodeDefinition.getNeo4jNameOfProperty(property))
+        }
+
+    @Bean
+    fun booleanFilter() =
+        TypeFilterDefinitionEntry(Boolean::class.createType()) { name, property, parentNodeDefinition, _ ->
+            BooleanFilterDefinition(name, parentNodeDefinition.getNeo4jNameOfProperty(property))
         }
 
     @Bean

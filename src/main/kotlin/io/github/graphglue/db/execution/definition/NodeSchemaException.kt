@@ -1,4 +1,4 @@
-package io.github.graphglue.neo4j.execution.definition
+package io.github.graphglue.db.execution.definition
 
 /**
  * Thrown to indicate that a node relation was wrongly declared

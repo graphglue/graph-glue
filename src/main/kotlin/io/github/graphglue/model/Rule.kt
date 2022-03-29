@@ -1,6 +1,6 @@
 package io.github.graphglue.model
 
-import io.github.graphglue.neo4j.authorization.AuthorizationRuleGenerator
+import io.github.graphglue.db.authorization.AuthorizationRuleGenerator
 
 /**
  * Rule used in [Authorization] annotations

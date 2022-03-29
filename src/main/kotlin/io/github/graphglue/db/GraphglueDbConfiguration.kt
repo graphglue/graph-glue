@@ -1,8 +1,8 @@
-package io.github.graphglue.neo4j
+package io.github.graphglue.db
 
-import io.github.graphglue.neo4j.execution.NodeQueryParser
-import io.github.graphglue.neo4j.execution.definition.NodeDefinitionCollection
-import io.github.graphglue.neo4j.repositories.GraphglueNeo4jOperations
+import io.github.graphglue.db.execution.NodeQueryParser
+import io.github.graphglue.db.execution.definition.NodeDefinitionCollection
+import io.github.graphglue.db.repositories.GraphglueNeo4jOperations
 import org.neo4j.driver.Driver
 import org.neo4j.driver.Value
 import org.neo4j.driver.Values
@@ -24,7 +24,7 @@ import java.util.*
  * Autoconfiguration associated with Neo4j part of library
  */
 @Configuration
-class GraphglueNeo4jConfiguration {
+class GraphglueDbConfiguration {
 
     /**
      * Generates the converter which is used to inject the [LazyLoadingContext] into nodes

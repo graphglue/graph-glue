@@ -1,6 +1,6 @@
 package io.github.graphglue.graphql.connection.filter.model
 
-import io.github.graphglue.neo4j.CypherConditionGenerator
+import io.github.graphglue.db.CypherConditionGenerator
 import org.neo4j.cypherdsl.core.Condition
 import org.neo4j.cypherdsl.core.Conditions
 import org.neo4j.cypherdsl.core.Node

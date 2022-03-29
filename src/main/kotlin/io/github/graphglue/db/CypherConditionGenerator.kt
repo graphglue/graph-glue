@@ -1,4 +1,4 @@
-package io.github.graphglue.neo4j
+package io.github.graphglue.db
 
 import org.neo4j.cypherdsl.core.Condition
 import org.neo4j.cypherdsl.core.Node

@@ -1,12 +1,12 @@
-package io.github.graphglue.neo4j.execution.definition
+package io.github.graphglue.db.execution.definition
 
 import io.github.graphglue.graphql.extensions.getSimpleName
 import io.github.graphglue.model.Node
 import io.github.graphglue.model.Rule
-import io.github.graphglue.neo4j.CypherConditionGenerator
-import io.github.graphglue.neo4j.authorization.AuthorizationContext
-import io.github.graphglue.neo4j.authorization.AuthorizationRuleGenerator
-import io.github.graphglue.neo4j.authorization.MergedAuthorization
+import io.github.graphglue.db.CypherConditionGenerator
+import io.github.graphglue.db.authorization.AuthorizationContext
+import io.github.graphglue.db.authorization.AuthorizationRuleGenerator
+import io.github.graphglue.db.authorization.MergedAuthorization
 import org.neo4j.cypherdsl.core.*
 import org.springframework.beans.factory.BeanFactory
 import kotlin.reflect.KClass

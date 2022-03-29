@@ -1,4 +1,4 @@
-package io.github.graphglue.neo4j.repositories
+package io.github.graphglue.db.repositories
 
 import org.neo4j.cypherdsl.core.Node
 

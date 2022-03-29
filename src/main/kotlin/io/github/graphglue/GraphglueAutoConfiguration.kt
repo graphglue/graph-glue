@@ -1,9 +1,9 @@
 package io.github.graphglue
 
 import com.expediagroup.graphql.server.spring.GraphQLAutoConfiguration
-import io.github.graphglue.graphql.GraphglueGraphQLConfiguration
 import io.github.graphglue.model.NODE_ID_GENERATOR_BEAN
-import io.github.graphglue.neo4j.GraphglueNeo4jConfiguration
+import io.github.graphglue.db.GraphglueDbConfiguration
+import io.github.graphglue.graphql.GraphglueGraphQLConfiguration
 import org.springframework.boot.autoconfigure.AutoConfigureAfter
 import org.springframework.boot.autoconfigure.AutoConfigureBefore
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
@@ -19,7 +19,7 @@ import org.springframework.data.neo4j.core.support.UUIDStringGenerator
  * Imports the GraphglueGraphQLConfiguration and GraphglueNeo4jConfiguration
  */
 @Configuration
-@Import(io.github.graphglue.graphql.GraphglueGraphQLConfiguration::class, GraphglueNeo4jConfiguration::class)
+@Import(GraphglueGraphQLConfiguration::class, GraphglueDbConfiguration::class)
 @AutoConfigureBefore(
     value = [GraphQLAutoConfiguration::class]
 )

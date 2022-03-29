@@ -1,9 +1,9 @@
-package io.github.graphglue.neo4j.repositories
+package io.github.graphglue.db.repositories
 
 import io.github.graphglue.model.Node
-import io.github.graphglue.neo4j.execution.definition.NodeDefinition
-import io.github.graphglue.neo4j.execution.definition.NodeDefinitionCollection
-import io.github.graphglue.neo4j.execution.definition.RelationshipDefinition
+import io.github.graphglue.db.execution.definition.NodeDefinition
+import io.github.graphglue.db.execution.definition.NodeDefinitionCollection
+import io.github.graphglue.db.execution.definition.RelationshipDefinition
 import org.neo4j.cypherdsl.core.Cypher
 import org.neo4j.cypherdsl.core.Statement
 import org.neo4j.cypherdsl.core.renderer.Renderer

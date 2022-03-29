@@ -32,10 +32,10 @@ import io.github.graphglue.model.DomainNode
 import io.github.graphglue.model.Node
 import io.github.graphglue.model.NodeSetProperty
 import io.github.graphglue.model.PageInfo
-import io.github.graphglue.neo4j.execution.NodeQueryParser
-import io.github.graphglue.neo4j.execution.definition.NodeDefinition
-import io.github.graphglue.neo4j.execution.definition.NodeDefinitionCache
-import io.github.graphglue.neo4j.execution.definition.NodeDefinitionCollection
+import io.github.graphglue.db.execution.NodeQueryParser
+import io.github.graphglue.db.execution.definition.NodeDefinition
+import io.github.graphglue.db.execution.definition.NodeDefinitionCache
+import io.github.graphglue.db.execution.definition.NodeDefinitionCollection
 import io.github.graphglue.util.CacheMap
 import graphql.schema.*
 import org.slf4j.LoggerFactory

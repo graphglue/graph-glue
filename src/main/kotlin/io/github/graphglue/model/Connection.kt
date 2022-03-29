@@ -3,7 +3,7 @@ package io.github.graphglue.model
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.github.graphglue.graphql.connection.order.Order
 import io.github.graphglue.graphql.extensions.getDataFetcherResult
-import io.github.graphglue.neo4j.execution.NodeQueryResult
+import io.github.graphglue.db.execution.NodeQueryResult
 import graphql.execution.DataFetcherResult
 import graphql.schema.DataFetchingEnvironment
 

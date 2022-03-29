@@ -1,8 +1,8 @@
-package io.github.graphglue.neo4j.execution
+package io.github.graphglue.db.execution
 
 import io.github.graphglue.graphql.connection.order.Order
 import io.github.graphglue.graphql.connection.order.OrderDirection
-import io.github.graphglue.neo4j.execution.definition.NodeDefinition
+import io.github.graphglue.db.execution.definition.NodeDefinition
 import kotlinx.coroutines.reactor.awaitSingle
 import org.neo4j.cypherdsl.core.*
 import org.neo4j.cypherdsl.core.renderer.Configuration

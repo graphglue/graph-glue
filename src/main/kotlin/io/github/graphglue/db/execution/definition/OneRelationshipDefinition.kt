@@ -1,4 +1,4 @@
-package io.github.graphglue.neo4j.execution.definition
+package io.github.graphglue.db.execution.definition
 
 import io.github.graphglue.model.Direction
 import io.github.graphglue.model.Node

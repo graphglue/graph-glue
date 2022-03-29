@@ -1,7 +1,7 @@
-package io.github.graphglue.neo4j.execution
+package io.github.graphglue.db.execution
 
-import io.github.graphglue.neo4j.execution.definition.NodeDefinition
-import io.github.graphglue.neo4j.execution.definition.RelationshipDefinition
+import io.github.graphglue.db.execution.definition.NodeDefinition
+import io.github.graphglue.db.execution.definition.RelationshipDefinition
 
 /**
  * Defines a SubQuery which is part of a [NodeQuery]

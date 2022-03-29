@@ -1,4 +1,4 @@
-package io.github.graphglue.neo4j.execution
+package io.github.graphglue.db.execution
 
 import io.github.graphglue.model.Node
 

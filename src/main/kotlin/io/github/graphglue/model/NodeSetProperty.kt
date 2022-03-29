@@ -1,14 +1,12 @@
 package io.github.graphglue.model
 
-import io.github.graphglue.neo4j.execution.NodeQuery
-import io.github.graphglue.neo4j.execution.NodeQueryParser
-import io.github.graphglue.neo4j.execution.NodeQueryResult
-import io.github.graphglue.neo4j.repositories.RelationshipDiff
+import io.github.graphglue.db.execution.NodeQuery
+import io.github.graphglue.db.execution.NodeQueryParser
+import io.github.graphglue.db.execution.NodeQueryResult
+import io.github.graphglue.db.repositories.RelationshipDiff
 import graphql.execution.DataFetcherResult
 import kotlinx.coroutines.runBlocking
 import org.neo4j.cypherdsl.core.Cypher
-import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.beans.factory.annotation.Value
 import java.util.*
 import kotlin.collections.HashSet
 import kotlin.reflect.KProperty

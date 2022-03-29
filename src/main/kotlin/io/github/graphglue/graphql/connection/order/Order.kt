@@ -1,7 +1,7 @@
 package io.github.graphglue.graphql.connection.order
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import de.graphglue.model.Node
+import io.github.graphglue.model.Node
 import java.util.*
 
 class Order<in T : Node>(val direction: OrderDirection, val field: OrderField<T>) {

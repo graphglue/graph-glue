@@ -1,6 +1,6 @@
 package io.github.graphglue.graphql.connection.order
 
-import de.graphglue.model.Node
+import io.github.graphglue.model.Node
 import kotlin.reflect.full.memberProperties
 
 val IdOrderPart = SimpleOrderPart<Node>(Node::class.memberProperties.first { it.name == "id" }, "id")

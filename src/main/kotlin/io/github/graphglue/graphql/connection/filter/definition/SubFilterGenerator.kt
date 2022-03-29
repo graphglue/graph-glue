@@ -1,9 +1,9 @@
 package io.github.graphglue.graphql.connection.filter.definition
 
-import de.graphglue.graphql.connection.filter.TypeFilterDefinitionEntry
-import de.graphglue.graphql.extensions.getPropertyName
-import de.graphglue.neo4j.execution.definition.NodeDefinition
-import de.graphglue.neo4j.execution.definition.NodeDefinitionCache
+import io.github.graphglue.graphql.connection.filter.TypeFilterDefinitionEntry
+import io.github.graphglue.graphql.extensions.getPropertyName
+import io.github.graphglue.neo4j.execution.definition.NodeDefinition
+import io.github.graphglue.neo4j.execution.definition.NodeDefinitionCache
 import kotlin.reflect.KProperty1
 import kotlin.reflect.full.isSubtypeOf
 import kotlin.reflect.jvm.jvmErasure

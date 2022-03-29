@@ -2,8 +2,8 @@ package io.github.graphglue.model
 
 import com.expediagroup.graphql.generator.annotations.GraphQLIgnore
 import com.fasterxml.jackson.databind.ObjectMapper
-import de.graphglue.graphql.connection.order.Order
-import de.graphglue.graphql.extensions.getDataFetcherResult
+import io.github.graphglue.graphql.connection.order.Order
+import io.github.graphglue.graphql.extensions.getDataFetcherResult
 import graphql.execution.DataFetcherResult
 import graphql.schema.DataFetchingEnvironment
 import org.springframework.beans.factory.annotation.Autowired

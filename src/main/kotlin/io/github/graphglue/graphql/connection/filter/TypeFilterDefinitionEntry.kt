@@ -1,8 +1,8 @@
 package io.github.graphglue.graphql.connection.filter
 
-import de.graphglue.graphql.connection.filter.definition.FilterEntryDefinition
-import de.graphglue.graphql.connection.filter.definition.SubFilterGenerator
-import de.graphglue.neo4j.execution.definition.NodeDefinition
+import io.github.graphglue.graphql.connection.filter.definition.FilterEntryDefinition
+import io.github.graphglue.graphql.connection.filter.definition.SubFilterGenerator
+import io.github.graphglue.neo4j.execution.definition.NodeDefinition
 import kotlin.reflect.KProperty1
 import kotlin.reflect.KType
 

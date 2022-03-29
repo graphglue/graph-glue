@@ -1,1 +1,1 @@
-org.springframework.boot.autoconfigure.EnableAutoConfiguration=de.graphglue.GraphglueAutoConfiguration
+org.springframework.boot.autoconfigure.EnableAutoConfiguration=io.github.graphglue.GraphglueAutoConfiguration

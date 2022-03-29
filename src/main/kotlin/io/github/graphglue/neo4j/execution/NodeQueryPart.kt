@@ -1,6 +1,6 @@
 package io.github.graphglue.neo4j.execution
 
-import de.graphglue.neo4j.execution.definition.NodeDefinition
+import io.github.graphglue.neo4j.execution.definition.NodeDefinition
 
 /**
  * Part of a [NodeQuery], consisting of a list of [NodeSubQuery]s

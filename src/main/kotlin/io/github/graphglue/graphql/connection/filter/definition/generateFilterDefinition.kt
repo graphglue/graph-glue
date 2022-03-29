@@ -1,9 +1,9 @@
 package io.github.graphglue.graphql.connection.filter.definition
 
-import de.graphglue.graphql.connection.filter.FilterProperty
-import de.graphglue.graphql.extensions.springFindRepeatableAnnotations
-import de.graphglue.model.AdditionalFilter
-import de.graphglue.model.Node
+import io.github.graphglue.graphql.connection.filter.FilterProperty
+import io.github.graphglue.graphql.extensions.springFindRepeatableAnnotations
+import io.github.graphglue.model.AdditionalFilter
+import io.github.graphglue.model.Node
 import kotlin.reflect.KClass
 import kotlin.reflect.full.hasAnnotation
 import kotlin.reflect.full.memberProperties

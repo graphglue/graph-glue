@@ -1,6 +1,6 @@
 package io.github.graphglue.graphql.connection.order
 
-import de.graphglue.model.Node
+import io.github.graphglue.model.Node
 import kotlin.reflect.KProperty
 
 class SimpleOrderPart<T : Node>(property: KProperty<*>, neo4jPropertyName: String) :

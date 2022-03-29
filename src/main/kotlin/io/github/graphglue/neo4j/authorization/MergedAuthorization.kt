@@ -1,8 +1,8 @@
 package io.github.graphglue.neo4j.authorization
 
-import de.graphglue.model.Authorization
-import de.graphglue.model.Rule
-import de.graphglue.neo4j.execution.definition.RelationshipDefinition
+import io.github.graphglue.model.Authorization
+import io.github.graphglue.model.Rule
+import io.github.graphglue.neo4j.execution.definition.RelationshipDefinition
 
 /**
  * A merged authorization composed of any amount of [Authorization]s

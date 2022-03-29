@@ -2,8 +2,8 @@ package io.github.graphglue.model
 
 import com.expediagroup.graphql.generator.annotations.GraphQLDescription
 import com.fasterxml.jackson.databind.ObjectMapper
-import de.graphglue.graphql.connection.order.Order
-import de.graphglue.neo4j.execution.NodeQueryOptions
+import io.github.graphglue.graphql.connection.order.Order
+import io.github.graphglue.neo4j.execution.NodeQueryOptions
 
 /**
  * Page info used in GraphQL connection to provide general pagination information

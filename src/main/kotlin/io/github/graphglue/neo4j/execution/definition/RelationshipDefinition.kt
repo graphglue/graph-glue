@@ -1,9 +1,9 @@
 package io.github.graphglue.neo4j.execution.definition
 
-import de.graphglue.graphql.extensions.getPropertyName
-import de.graphglue.model.*
-import de.graphglue.neo4j.execution.NodeQueryResult
-import de.graphglue.neo4j.repositories.RelationshipDiff
+import io.github.graphglue.graphql.extensions.getPropertyName
+import io.github.graphglue.model.*
+import io.github.graphglue.neo4j.execution.NodeQueryResult
+import io.github.graphglue.neo4j.repositories.RelationshipDiff
 import org.neo4j.cypherdsl.core.ExposesPatternLengthAccessors
 import org.neo4j.cypherdsl.core.ExposesRelationships
 import org.neo4j.cypherdsl.core.RelationshipPattern

@@ -1,8 +1,8 @@
 package io.github.graphglue.graphql.connection.filter.definition
 
-import de.graphglue.graphql.connection.filter.model.FilterEntry
-import de.graphglue.graphql.connection.filter.model.SimpleFilterEntry
-import de.graphglue.util.CacheMap
+import io.github.graphglue.graphql.connection.filter.model.FilterEntry
+import io.github.graphglue.graphql.connection.filter.model.SimpleFilterEntry
+import io.github.graphglue.util.CacheMap
 import graphql.schema.GraphQLInputType
 import org.neo4j.cypherdsl.core.*
 

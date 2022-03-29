@@ -1,6 +1,6 @@
 package io.github.graphglue.graphql.connection.filter.definition
 
-import de.graphglue.model.Node
+import io.github.graphglue.model.Node
 import kotlin.reflect.KClass
 
 class FilterDefinitionCollection(private val backingCollection: Map<KClass<out Node>, FilterDefinition<out Node>>) {

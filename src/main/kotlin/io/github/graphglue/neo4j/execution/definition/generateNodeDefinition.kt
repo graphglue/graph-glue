@@ -1,9 +1,9 @@
 package io.github.graphglue.neo4j.execution.definition
 
-import de.graphglue.model.Node
-import de.graphglue.model.NodeProperty
-import de.graphglue.model.NodeRelationship
-import de.graphglue.model.NodeSetProperty
+import io.github.graphglue.model.Node
+import io.github.graphglue.model.NodeProperty
+import io.github.graphglue.model.NodeRelationship
+import io.github.graphglue.model.NodeSetProperty
 import org.springframework.data.neo4j.core.mapping.Neo4jMappingContext
 import org.springframework.data.neo4j.core.mapping.Neo4jPersistentEntity
 import kotlin.reflect.KClass

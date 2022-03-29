@@ -1,6 +1,6 @@
 package io.github.graphglue.neo4j.authorization
 
-import de.graphglue.model.Rule
+import io.github.graphglue.model.Rule
 import org.neo4j.cypherdsl.core.Condition
 import org.neo4j.cypherdsl.core.Node
 

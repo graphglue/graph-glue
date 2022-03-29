@@ -1,7 +1,7 @@
 package io.github.graphglue.graphql.redirect
 
 import com.expediagroup.graphql.generator.extensions.unwrapType
-import de.graphglue.model.NODE_RELATIONSHIP_DIRECTIVE
+import io.github.graphglue.model.NODE_RELATIONSHIP_DIRECTIVE
 import graphql.schema.*
 
 /**

@@ -1,6 +1,6 @@
 package io.github.graphglue.graphql.connection.filter.definition
 
-import de.graphglue.util.CacheMap
+import io.github.graphglue.util.CacheMap
 import graphql.schema.GraphQLInputType
 
 interface GraphQLInputTypeGenerator {

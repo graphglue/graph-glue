@@ -1,6 +1,6 @@
 package io.github.graphglue.graphql.connection.filter.model
 
-import de.graphglue.graphql.connection.filter.definition.FilterEntryDefinition
+import io.github.graphglue.graphql.connection.filter.definition.FilterEntryDefinition
 import org.neo4j.cypherdsl.core.Condition
 import org.neo4j.cypherdsl.core.Conditions
 import org.neo4j.cypherdsl.core.Node

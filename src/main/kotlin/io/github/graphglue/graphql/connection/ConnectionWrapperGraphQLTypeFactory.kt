@@ -1,13 +1,13 @@
 package io.github.graphglue.graphql.connection
 
 import com.expediagroup.graphql.generator.execution.KotlinDataFetcherFactoryProvider
-import de.graphglue.graphql.connection.filter.definition.SubFilterGenerator
-import de.graphglue.graphql.connection.filter.definition.generateFilterDefinition
-import de.graphglue.graphql.connection.order.OrderField
-import de.graphglue.graphql.connection.order.generateOrders
-import de.graphglue.graphql.extensions.getSimpleName
-import de.graphglue.model.*
-import de.graphglue.util.CacheMap
+import io.github.graphglue.graphql.connection.filter.definition.SubFilterGenerator
+import io.github.graphglue.graphql.connection.filter.definition.generateFilterDefinition
+import io.github.graphglue.graphql.connection.order.OrderField
+import io.github.graphglue.graphql.connection.order.generateOrders
+import io.github.graphglue.graphql.extensions.getSimpleName
+import io.github.graphglue.model.*
+import io.github.graphglue.util.CacheMap
 import graphql.Scalars
 import graphql.language.EnumValue
 import graphql.schema.*

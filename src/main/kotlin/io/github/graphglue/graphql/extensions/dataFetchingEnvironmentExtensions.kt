@@ -1,10 +1,10 @@
 package io.github.graphglue.graphql.extensions
 
 import com.expediagroup.graphql.generator.extensions.deepName
-import de.graphglue.neo4j.authorization.AuthorizationContext
-import de.graphglue.neo4j.execution.NodeQuery
-import de.graphglue.neo4j.execution.definition.NodeDefinition
-import de.graphglue.neo4j.execution.definition.NodeDefinitionCollection
+import io.github.graphglue.neo4j.authorization.AuthorizationContext
+import io.github.graphglue.neo4j.execution.NodeQuery
+import io.github.graphglue.neo4j.execution.definition.NodeDefinition
+import io.github.graphglue.neo4j.execution.definition.NodeDefinitionCollection
 import graphql.execution.DataFetcherResult
 import graphql.schema.DataFetchingEnvironment
 

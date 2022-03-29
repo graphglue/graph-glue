@@ -1,8 +1,8 @@
 package io.github.graphglue.neo4j.execution
 
-import de.graphglue.graphql.connection.order.Order
-import de.graphglue.graphql.connection.order.OrderDirection
-import de.graphglue.neo4j.execution.definition.NodeDefinition
+import io.github.graphglue.graphql.connection.order.Order
+import io.github.graphglue.graphql.connection.order.OrderDirection
+import io.github.graphglue.neo4j.execution.definition.NodeDefinition
 import kotlinx.coroutines.reactor.awaitSingle
 import org.neo4j.cypherdsl.core.*
 import org.neo4j.cypherdsl.core.renderer.Configuration
@@ -433,7 +433,7 @@ class NodeQueryExecutor(
     private fun parseNode(
         value: Value,
         nodeDefinition: NodeDefinition
-    ): de.graphglue.model.Node {
+    ): io.github.graphglue.model.Node {
         val node = mappingContext.entityConverter.read(nodeDefinition.nodeType.java, value.get(NODE_KEY))
         for (relatedNodeName in value.keys()) {
             if (relatedNodeName != NODE_KEY) {
@@ -448,7 +448,7 @@ class NodeQueryExecutor(
                 @Suppress("UNCHECKED_CAST")
                 relationshipDefinition.registerQueryResult(
                     node,
-                    subQueryResult as NodeQueryResult<de.graphglue.model.Node>
+                    subQueryResult as NodeQueryResult<io.github.graphglue.model.Node>
                 )
             }
         }

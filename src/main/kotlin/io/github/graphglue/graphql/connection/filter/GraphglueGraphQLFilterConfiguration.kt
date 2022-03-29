@@ -1,10 +1,10 @@
 package io.github.graphglue.graphql.connection.filter
 
 import com.expediagroup.graphql.generator.scalars.ID
-import de.graphglue.graphql.connection.filter.definition.NodeListFilterDefinition
-import de.graphglue.graphql.connection.filter.definition.NodeSubFilterDefinition
-import de.graphglue.graphql.connection.filter.definition.scalars.*
-import de.graphglue.model.Node
+import io.github.graphglue.graphql.connection.filter.definition.NodeListFilterDefinition
+import io.github.graphglue.graphql.connection.filter.definition.NodeSubFilterDefinition
+import io.github.graphglue.graphql.connection.filter.definition.scalars.*
+import io.github.graphglue.model.Node
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import kotlin.reflect.KTypeProjection

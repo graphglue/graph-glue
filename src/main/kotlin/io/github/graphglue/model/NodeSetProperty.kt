@@ -1,9 +1,9 @@
 package io.github.graphglue.model
 
-import de.graphglue.neo4j.execution.NodeQuery
-import de.graphglue.neo4j.execution.NodeQueryParser
-import de.graphglue.neo4j.execution.NodeQueryResult
-import de.graphglue.neo4j.repositories.RelationshipDiff
+import io.github.graphglue.neo4j.execution.NodeQuery
+import io.github.graphglue.neo4j.execution.NodeQueryParser
+import io.github.graphglue.neo4j.execution.NodeQueryResult
+import io.github.graphglue.neo4j.repositories.RelationshipDiff
 import graphql.execution.DataFetcherResult
 import kotlinx.coroutines.runBlocking
 import org.neo4j.cypherdsl.core.Cypher

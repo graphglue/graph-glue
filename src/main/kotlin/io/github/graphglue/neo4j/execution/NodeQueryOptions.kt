@@ -1,8 +1,8 @@
 package io.github.graphglue.neo4j.execution
 
-import de.graphglue.graphql.connection.order.IdOrder
-import de.graphglue.graphql.connection.order.Order
-import de.graphglue.neo4j.CypherConditionGenerator
+import io.github.graphglue.graphql.connection.order.IdOrder
+import io.github.graphglue.graphql.connection.order.Order
+import io.github.graphglue.neo4j.CypherConditionGenerator
 
 /**
  * Defines how a [NodeQuery] fetches data

@@ -1,7 +1,7 @@
 package io.github.graphglue.neo4j.execution.definition
 
-import de.graphglue.model.Direction
-import de.graphglue.model.Node
+import io.github.graphglue.model.Direction
+import io.github.graphglue.model.Node
 import kotlin.reflect.KClass
 import kotlin.reflect.KProperty1
 import kotlin.reflect.jvm.jvmErasure

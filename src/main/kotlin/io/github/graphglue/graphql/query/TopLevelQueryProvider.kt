@@ -2,14 +2,14 @@ package io.github.graphglue.graphql.query
 
 import com.expediagroup.graphql.generator.annotations.GraphQLIgnore
 import com.fasterxml.jackson.databind.ObjectMapper
-import de.graphglue.graphql.extensions.authorizationContext
-import de.graphglue.model.Connection
-import de.graphglue.model.Node
-import de.graphglue.neo4j.LazyLoadingContext
-import de.graphglue.neo4j.execution.NodeQueryExecutor
-import de.graphglue.neo4j.execution.NodeQueryParser
-import de.graphglue.neo4j.execution.NodeQueryResult
-import de.graphglue.neo4j.execution.definition.NodeDefinition
+import io.github.graphglue.graphql.extensions.authorizationContext
+import io.github.graphglue.model.Connection
+import io.github.graphglue.model.Node
+import io.github.graphglue.neo4j.LazyLoadingContext
+import io.github.graphglue.neo4j.execution.NodeQueryExecutor
+import io.github.graphglue.neo4j.execution.NodeQueryParser
+import io.github.graphglue.neo4j.execution.NodeQueryResult
+import io.github.graphglue.neo4j.execution.definition.NodeDefinition
 import graphql.execution.DataFetcherResult
 import graphql.schema.DataFetchingEnvironment
 import org.springframework.beans.factory.annotation.Autowired

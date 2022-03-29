@@ -1,7 +1,7 @@
 package io.github.graphglue.model
 
-import de.graphglue.neo4j.execution.*
-import de.graphglue.neo4j.repositories.RelationshipDiff
+import io.github.graphglue.neo4j.execution.*
+import io.github.graphglue.neo4j.repositories.RelationshipDiff
 import graphql.execution.DataFetcherResult
 import kotlinx.coroutines.runBlocking
 import org.neo4j.cypherdsl.core.Cypher

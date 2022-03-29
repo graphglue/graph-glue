@@ -1,9 +1,9 @@
 package io.github.graphglue.graphql.connection.filter.definition
 
-import de.graphglue.graphql.connection.filter.model.*
-import de.graphglue.graphql.extensions.getSimpleName
-import de.graphglue.model.Node
-import de.graphglue.util.CacheMap
+import io.github.graphglue.graphql.connection.filter.model.*
+import io.github.graphglue.graphql.extensions.getSimpleName
+import io.github.graphglue.model.Node
+import io.github.graphglue.util.CacheMap
 import graphql.schema.*
 import kotlin.reflect.KClass
 

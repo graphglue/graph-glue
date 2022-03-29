@@ -1,10 +1,10 @@
 package io.github.graphglue.neo4j.execution.definition
 
-import de.graphglue.graphql.extensions.getSimpleName
-import de.graphglue.graphql.extensions.springFindRepeatableAnnotations
-import de.graphglue.model.Authorization
-import de.graphglue.model.Node
-import de.graphglue.neo4j.authorization.MergedAuthorization
+import io.github.graphglue.graphql.extensions.getSimpleName
+import io.github.graphglue.graphql.extensions.springFindRepeatableAnnotations
+import io.github.graphglue.model.Authorization
+import io.github.graphglue.model.Node
+import io.github.graphglue.neo4j.authorization.MergedAuthorization
 import org.neo4j.cypherdsl.core.Expression
 import org.neo4j.cypherdsl.core.SymbolicName
 import org.springframework.data.neo4j.core.mapping.Constants

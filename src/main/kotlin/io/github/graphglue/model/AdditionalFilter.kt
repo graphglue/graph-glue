@@ -1,6 +1,6 @@
 package io.github.graphglue.model
 
-import de.graphglue.graphql.connection.filter.definition.FilterEntryDefinition
+import io.github.graphglue.graphql.connection.filter.definition.FilterEntryDefinition
 import java.lang.annotation.Inherited
 
 /**

@@ -13,30 +13,30 @@ import com.expediagroup.graphql.server.operations.Query
 import com.expediagroup.graphql.server.operations.Subscription
 import com.expediagroup.graphql.server.spring.GraphQLConfigurationProperties
 import com.fasterxml.jackson.databind.ObjectMapper
-import de.graphglue.graphql.connection.ConnectionWrapperGraphQLTypeFactory
-import de.graphglue.graphql.connection.filter.GraphglueGraphQLFilterConfiguration
-import de.graphglue.graphql.connection.filter.TypeFilterDefinitionEntry
-import de.graphglue.graphql.connection.filter.definition.FilterDefinitionCache
-import de.graphglue.graphql.connection.filter.definition.FilterDefinitionCollection
-import de.graphglue.graphql.connection.filter.definition.FilterEntryDefinition
-import de.graphglue.graphql.connection.filter.definition.SubFilterGenerator
-import de.graphglue.graphql.connection.order.OrderDirection
-import de.graphglue.graphql.extensions.getSimpleName
-import de.graphglue.graphql.extensions.springFindAnnotation
-import de.graphglue.graphql.extensions.toTopLevelObjects
-import de.graphglue.graphql.query.GraphglueQuery
-import de.graphglue.graphql.query.TopLevelQueryProvider
-import de.graphglue.graphql.redirect.RedirectKotlinDataFetcherFactoryProvider
-import de.graphglue.graphql.redirect.rewireFieldType
-import de.graphglue.model.DomainNode
-import de.graphglue.model.Node
-import de.graphglue.model.NodeSetProperty
-import de.graphglue.model.PageInfo
-import de.graphglue.neo4j.execution.NodeQueryParser
-import de.graphglue.neo4j.execution.definition.NodeDefinition
-import de.graphglue.neo4j.execution.definition.NodeDefinitionCache
-import de.graphglue.neo4j.execution.definition.NodeDefinitionCollection
-import de.graphglue.util.CacheMap
+import io.github.graphglue.graphql.connection.ConnectionWrapperGraphQLTypeFactory
+import io.github.graphglue.graphql.connection.filter.GraphglueGraphQLFilterConfiguration
+import io.github.graphglue.graphql.connection.filter.TypeFilterDefinitionEntry
+import io.github.graphglue.graphql.connection.filter.definition.FilterDefinitionCache
+import io.github.graphglue.graphql.connection.filter.definition.FilterDefinitionCollection
+import io.github.graphglue.graphql.connection.filter.definition.FilterEntryDefinition
+import io.github.graphglue.graphql.connection.filter.definition.SubFilterGenerator
+import io.github.graphglue.graphql.connection.order.OrderDirection
+import io.github.graphglue.graphql.extensions.getSimpleName
+import io.github.graphglue.graphql.extensions.springFindAnnotation
+import io.github.graphglue.graphql.extensions.toTopLevelObjects
+import io.github.graphglue.graphql.query.GraphglueQuery
+import io.github.graphglue.graphql.query.TopLevelQueryProvider
+import io.github.graphglue.graphql.redirect.RedirectKotlinDataFetcherFactoryProvider
+import io.github.graphglue.graphql.redirect.rewireFieldType
+import io.github.graphglue.model.DomainNode
+import io.github.graphglue.model.Node
+import io.github.graphglue.model.NodeSetProperty
+import io.github.graphglue.model.PageInfo
+import io.github.graphglue.neo4j.execution.NodeQueryParser
+import io.github.graphglue.neo4j.execution.definition.NodeDefinition
+import io.github.graphglue.neo4j.execution.definition.NodeDefinitionCache
+import io.github.graphglue.neo4j.execution.definition.NodeDefinitionCollection
+import io.github.graphglue.util.CacheMap
 import graphql.schema.*
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.BeanFactory
@@ -199,7 +199,7 @@ class GraphglueGraphQLConfiguration(private val neo4jMappingContext: Neo4jMappin
     ): SchemaGeneratorConfig {
         val generatorHooks = hooks.orElse(NoopSchemaGeneratorHooks)
         return SchemaGeneratorConfig(
-            supportedPackages = listOf("de.graphglue") + config.packages,
+            supportedPackages = listOf("io.github.graphglue") + config.packages,
             topLevelNames = topLevelNames.orElse(TopLevelNames()),
             hooks = generatorHooks,
             dataFetcherFactoryProvider = dataFetcherFactoryProvider,

@@ -2,10 +2,10 @@ package io.github.graphglue.model
 
 import com.expediagroup.graphql.generator.annotations.GraphQLIgnore
 import com.fasterxml.jackson.databind.ObjectMapper
-import de.graphglue.graphql.extensions.getParentNodeDefinition
-import de.graphglue.neo4j.execution.*
-import de.graphglue.neo4j.execution.definition.NodeDefinitionCollection
-import de.graphglue.neo4j.repositories.RelationshipDiff
+import io.github.graphglue.graphql.extensions.getParentNodeDefinition
+import io.github.graphglue.neo4j.execution.*
+import io.github.graphglue.neo4j.execution.definition.NodeDefinitionCollection
+import io.github.graphglue.neo4j.repositories.RelationshipDiff
 import graphql.execution.DataFetcherResult
 import graphql.schema.DataFetchingEnvironment
 import org.springframework.beans.factory.annotation.Autowired

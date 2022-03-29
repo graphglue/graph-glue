@@ -1,7 +1,7 @@
 package io.github.graphglue.neo4j.execution
 
-import de.graphglue.model.Node
-import de.graphglue.neo4j.execution.definition.NodeDefinition
+import io.github.graphglue.model.Node
+import io.github.graphglue.neo4j.execution.definition.NodeDefinition
 
 /**
  * Defines a query which fetches Nodes of type `definition`

@@ -3,8 +3,8 @@ package io.github.graphglue.graphql.redirect
 import com.expediagroup.graphql.generator.execution.KotlinDataFetcherFactoryProvider
 import com.expediagroup.graphql.server.spring.execution.SpringKotlinDataFetcherFactoryProvider
 import com.fasterxml.jackson.databind.ObjectMapper
-import de.graphglue.model.BaseProperty
-import de.graphglue.model.Node
+import io.github.graphglue.model.BaseProperty
+import io.github.graphglue.model.Node
 import graphql.schema.DataFetcher
 import graphql.schema.DataFetcherFactory
 import graphql.schema.DataFetchingEnvironment

@@ -1,7 +1,7 @@
 package io.github.graphglue.graphql.connection.filter.model
 
-import de.graphglue.graphql.connection.filter.definition.NodeListFilterDefinition
-import de.graphglue.graphql.connection.filter.definition.NodeSubFilterDefinition
+import io.github.graphglue.graphql.connection.filter.definition.NodeListFilterDefinition
+import io.github.graphglue.graphql.connection.filter.definition.NodeSubFilterDefinition
 import org.neo4j.cypherdsl.core.*
 
 class NodeListFilter(definition: NodeListFilterDefinition, entries: List<NodeListFilterEntry>) :

@@ -1,6 +1,6 @@
 package io.github.graphglue.neo4j.authorization
 
-import de.graphglue.model.Authorization
+import io.github.graphglue.model.Authorization
 
 /**
  * Context for authorization

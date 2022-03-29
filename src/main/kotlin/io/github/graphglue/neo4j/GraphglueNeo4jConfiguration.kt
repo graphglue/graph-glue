@@ -1,8 +1,8 @@
 package io.github.graphglue.neo4j
 
-import de.graphglue.neo4j.execution.NodeQueryParser
-import de.graphglue.neo4j.execution.definition.NodeDefinitionCollection
-import de.graphglue.neo4j.repositories.GraphglueNeo4jOperations
+import io.github.graphglue.neo4j.execution.NodeQueryParser
+import io.github.graphglue.neo4j.execution.definition.NodeDefinitionCollection
+import io.github.graphglue.neo4j.repositories.GraphglueNeo4jOperations
 import org.neo4j.driver.Driver
 import org.neo4j.driver.Value
 import org.neo4j.driver.Values

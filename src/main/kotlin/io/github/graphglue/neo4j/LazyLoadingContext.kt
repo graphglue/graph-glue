@@ -1,6 +1,6 @@
 package io.github.graphglue.neo4j
 
-import de.graphglue.neo4j.execution.NodeQueryParser
+import io.github.graphglue.neo4j.execution.NodeQueryParser
 import org.springframework.data.neo4j.core.ReactiveNeo4jClient
 import org.springframework.data.neo4j.core.mapping.Neo4jMappingContext
 

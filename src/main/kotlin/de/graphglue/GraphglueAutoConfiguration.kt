@@ -28,6 +28,10 @@ import org.springframework.data.neo4j.core.support.UUIDStringGenerator
 )
 class GraphglueAutoConfiguration {
 
+    /**
+     * Default node id generator
+     * @return the generator for node ids
+     */
     @Bean(NODE_ID_GENERATOR_BEAN)
     @ConditionalOnMissingBean
     fun nodeIdGenerator() = UUIDStringGenerator()

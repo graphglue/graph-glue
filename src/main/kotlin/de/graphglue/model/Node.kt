@@ -22,6 +22,9 @@ import kotlin.properties.PropertyDelegateProvider
 import kotlin.reflect.KProperty
 import kotlin.reflect.KProperty1
 
+/**
+ * Name of the bean used as id generator for [Node]s
+ */
 const val NODE_ID_GENERATOR_BEAN = "nodeIdGenerator"
 
 /**

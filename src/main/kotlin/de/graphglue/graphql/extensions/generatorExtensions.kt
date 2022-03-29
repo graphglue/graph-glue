@@ -24,6 +24,8 @@ import org.springframework.aop.support.AopUtils
 /**
  * Convert a list of spring objects into a list of [TopLevelObject]s that
  * the schema generator can use
+ * Taken from graphql-kotlin
+ * [https://github.com/ExpediaGroup/graphql-kotlin/blob/master/servers/graphql-kotlin-spring-server/src/main/kotlin/com/expediagroup/graphql/server/spring/extensions/generatorExtensions.kt]
  */
 fun List<Any>.toTopLevelObjects() = this.map {
     val klazz = if (AopUtils.isAopProxy(it) && it is Advised) {

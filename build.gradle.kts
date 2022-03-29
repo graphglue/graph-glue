@@ -1,6 +1,7 @@
 import org.jetbrains.dokka.gradle.DokkaTask
 
-description = "A framework to connect graphql-kotlin and neo4j"
+val projectDescription = "A library to develop annotation-based code-first GraphQL servers using GraphQL Kotlin, Spring Boot and Neo4j"
+description = projectDescription
 
 val reactorVersion = "5.3.10"
 val graphqlKotlinVersion = "5.3.1"
@@ -11,6 +12,8 @@ plugins {
 	kotlin("plugin.spring") version "1.6.10"
     id("maven-publish")
     id("org.jetbrains.dokka") version "1.6.10"
+    signing
+    id("io.github.gradle-nexus.publish-plugin") version "1.1.0"
 }
 
 repositories {
@@ -61,11 +64,69 @@ tasks {
             create<MavenPublication>("mavenJava") {
                 groupId = "io.github.graphglue"
                 artifactId = "graphglue"
-                version = "0.1"
+                version = "1.0.0"
+
+                pom {
+                    name.set("graph-glue")
+                    description.set(projectDescription)
+                    url.set("https://github.com/graphglue/graph-glue")
+
+                    organization {
+                        name.set("Software Quality and Architecture - University of Stuttgart")
+                        url.set("https://www.iste.uni-stuttgart.de/sqa/")
+                    }
+
+                    developers {
+                        developer {
+                            name.set("Niklas Krieger")
+                            email.set("niklas.krieger@iste.uni-stuttgart.de")
+                            organization.set("Software Quality and Architecture - University of Stuttgart")
+                            organizationUrl.set("https://www.iste.uni-stuttgart.de/sqa/")
+                        }
+                        developer {
+                            name.set("Georg Reißner")
+                            email.set("georg.reissner@iste.uni-stuttgart.de")
+                            organization.set("Software Quality and Architecture - University of Stuttgart")
+                            organizationUrl.set("https://www.iste.uni-stuttgart.de/sqa/")
+                        }
+                        developer {
+                            name.set("Christian Kurz")
+                            email.set("chrikuvellberg@gmail.com")
+                            organization.set("Software Quality and Architecture - University of Stuttgart")
+                            organizationUrl.set("https://www.iste.uni-stuttgart.de/sqa/")
+                        }
+                    }
+
+                    scm {
+                        connection.set("scm:git:git://github.com/graphglue/graph-glue.git")
+                        developerConnection.set("scm:git:https://github.com/graphglue/graph-glue.git")
+                        url.set("https://github.com/graphglue/graph-glue/tree/main")
+                    }
+
+                    licenses {
+                        license {
+                            name.set("The Apache License, Version 2.0")
+                            url.set("http://www.apache.org/licenses/LICENSE-2.0.txt")
+                        }
+                    }
+                }
 
                 from(jarComponent)
                 artifact(sourcesJar.get())
                 artifact(javadocJar.get())
+            }
+        }
+    }
+
+    signing {
+        sign(publishing.publications["mavenJava"])
+    }
+
+    nexusPublishing {
+        repositories {
+            sonatype {
+                nexusUrl.set(uri("https://s01.oss.sonatype.org/service/local/"))
+                snapshotRepositoryUrl.set(uri("https://s01.oss.sonatype.org/content/repositories/snapshots/"))
             }
         }
     }

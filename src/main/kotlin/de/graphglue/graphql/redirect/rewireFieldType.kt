@@ -24,17 +24,3 @@ fun rewireFieldType(fieldDefinition: GraphQLFieldDefinition): GraphQLFieldDefini
     }
     return fieldDefinition
 }
-
-/***
- * Wrapper for an existing [DataFetchingEnvironment] but which replaces the source
- * by applying the original DataFetchingEnvironment first on the original [parentDataFetcher]
- */
-private class RedirectDataFetchingEnvironment(
-    private val parent: DataFetchingEnvironment,
-    private val parentDataFetcher: DataFetcher<*>
-) : DataFetchingEnvironment by parent {
-    override fun <T : Any?> getSource(): T {
-        @Suppress("UNCHECKED_CAST")
-        return parentDataFetcher.get(parent) as T
-    }
-}

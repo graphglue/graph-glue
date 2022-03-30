@@ -1,7 +1,7 @@
 import org.jetbrains.dokka.gradle.DokkaTask
 
-val projectDescription = "A library to develop annotation-based code-first GraphQL servers using GraphQL Kotlin, Spring Boot and Neo4j"
-description = projectDescription
+description = "A library to develop annotation-based code-first GraphQL servers using GraphQL Kotlin, Spring Boot and Neo4j"
+version = "1.0.0-SNAPSHOT"
 
 val reactorVersion = "5.3.10"
 val graphqlKotlinVersion = "5.3.1"
@@ -24,6 +24,8 @@ dependencies {
     api("com.expediagroup", "graphql-kotlin-spring-server",graphqlKotlinVersion)
     api("org.springframework.boot", "spring-boot-starter-data-neo4j", neo4jVersion)
 }
+
+extra["isReleaseVersion"] = !version.toString().endsWith("SNAPSHOT")
 
 tasks {
     jar {
@@ -64,11 +66,10 @@ tasks {
             create<MavenPublication>("mavenJava") {
                 groupId = "io.github.graphglue"
                 artifactId = "graphglue"
-                version = "1.0.0"
 
                 pom {
                     name.set("graph-glue")
-                    description.set(projectDescription)
+                    description.set(project.description)
                     url.set("https://github.com/graphglue/graph-glue")
 
                     organization {
@@ -119,6 +120,9 @@ tasks {
     }
 
     signing {
+        setRequired({
+            (project.extra["isReleaseVersion"] as Boolean)
+        })
         sign(publishing.publications["mavenJava"])
     }
 

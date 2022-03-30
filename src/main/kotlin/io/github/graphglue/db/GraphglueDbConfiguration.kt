@@ -19,6 +19,10 @@ import org.springframework.data.neo4j.core.mapping.Neo4jMappingContext
 import org.springframework.data.neo4j.core.transaction.ReactiveNeo4jTransactionManager
 import java.util.*
 
+/**
+ * Name for the bean which provides an instance of  [GraphglueNeo4jOperations]
+ */
+const val GRAPHGLUE_NEO4J_OPERATIONS_BEAN_NAME = "graphglueNeo4jOperations"
 
 /***
  * Autoconfiguration associated with Neo4j part of library
@@ -86,7 +90,7 @@ class GraphglueDbConfiguration {
      * @param beanFactory used to get the [NodeDefinitionCollection]
      * @return the created [GraphglueNeo4jOperations] which supports save of lazy loaded relations
      */
-    @Bean("graphglueNeo4jOperations")
+    @Bean(GRAPHGLUE_NEO4J_OPERATIONS_BEAN_NAME)
     fun graphGlueNeo4jOperations(
         neo4jTemplate: ReactiveNeo4jTemplate,
         neo4jClient: ReactiveNeo4jClient,

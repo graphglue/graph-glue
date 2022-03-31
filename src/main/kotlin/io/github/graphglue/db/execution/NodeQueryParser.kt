@@ -8,7 +8,7 @@ import io.github.graphglue.graphql.connection.order.parseOrder
 import io.github.graphglue.model.NODE_RELATIONSHIP_DIRECTIVE
 import io.github.graphglue.model.Node
 import io.github.graphglue.db.CypherConditionGenerator
-import io.github.graphglue.db.authorization.AuthorizationContext
+import io.github.graphglue.db.authorization.Permission
 import io.github.graphglue.db.execution.definition.*
 import graphql.schema.DataFetchingEnvironment
 import graphql.schema.DataFetchingFieldSelectionSet
@@ -44,7 +44,7 @@ class NodeQueryParser(
      * @param dataFetchingEnvironment can optionally be provided to fetch a subtree of nodes
      * @param relationshipDefinition defines the relationship to load related nodes of
      * @param parentNode root [Node] of the relationship to load related nodes of
-     * @param authorizationContext optional context to add authorization filter conditions
+     * @param requiredPermission optional required permission
      * @return the generated [NodeQuery] to load related nodes of `rootNode`
      */
     fun generateRelationshipNodeQuery(
@@ -52,7 +52,7 @@ class NodeQueryParser(
         dataFetchingEnvironment: DataFetchingEnvironment?,
         relationshipDefinition: RelationshipDefinition,
         parentNode: Node,
-        authorizationContext: AuthorizationContext?
+        requiredPermission: Permission?
     ): NodeQuery {
         val idParameter = Cypher.anonParameter(parentNode.rawId)
         val rootCypherNode = Cypher.anyNode().withProperties(mapOf("id" to idParameter))
@@ -63,15 +63,15 @@ class NodeQueryParser(
             ).where(Conditions.isTrue())
         })
         val authorizationCondition = getAuthorizationConditionWithRelationshipDefinition(
-            authorizationContext, relationshipDefinition
+            requiredPermission, relationshipDefinition
         )
 
         return when (relationshipDefinition) {
             is OneRelationshipDefinition -> generateOneNodeQuery(
-                definition, dataFetchingEnvironment, additionalConditions, authorizationContext, authorizationCondition
+                definition, dataFetchingEnvironment, additionalConditions, requiredPermission, authorizationCondition
             )
             is ManyRelationshipDefinition -> generateManyNodeQuery(
-                definition, dataFetchingEnvironment, additionalConditions, authorizationContext, authorizationCondition
+                definition, dataFetchingEnvironment, additionalConditions, requiredPermission, authorizationCondition
             )
             else -> throw IllegalStateException("Unknown relationship type")
         }
@@ -84,21 +84,21 @@ class NodeQueryParser(
      * @param definition [NodeDefinition] of the node to load
      * @param dataFetchingEnvironment can optionally be provided to fetch a subtree of nodes
      * @param additionalConditions list of conditions which are applied to filter the returned node
-     * @param authorizationContext optional context to add authorization filter conditions
+     * @param requiredPermission optional required permission
      * @return the generated [NodeQuery] to load the node
      */
     fun generateOneNodeQuery(
         definition: NodeDefinition,
         dataFetchingEnvironment: DataFetchingEnvironment?,
         additionalConditions: List<CypherConditionGenerator>,
-        authorizationContext: AuthorizationContext?
+        requiredPermission: Permission?
     ): NodeQuery {
-        val authorizationCondition = getAuthorizationCondition(authorizationContext, definition)
+        val authorizationCondition = getAuthorizationCondition(requiredPermission, definition)
         return generateOneNodeQuery(
             definition,
             dataFetchingEnvironment,
             additionalConditions,
-            authorizationContext,
+            requiredPermission,
             authorizationCondition
         )
     }
@@ -110,21 +110,21 @@ class NodeQueryParser(
      * @param definition [NodeDefinition] of the nodes to load
      * @param dataFetchingEnvironment can optionally be provided to fetch a subtree of nodes
      * @param additionalConditions list of conditions which are applied to filter the returned node
-     * @param authorizationContext optional context to add authorization filter conditions
+     * @param requiredPermission optional required permission
      * @return the generated [NodeQuery] to load the node
      */
     fun generateManyNodeQuery(
         definition: NodeDefinition,
         dataFetchingEnvironment: DataFetchingEnvironment?,
         additionalConditions: List<CypherConditionGenerator>,
-        authorizationContext: AuthorizationContext?
+        requiredPermission: Permission?
     ): NodeQuery {
-        val authorizationCondition = getAuthorizationCondition(authorizationContext, definition)
+        val authorizationCondition = getAuthorizationCondition(requiredPermission, definition)
         return generateManyNodeQuery(
             definition,
             dataFetchingEnvironment,
             additionalConditions,
-            authorizationContext,
+            requiredPermission,
             authorizationCondition
         )
     }
@@ -136,7 +136,7 @@ class NodeQueryParser(
      * @param definition [NodeDefinition] of the node to load
      * @param dataFetchingEnvironment can optionally be provided to fetch a subtree of nodes
      * @param additionalConditions list of conditions which are applied to filter the returned node
-     * @param authorizationContext optional context to add authorization filter conditions
+     * @param requiredPermission optional required permission
      * @param authorizationCondition optional authorization condition generated for the current query
      * @return the generated [NodeQuery] to load the node
      */
@@ -144,14 +144,14 @@ class NodeQueryParser(
         definition: NodeDefinition,
         dataFetchingEnvironment: DataFetchingEnvironment?,
         additionalConditions: List<CypherConditionGenerator>,
-        authorizationContext: AuthorizationContext?,
+        requiredPermission: Permission?,
         authorizationCondition: CypherConditionGenerator?
     ): NodeQuery {
         return generateOneNodeQuery(
             definition,
             dataFetchingEnvironment?.selectionSet,
             additionalConditions + listOfNotNull(authorizationCondition),
-            authorizationContext
+            requiredPermission
         )
     }
 
@@ -162,7 +162,7 @@ class NodeQueryParser(
      * @param definition [NodeDefinition] of the nodes to load
      * @param dataFetchingEnvironment can optionally be provided to fetch a subtree of nodes
      * @param additionalConditions list of conditions which are applied to filter the returned node
-     * @param authorizationContext optional context to add authorization filter conditions
+     * @param requiredPermission optional required permission
      * @param authorizationCondition optional authorization condition generated for the current query
      * @return the generated [NodeQuery] to load the node
      */
@@ -170,7 +170,7 @@ class NodeQueryParser(
         definition: NodeDefinition,
         dataFetchingEnvironment: DataFetchingEnvironment?,
         additionalConditions: List<CypherConditionGenerator>,
-        authorizationContext: AuthorizationContext?,
+        requiredPermission: Permission?,
         authorizationCondition: CypherConditionGenerator?
     ): NodeQuery {
         return generateManyNodeQuery(
@@ -178,7 +178,7 @@ class NodeQueryParser(
             dataFetchingEnvironment?.selectionSet,
             dataFetchingEnvironment?.arguments ?: emptyMap(),
             additionalConditions + listOfNotNull(authorizationCondition),
-            authorizationContext
+            requiredPermission
         )
     }
 
@@ -189,13 +189,13 @@ class NodeQueryParser(
      * @param definition definition for the [Node] to load
      * @param fieldParts parts which are used to create subqueries
      * @param nodeQueryOptions options for this [NodeQuery]
-     * @param authorizationContext authorization context for subqueries
+     * @param requiredPermission authorization context for subqueries
      */
     private fun generateNodeQuery(
         definition: NodeDefinition,
         fieldParts: Map<String, List<SelectedField>>,
         nodeQueryOptions: NodeQueryOptions,
-        authorizationContext: AuthorizationContext?
+        requiredPermission: Permission?
     ): NodeQuery {
         val subQueries = ArrayList<NodeSubQuery>()
         val parts = fieldParts.mapValues {
@@ -206,14 +206,14 @@ class NodeQueryParser(
                     val firstPossibleType = onlyOnTypes.first()
                     val relationshipDefinition = firstPossibleType.relationshipDefinitions[field.name]!!
                     val authorizationCondition = getAuthorizationConditionWithRelationshipDefinition(
-                        authorizationContext,
+                        requiredPermission,
                         relationshipDefinition
                     )
                     val subQuery = generateSubQuery(
                         relationshipDefinition,
                         field,
                         authorizationCondition,
-                        authorizationContext,
+                        requiredPermission,
                         onlyOnTypes
                     )
                     subQueries.add(subQuery)
@@ -230,7 +230,7 @@ class NodeQueryParser(
      * @param relationshipDefinition defines the relationship to load
      * @param field defines which nodes to load from the relationship
      * @param authorizationCondition optional additional condition for authorization
-     * @param authorizationContext optional authorization context for subqueries
+     * @param requiredPermission optional authorization context for subqueries
      * @param onlyOnTypes types for which the subquery is active
      * @return the generated [NodeSubQuery]
      */
@@ -238,7 +238,7 @@ class NodeQueryParser(
         relationshipDefinition: RelationshipDefinition,
         field: SelectedField,
         authorizationCondition: CypherConditionGenerator?,
-        authorizationContext: AuthorizationContext?,
+        requiredPermission: Permission?,
         onlyOnTypes: List<NodeDefinition>
     ) = when (relationshipDefinition) {
         is ManyRelationshipDefinition -> {
@@ -248,7 +248,7 @@ class NodeQueryParser(
                     field.selectionSet,
                     field.arguments,
                     listOfNotNull(authorizationCondition),
-                    authorizationContext
+                    requiredPermission
                 ), onlyOnTypes, relationshipDefinition, field.resultKey
             )
         }
@@ -258,7 +258,7 @@ class NodeQueryParser(
                     nodeDefinitionCollection.getNodeDefinition(relationshipDefinition.nodeKClass),
                     field.selectionSet,
                     listOfNotNull(authorizationCondition),
-                    authorizationContext
+                    requiredPermission
                 ), onlyOnTypes, relationshipDefinition, field.resultKey
             )
         }
@@ -268,15 +268,15 @@ class NodeQueryParser(
     /**
      * Gets the authorization condition for the related nodes of a [RelationshipDefinition]
      *
-     * @param authorizationContext optional context used to get authorization name and parameters
+     * @param requiredPermission optional required permission
      * @param relationshipDefinition defines the relationship
      * @return a condition generator which can be used as filter condition or null if `authorizationContext == null`
      */
     private fun getAuthorizationConditionWithRelationshipDefinition(
-        authorizationContext: AuthorizationContext?,
+        requiredPermission: Permission?,
         relationshipDefinition: RelationshipDefinition
     ): CypherConditionGenerator? {
-        return authorizationContext?.let {
+        return requiredPermission?.let {
             nodeDefinitionCollection.generateRelationshipAuthorizationCondition(
                 relationshipDefinition, it
             )
@@ -284,18 +284,18 @@ class NodeQueryParser(
     }
 
     /**
-     * Gets the authorization condition for a [NodeDefinition] and an [AuthorizationContext]
+     * Gets the authorization condition for a [NodeDefinition] and an [Permission]
      *
-     * @param authorizationContext optional context used to get authorization name and parameters
+     * @param requiredPermission optional required permission
      * @param nodeDefinition represents the [Node]s to get the authorization condition for
      * @return a condition generator which can be used as filter condition or null if `authorizationContext == null`
      */
     private fun getAuthorizationCondition(
-        authorizationContext: AuthorizationContext?,
+        requiredPermission: Permission?,
         nodeDefinition: NodeDefinition
     ): CypherConditionGenerator? {
-        return authorizationContext?.let {
-            nodeDefinitionCollection.generateAuthorizationCondition(nodeDefinition, authorizationContext)
+        return requiredPermission?.let {
+            nodeDefinitionCollection.generateAuthorizationCondition(nodeDefinition, requiredPermission)
         }
     }
 
@@ -307,8 +307,7 @@ class NodeQueryParser(
      * @param selectionSet optional, used to generate subqueries
      * @param arguments used to get pagination arguments
      * @param additionalConditions list of conditions which are applied to filter the returned node
-     * @param authorizationContext optional context to add authorization filter conditions,
-     *                             including authorization condition
+     * @param requiredPermission optional required permission
      * @return the generated [NodeQuery] to load the node
      */
     private fun generateManyNodeQuery(
@@ -316,7 +315,7 @@ class NodeQueryParser(
         selectionSet: DataFetchingFieldSelectionSet?,
         arguments: Map<String, Any>,
         additionalConditions: List<CypherConditionGenerator>,
-        authorizationContext: AuthorizationContext?
+        requiredPermission: Permission?
     ): NodeQuery {
         val filterDefinition = filterDefinitionCollection.getFilterDefinition<Node>(nodeDefinition.nodeType)
         val filters = ArrayList(additionalConditions)
@@ -344,7 +343,7 @@ class NodeQueryParser(
             }
         }
         return generateNodeQuery(
-            nodeDefinition, parts, subNodeQueryOptions, authorizationContext
+            nodeDefinition, parts, subNodeQueryOptions, requiredPermission
         )
     }
 
@@ -356,21 +355,21 @@ class NodeQueryParser(
      * @param selectionSet optional, used to generate subqueries
      * @param additionalConditions list of conditions which are applied to filter the returned node, including
      *                             authorization condition
-     * @param authorizationContext optional context to add authorization filter conditions
+     * @param requiredPermission optional required permission
      * @return the generated [NodeQuery] to load the node
      */
     private fun generateOneNodeQuery(
         nodeDefinition: NodeDefinition,
         selectionSet: DataFetchingFieldSelectionSet?,
         additionalConditions: List<CypherConditionGenerator>,
-        authorizationContext: AuthorizationContext?
+        requiredPermission: Permission?
     ): NodeQuery {
         val subNodeQueryOptions = NodeQueryOptions(filters = additionalConditions, first = 1, fetchTotalCount = false)
         return generateNodeQuery(
             nodeDefinition,
             mapOf(DEFAULT_PART_ID to (selectionSet?.immediateFields ?: emptyList())),
             subNodeQueryOptions,
-            authorizationContext
+            requiredPermission
         )
     }
 }

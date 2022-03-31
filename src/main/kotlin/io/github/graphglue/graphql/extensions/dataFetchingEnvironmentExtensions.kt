@@ -1,12 +1,13 @@
 package io.github.graphglue.graphql.extensions
 
 import com.expediagroup.graphql.generator.extensions.deepName
+import graphql.execution.DataFetcherResult
+import graphql.schema.DataFetchingEnvironment
 import io.github.graphglue.db.authorization.AuthorizationContext
+import io.github.graphglue.db.authorization.Permission
 import io.github.graphglue.db.execution.NodeQuery
 import io.github.graphglue.db.execution.definition.NodeDefinition
 import io.github.graphglue.db.execution.definition.NodeDefinitionCollection
-import graphql.execution.DataFetcherResult
-import graphql.schema.DataFetchingEnvironment
 
 fun DataFetchingEnvironment.getParentNodeDefinition(nodeDefinitionCollection: NodeDefinitionCollection): NodeDefinition {
     val parentTypeName = parentType.deepName
@@ -30,7 +31,22 @@ fun <R> DataFetchingEnvironment.getDataFetcherResult(
     }
 }
 
+/**
+ * Gets the permission which is required for all data fetching
+ * Can be provided under context key `Permission::class`
+ */
+val DataFetchingEnvironment.requiredPermission: Permission?
+    get() {
+        return this.graphQlContext.get<Permission?>(Permission::class)
+    }
+
+/**
+ * Gets the authorization context necessary to generate new [Permission]s to check for permissions
+ * Can either be set by setting the [requiredPermission] or can be provided under context key
+ * `AuthorizationContext::class`
+ */
 val DataFetchingEnvironment.authorizationContext: AuthorizationContext?
     get() {
-        return this.graphQlContext.get<AuthorizationContext?>(AuthorizationContext::class)
+        return this.requiredPermission?.context
+            ?: this.graphQlContext.get<AuthorizationContext>(AuthorizationContext::class)
     }

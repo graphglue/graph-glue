@@ -14,8 +14,8 @@ fun interface AuthorizationRuleGenerator {
      *
      * @param node the [Node] on which the condition should be applied
      * @param rule the [Rule] to generate the condition for
-     * @param authorizationContext context for condition generation
+     * @param permission context for condition generation
      * @return the generated condition
      */
-    fun generateCondition(node: Node, rule: Rule, authorizationContext: AuthorizationContext): Condition
+    fun generateCondition(node: Node, rule: Rule, permission: Permission): Condition
 }

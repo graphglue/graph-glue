@@ -4,7 +4,7 @@ import com.expediagroup.graphql.generator.annotations.GraphQLDescription
 import com.expediagroup.graphql.generator.annotations.GraphQLIgnore
 import com.expediagroup.graphql.generator.scalars.ID
 import com.expediagroup.graphql.server.operations.Query
-import io.github.graphglue.graphql.extensions.authorizationContext
+import io.github.graphglue.graphql.extensions.requiredPermission
 import io.github.graphglue.model.Node
 import io.github.graphglue.db.CypherConditionGenerator
 import io.github.graphglue.db.LazyLoadingContext
@@ -34,7 +34,7 @@ class GraphglueQuery(private val nodeDefinition: NodeDefinition) : Query {
             nodeDefinition,
             dataFetchingEnvironment,
             listOf(idConditionGenerator),
-            dataFetchingEnvironment.authorizationContext
+            dataFetchingEnvironment.requiredPermission
         )
         val queryExecutor =
             NodeQueryExecutor(nodeQuery, lazyLoadingContext.neo4jClient, lazyLoadingContext.neo4jMappingContext)

@@ -1,11 +1,6 @@
 package io.github.graphglue.db.authorization
 
-import io.github.graphglue.model.Authorization
-
 /**
- * Context for authorization
- *
- * @param name name of the authorization, must match [Authorization.name]
- * @param context map of parameters for condition generation
+ * Context for checking for a permission
  */
-data class AuthorizationContext(val name: String, val context: Map<String, Any>)
+interface AuthorizationContext

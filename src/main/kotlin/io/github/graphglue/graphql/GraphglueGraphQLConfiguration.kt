@@ -26,8 +26,8 @@ import io.github.graphglue.graphql.extensions.springFindAnnotation
 import io.github.graphglue.graphql.extensions.toTopLevelObjects
 import io.github.graphglue.graphql.query.GraphglueQuery
 import io.github.graphglue.graphql.query.TopLevelQueryProvider
-import io.github.graphglue.graphql.redirect.RedirectKotlinDataFetcherFactoryProvider
-import io.github.graphglue.graphql.redirect.rewireFieldType
+import io.github.graphglue.graphql.datafetcher.RedirectKotlinDataFetcherFactoryProvider
+import io.github.graphglue.graphql.datafetcher.rewireFieldType
 import io.github.graphglue.model.DomainNode
 import io.github.graphglue.model.Node
 import io.github.graphglue.model.NodeSetProperty

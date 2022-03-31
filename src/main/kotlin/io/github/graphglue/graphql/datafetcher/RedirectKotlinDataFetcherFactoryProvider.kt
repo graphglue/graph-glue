@@ -1,4 +1,4 @@
-package io.github.graphglue.graphql.redirect
+package io.github.graphglue.graphql.datafetcher
 
 import com.expediagroup.graphql.generator.execution.KotlinDataFetcherFactoryProvider
 import com.expediagroup.graphql.server.spring.execution.SpringKotlinDataFetcherFactoryProvider
@@ -7,7 +7,6 @@ import io.github.graphglue.model.BaseProperty
 import io.github.graphglue.model.Node
 import graphql.schema.DataFetcher
 import graphql.schema.DataFetcherFactory
-import graphql.schema.DataFetchingEnvironment
 import org.springframework.context.ApplicationContext
 import kotlin.reflect.KClass
 import kotlin.reflect.KProperty
@@ -51,10 +50,3 @@ class RedirectKotlinDataFetcherFactoryProvider(
     }
 }
 
-private class DelegateDataFetchingEnvironment(
-    private val parent: DataFetchingEnvironment, private val source: BaseProperty<*>
-) : DataFetchingEnvironment by parent {
-
-    @Suppress("UNCHECKED_CAST")
-    override fun <T : Any?> getSource() = source as T
-}

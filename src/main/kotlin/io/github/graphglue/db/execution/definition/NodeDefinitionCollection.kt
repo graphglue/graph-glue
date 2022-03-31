@@ -4,7 +4,7 @@ import io.github.graphglue.graphql.extensions.getSimpleName
 import io.github.graphglue.model.Node
 import io.github.graphglue.model.Rule
 import io.github.graphglue.db.CypherConditionGenerator
-import io.github.graphglue.db.authorization.AuthorizationContext
+import io.github.graphglue.db.authorization.Permission
 import io.github.graphglue.db.authorization.AuthorizationRuleGenerator
 import io.github.graphglue.db.authorization.MergedAuthorization
 import org.neo4j.cypherdsl.core.*
@@ -125,15 +125,15 @@ class NodeDefinitionCollection(
      * Generates the authorization condition
      *
      * @param nodeDefinition the type to generate the authorization condition for
-     * @param authorizationContext context for condition creation
+     * @param permission context for condition creation
      * @return a condition generator which generates the authorization condition
      */
     fun generateAuthorizationCondition(
         nodeDefinition: NodeDefinition,
-        authorizationContext: AuthorizationContext
+        permission: Permission
     ): CypherConditionGenerator {
         return generateAuthorizationCondition(
-            nodeDefinition, authorizationContext, false
+            nodeDefinition, permission, false
         )
     }
 
@@ -142,18 +142,18 @@ class NodeDefinitionCollection(
      * It is assumed that allow is present on the parent side!
      *
      * @param relationshipDefinition defines the relation to generate the condition for
-     * @param authorizationContext context for condition creation
+     * @param permission context for condition creation
      * @return a condition generator which generates the authorization condition when provided the remote side node
      */
     fun generateRelationshipAuthorizationCondition(
         relationshipDefinition: RelationshipDefinition,
-        authorizationContext: AuthorizationContext
+        permission: Permission
     ): CypherConditionGenerator {
         val nodeDefinition = getNodeDefinition(relationshipDefinition.nodeKClass)
         return generateAuthorizationCondition(
             nodeDefinition,
-            authorizationContext,
-            checkIfRelationIsAllowed(relationshipDefinition, authorizationContext.name)
+            permission,
+            checkIfRelationIsAllowed(relationshipDefinition, permission.name)
         )
     }
 
@@ -161,18 +161,18 @@ class NodeDefinitionCollection(
      * Generates the authorization condition for a specific type
      *
      * @param nodeDefinition the type to generate the authorization condition for
-     * @param authorizationContext context for condition creation
+     * @param permission context for condition creation
      * @param isAllowed if `true`, allow is assumed to be present and only disallow conditions are checked
      * @return a condition generator which generates the authorization condition
      */
     private fun generateAuthorizationCondition(
         nodeDefinition: NodeDefinition,
-        authorizationContext: AuthorizationContext,
+        permission: Permission,
         isAllowed: Boolean
     ): CypherConditionGenerator {
         return CypherConditionGenerator {
             val authorizationPart = generateAuthorizationConditionInternal(
-                it, it, nodeDefinition, authorizationContext, isAllowed
+                it, it, nodeDefinition, permission, isAllowed
             )
             authorizationPart.toCondition()
         }
@@ -229,7 +229,7 @@ class NodeDefinitionCollection(
      * do not define additional authorizations).
      *
      * @param node the Cypher-DSL node on which the condition should be applied
-     * @param authorizationContext context for condition creation
+     * @param permission context for condition creation
      * @param pattern the already existing pattern part which might be extended
      * @param nodeDefinition used to obtain the [MergedAuthorization]
      * @param isAllowed if `true`, allow is assumed to be present and only disallow conditions are checked
@@ -239,7 +239,7 @@ class NodeDefinitionCollection(
         node: org.neo4j.cypherdsl.core.Node,
         pattern: ExposesRelationships<*>,
         nodeDefinition: NodeDefinition,
-        authorizationContext: AuthorizationContext,
+        permission: Permission,
         isAllowed: Boolean
     ): AuthorizationConditionPart {
         val subNodeDefinitions = authorizationSubtypeNodeDefinitionLookup[nodeDefinition]!!
@@ -247,7 +247,7 @@ class NodeDefinitionCollection(
             val subNodesCondition = subNodeDefinitions.fold(Conditions.noCondition()) { condition, subNodeDefinition ->
                 val typeCondition = node.hasLabels(subNodeDefinition.primaryLabel)
                 val subPart = generateFullAuthorizationConditionForFinalType(
-                    node, pattern, subNodeDefinition, authorizationContext, isAllowed
+                    node, pattern, subNodeDefinition, permission, isAllowed
                 )
                 val subCondition = subPart.toCondition()
                 condition.or(typeCondition.and(subCondition))
@@ -255,7 +255,7 @@ class NodeDefinitionCollection(
             AuthorizationConditionPart(null, subNodesCondition)
         } else {
             generateFullAuthorizationConditionForFinalType(
-                node, pattern, nodeDefinition, authorizationContext, isAllowed
+                node, pattern, nodeDefinition, permission, isAllowed
             )
         }
     }
@@ -266,7 +266,7 @@ class NodeDefinitionCollection(
      * authorizations).
      *
      * @param node the Cypher-DSL node on which the condition should be applied
-     * @param authorizationContext context for condition creation
+     * @param permission context for condition creation
      * @param pattern the already existing pattern part which might be extended
      * @param nodeDefinition used to obtain the [MergedAuthorization]
      * @param isAllowed if `true`, allow is assumed to be present and only disallow conditions are checked
@@ -276,15 +276,15 @@ class NodeDefinitionCollection(
         node: org.neo4j.cypherdsl.core.Node,
         pattern: ExposesRelationships<*>,
         nodeDefinition: NodeDefinition,
-        authorizationContext: AuthorizationContext,
+        permission: Permission,
         isAllowed: Boolean
     ): AuthorizationConditionPart {
-        val authorization = nodeDefinition.authorizations[authorizationContext.name]!!
+        val authorization = nodeDefinition.authorizations[permission.name]!!
         return if (isAllowed) {
-            AuthorizationConditionPart(null, generateDisallowCondition(node, authorization, authorizationContext))
+            AuthorizationConditionPart(null, generateDisallowCondition(node, authorization, permission))
         } else {
             generateFullAuthorizationConditionForFinalType(
-                node, authorization, authorizationContext, pattern
+                node, authorization, permission, pattern
             )
         }
     }
@@ -296,27 +296,27 @@ class NodeDefinitionCollection(
      *
      * @param authorization the authorization to convert into a condition
      * @param node the Cypher-DSL node on which the condition should be applied
-     * @param authorizationContext context for condition creation
+     * @param permission context for condition creation
      * @param pattern the already existing pattern part which might be extended
      * @return the generated  authorization condition part, the optionalPattern is defined iff the pattern is extended
      */
     private fun generateFullAuthorizationConditionForFinalType(
         node: org.neo4j.cypherdsl.core.Node,
         authorization: MergedAuthorization,
-        authorizationContext: AuthorizationContext,
+        permission: Permission,
         pattern: ExposesRelationships<*>
     ): AuthorizationConditionPart {
-        val allowCondition = generateAllowCondition(node, authorization, authorizationContext)
-        val disallowCondition = generateDisallowCondition(node, authorization, authorizationContext)
+        val allowCondition = generateAllowCondition(node, authorization, permission)
+        val disallowCondition = generateDisallowCondition(node, authorization, permission)
         return if (authorization.allowFromRelated.isEmpty()) {
             AuthorizationConditionPart(null, allowCondition.and(disallowCondition))
         } else if (authorization.allowFromRelated.size == 1 && authorization.allow.isEmpty()) {
             generateFullAuthorizationConditionForFinalTypeSingleRelatedAllow(
-                authorization, pattern, authorizationContext, disallowCondition
+                authorization, pattern, permission, disallowCondition
             )
         } else {
             generateFullAuthorizationConditionForFinalTypeRelatedAllows(
-                authorization, node, authorizationContext, disallowCondition, allowCondition
+                authorization, node, permission, disallowCondition, allowCondition
             )
         }
     }
@@ -328,7 +328,7 @@ class NodeDefinitionCollection(
      *
      * @param authorization the authorization to convert into a condition
      * @param node the Cypher-DSL node on which the condition should be applied
-     * @param authorizationContext context for condition creation
+     * @param permission context for condition creation
      * @param disallowCondition the already generated disallow condition
      * @param allowCondition the already generated allow condition (does not include related allows)
      * @return the generated  authorization condition part, the optionalPattern is never defined
@@ -336,7 +336,7 @@ class NodeDefinitionCollection(
     private fun generateFullAuthorizationConditionForFinalTypeRelatedAllows(
         authorization: MergedAuthorization,
         node: org.neo4j.cypherdsl.core.Node,
-        authorizationContext: AuthorizationContext,
+        permission: Permission,
         disallowCondition: Condition,
         allowCondition: Condition
     ): AuthorizationConditionPart {
@@ -346,7 +346,7 @@ class NodeDefinitionCollection(
                 val relatedNode = Cypher.node(relatedNodeDefinition.primaryLabel)
                 val newPattern = relationshipDefinition.generateRelationship(node, relatedNode)
                 val newPart = generateAuthorizationConditionInternal(
-                    relatedNode, newPattern, relatedNodeDefinition, authorizationContext, false
+                    relatedNode, newPattern, relatedNodeDefinition, permission, false
                 )
                 val relatedCondition = Cypher.match(newPart.optionalPattern ?: newPattern)
                     .where(newPart.condition)
@@ -366,14 +366,14 @@ class NodeDefinitionCollection(
      *
      * @param authorization the authorization to convert into a condition
      * @param pattern the already existing pattern part which might be extended
-     * @param authorizationContext context for condition creation
+     * @param permission context for condition creation
      * @param disallowCondition the already generated disallow condition
      * @return the generated  authorization condition part, the optionalPattern is always defined
      */
     private fun generateFullAuthorizationConditionForFinalTypeSingleRelatedAllow(
         authorization: MergedAuthorization,
         pattern: ExposesRelationships<*>,
-        authorizationContext: AuthorizationContext,
+        permission: Permission,
         disallowCondition: Condition
     ): AuthorizationConditionPart {
         val relationshipDefinition = authorization.allowFromRelated.first()
@@ -381,7 +381,7 @@ class NodeDefinitionCollection(
         val relatedNode = Cypher.node(relatedNodeDefinition.primaryLabel)
         val newPattern = relationshipDefinition.generateRelationship(pattern, relatedNode)
         val newPart = generateAuthorizationConditionInternal(
-            relatedNode, newPattern, relatedNodeDefinition, authorizationContext, false
+            relatedNode, newPattern, relatedNodeDefinition, permission, false
         )
         return AuthorizationConditionPart(
             newPart.optionalPattern ?: newPattern,
@@ -394,16 +394,16 @@ class NodeDefinitionCollection(
      *
      * @param node the Cypher-DSL node on which the condition should be applied
      * @param authorization contains allow rules
-     * @param authorizationContext context for condition creation
+     * @param permission context for condition creation
      * @return the generated condition which enforces allow rules
      */
     private fun generateAllowCondition(
         node: org.neo4j.cypherdsl.core.Node,
         authorization: MergedAuthorization,
-        authorizationContext: AuthorizationContext
+        permission: Permission
     ): Condition {
         return authorization.allow.fold(Conditions.noCondition()) { condition, rule ->
-            condition.or(generateConditionForRule(rule, node, authorizationContext))
+            condition.or(generateConditionForRule(rule, node, permission))
         }
     }
 
@@ -412,17 +412,17 @@ class NodeDefinitionCollection(
      *
      * @param node the Cypher-DSL node on which the condition should be applied
      * @param authorization contains disallow rules
-     * @param authorizationContext context for condition creation
+     * @param permission context for condition creation
      * @return the generated condition which enforces disallow rules
      */
     private fun generateDisallowCondition(
         node: org.neo4j.cypherdsl.core.Node,
         authorization: MergedAuthorization,
-        authorizationContext: AuthorizationContext
+        permission: Permission
     ): Condition {
         return if (authorization.disallow.isNotEmpty()) {
             authorization.disallow.fold(Conditions.noCondition()) { condition, rule ->
-                condition.or(generateConditionForRule(rule, node, authorizationContext))
+                condition.or(generateConditionForRule(rule, node, permission))
             }.not()
         } else {
             Conditions.noCondition()
@@ -434,16 +434,16 @@ class NodeDefinitionCollection(
      *
      * @param rule the rule to convert
      * @param node the Cypher-DSL node on which the condition should be applied
-     * @param authorizationContext context for condition creation
+     * @param permission context for condition creation
      * @return the generated condition which enforces the rule
      */
     private fun generateConditionForRule(
         rule: Rule,
         node: org.neo4j.cypherdsl.core.Node,
-        authorizationContext: AuthorizationContext
+        permission: Permission
     ): Condition {
         val bean = beanFactory.getBean(rule.beanRef, AuthorizationRuleGenerator::class.java)
-        return bean.generateCondition(node, rule, authorizationContext)
+        return bean.generateCondition(node, rule, permission)
     }
 }
 

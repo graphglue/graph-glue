@@ -4,7 +4,7 @@ import com.expediagroup.graphql.generator.annotations.GraphQLDescription
 import com.expediagroup.graphql.generator.annotations.GraphQLIgnore
 import com.expediagroup.graphql.generator.annotations.GraphQLName
 import com.expediagroup.graphql.generator.scalars.ID
-import io.github.graphglue.graphql.extensions.authorizationContext
+import io.github.graphglue.graphql.extensions.requiredPermission
 import io.github.graphglue.db.LazyLoadingContext
 import io.github.graphglue.db.execution.NodeQuery
 import io.github.graphglue.db.execution.NodeQueryExecutor
@@ -133,7 +133,7 @@ abstract class Node {
                 dataFetchingEnvironment,
                 relationshipDefinition,
                 this,
-                dataFetchingEnvironment?.authorizationContext
+                dataFetchingEnvironment?.requiredPermission
             )
             val queryExecutor = NodeQueryExecutor(
                 query, lazyLoadingContext.neo4jClient, lazyLoadingContext.neo4jMappingContext

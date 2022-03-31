@@ -1,4 +1,4 @@
-package io.github.graphglue.graphql.redirect
+package io.github.graphglue.graphql.datafetcher
 
 import com.expediagroup.graphql.generator.extensions.unwrapType
 import io.github.graphglue.model.NODE_RELATIONSHIP_DIRECTIVE

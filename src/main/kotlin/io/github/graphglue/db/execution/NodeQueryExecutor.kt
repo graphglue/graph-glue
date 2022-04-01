@@ -50,18 +50,12 @@ class NodeQueryExecutor(
     private val subQueryLookup = HashMap<String, NodeSubQuery>()
 
     /**
-     * logger to log generated queries
-     */
-    private val logger = LoggerFactory.getLogger(NodeQueryExecutor::class.java)
-
-    /**
      * Executes the query
      *
      * @return the query result including all found nodes
      */
     suspend fun execute(): NodeQueryResult<*> {
         val (statement, returnName) = createRootNodeQuery()
-        logger.info(Renderer.getRenderer(Configuration.prettyPrinting()).render(statement))
         return client.query(Renderer.getDefaultRenderer().render(statement))
             .bindAll(statement.parameters)
             .fetchAs(NodeQueryResult::class.java)

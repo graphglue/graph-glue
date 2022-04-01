@@ -17,7 +17,6 @@ import kotlin.reflect.KProperty1
  * @param property see [BaseProperty.property]
  */
 class NodeProperty<T : Node?>(
-    value: T? = null,
     parent: Node,
     property: KProperty1<*, *>
 ) : BaseProperty<T>(parent, property) {
@@ -42,13 +41,6 @@ class NodeProperty<T : Node?>(
      * True if the [T] is marked nullable
      */
     private val supportsNull get() = property.returnType.isMarkedNullable
-
-    init {
-        if (value != null) {
-            isLoaded = true
-            currentNode = value
-        }
-    }
 
     /**
      * Gets the value of the property

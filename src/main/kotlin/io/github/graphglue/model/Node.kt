@@ -4,13 +4,13 @@ import com.expediagroup.graphql.generator.annotations.GraphQLDescription
 import com.expediagroup.graphql.generator.annotations.GraphQLIgnore
 import com.expediagroup.graphql.generator.annotations.GraphQLName
 import com.expediagroup.graphql.generator.scalars.ID
-import io.github.graphglue.graphql.extensions.requiredPermission
+import graphql.schema.DataFetchingEnvironment
 import io.github.graphglue.db.LazyLoadingContext
 import io.github.graphglue.db.execution.NodeQuery
 import io.github.graphglue.db.execution.NodeQueryExecutor
 import io.github.graphglue.db.execution.NodeQueryOptions
 import io.github.graphglue.db.execution.NodeQueryResult
-import graphql.schema.DataFetchingEnvironment
+import io.github.graphglue.graphql.extensions.requiredPermission
 import org.springframework.data.annotation.Transient
 import org.springframework.data.neo4j.core.convert.ConvertWith
 import org.springframework.data.neo4j.core.schema.GeneratedValue
@@ -91,8 +91,8 @@ abstract class Node {
      * @param T value type
      * @return a provider for the property delegate
      */
-    protected fun <T : Node> NodeSetProperty(value: Collection<T>? = null): PropertyDelegateProvider<Node, NodeSetProperty<T>> {
-        return NodeSetPropertyProvider(value)
+    protected fun <T : Node> NodeSetProperty(): PropertyDelegateProvider<Node, NodeSetProperty<T>> {
+        return NodeSetPropertyProvider()
     }
 
     /**
@@ -102,8 +102,8 @@ abstract class Node {
      * @param T value type
      * @return a provider for the property delegate
      */
-    protected fun <T : Node> NodeProperty(value: T? = null): PropertyDelegateProvider<Node, NodeProperty<T>> {
-        return NodePropertyProvider(value)
+    protected fun <T : Node> NodeProperty(): PropertyDelegateProvider<Node, NodeProperty<T>> {
+        return NodePropertyProvider()
     }
 
     /**
@@ -159,7 +159,7 @@ abstract class Node {
 /**
  * Provider for [NodeProperty]s
  */
-private class NodePropertyProvider<T : Node?>(private val value: T?) : PropertyDelegateProvider<Node, NodeProperty<T>> {
+private class NodePropertyProvider<T : Node?> : PropertyDelegateProvider<Node, NodeProperty<T>> {
 
     /**
      * Creates a new [NodeProperty] and registers it to the [Node.propertyLookup]
@@ -169,8 +169,8 @@ private class NodePropertyProvider<T : Node?>(private val value: T?) : PropertyD
      * @return the generated property delegate
      */
     override operator fun provideDelegate(thisRef: Node, property: KProperty<*>): NodeProperty<T> {
-        val nodeProperty = NodeProperty(
-            value, thisRef,
+        val nodeProperty = NodeProperty<T>(
+            thisRef,
             property as KProperty1<*, *>
         )
         thisRef.propertyLookup[property] = nodeProperty
@@ -181,8 +181,7 @@ private class NodePropertyProvider<T : Node?>(private val value: T?) : PropertyD
 /**
  * Provider for [NodeSetProperty]s
  */
-private class NodeSetPropertyProvider<T : Node>(private val value: Collection<T>?) :
-    PropertyDelegateProvider<Node, NodeSetProperty<T>> {
+private class NodeSetPropertyProvider<T : Node> : PropertyDelegateProvider<Node, NodeSetProperty<T>> {
 
     /**
      * Creates a new [NodeSetProperty] and registers it to the [Node.propertyLookup]
@@ -192,8 +191,8 @@ private class NodeSetPropertyProvider<T : Node>(private val value: Collection<T>
      * @return the generated property delegate
      */
     override operator fun provideDelegate(thisRef: Node, property: KProperty<*>): NodeSetProperty<T> {
-        val nodeSetProperty = NodeSetProperty(
-            value, thisRef,
+        val nodeSetProperty = NodeSetProperty<T>(
+            thisRef,
             property as KProperty1<*, *>
         )
         thisRef.propertyLookup[property] = nodeSetProperty

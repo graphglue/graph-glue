@@ -21,7 +21,6 @@ import kotlin.reflect.KProperty1
  * @param property see [BaseProperty.property]
  */
 class NodeSetProperty<T : Node>(
-    value: Collection<T>? = null,
     parent: Node,
     property: KProperty1<*, *>
 ) : BaseProperty<T>(parent, property) {
@@ -49,14 +48,6 @@ class NodeSetProperty<T : Node>(
      * `true` iff the current values are loaded from the database or set via constructor
      */
     private val isLoaded get() = currentNodes != null
-
-    init {
-        if (value != null) {
-            val current = HashSet(value)
-            currentNodes = current
-            addedNodes.addAll(current)
-        }
-    }
 
     /**
      * Gets the value of the property

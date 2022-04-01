@@ -1,9 +1,9 @@
 package io.github.graphglue.db.repositories
 
-import io.github.graphglue.model.Node
 import io.github.graphglue.db.execution.definition.NodeDefinition
 import io.github.graphglue.db.execution.definition.NodeDefinitionCollection
 import io.github.graphglue.db.execution.definition.RelationshipDefinition
+import io.github.graphglue.model.Node
 import org.neo4j.cypherdsl.core.Cypher
 import org.neo4j.cypherdsl.core.Statement
 import org.neo4j.cypherdsl.core.renderer.Renderer
@@ -39,9 +39,10 @@ class GraphglueNeo4jOperations(
      * @param T the type of the entity.
      * @return the saved instance.
      */
+    @Suppress("UNCHECKED_CAST")
     override fun <T : Any?> save(instance: T): Mono<T> {
         return if (instance is Node) {
-            saveNode(instance)
+            saveNodes(listOf(instance)).next() as Mono<T>
         } else {
             delegate.save(instance)
         }
@@ -55,8 +56,12 @@ class GraphglueNeo4jOperations(
      * @param T the type of the entity.
      * @return the saved instances.
      */
+    @Suppress("UNCHECKED_CAST")
     override fun <T : Any?> saveAll(instances: MutableIterable<T>): Flux<T> {
-        return Flux.fromIterable(instances).flatMap(this::save)
+        val (nodes, others) = instances.partition { it is Node }
+        return Flux.concat(
+            delegate.saveAll(others), saveNodes(nodes as Collection<Node>) as Flux<T>
+        )
     }
 
     /**
@@ -78,15 +83,14 @@ class GraphglueNeo4jOperations(
      * Important: it has to be ensured that the returned node is newly loaded from the database
      * Sometimes, the internal save method does not reload it. In this case, we have to find it by id manually
      *
-     * @param entity the [Node] to save
-     * @return the newly from the database loaded entity
+     * @param entities the [Node]s to save
+     * @return the saved nodes
      */
-    @Suppress("UNCHECKED_CAST")
-    private fun <S> saveNode(entity: Node): Mono<S> {
-        val nodesToSave = getNodesToSaveRecursive(entity)
+    private fun saveNodes(entities: Iterable<Node>): Flux<Node> {
+        val nodesToSave = getNodesToSaveRecursive(entities)
         return Flux.fromIterable(nodesToSave).flatMap { nodeToSave ->
             delegate.save(nodeToSave).map { nodeToSave to it }
-        }.collectList().flatMap { saveResult ->
+        }.collectList().flatMapMany { saveResult ->
             val savedNodeLookup = saveResult.associate { (nodeToSave, savedNode) ->
                 nodeToSave to savedNode
             }
@@ -94,11 +98,13 @@ class GraphglueNeo4jOperations(
             Flux.fromIterable(nodeIdLookup.keys).flatMap { nodeToSave ->
                 val nodeDefinition = nodeDefinitionCollection.getNodeDefinition(nodeToSave::class)
                 saveAllRelationships(nodeDefinition, nodeToSave, nodeIdLookup)
-            }.then(savedNodeLookup[entity].let {
-                if (it === entity) {
-                    findById(nodeIdLookup[entity]!!, entity::class.java) as Mono<S>
-                } else {
-                    Mono.just(it as S)
+            }.thenMany(Flux.fromIterable(entities).concatMap { entity ->
+                savedNodeLookup[entity].let {
+                    if (it === entity) {
+                        findById(nodeIdLookup[entity]!!, entity::class.java)
+                    } else {
+                        Mono.just(it!!)
+                    }
                 }
             })
         }
@@ -113,9 +119,7 @@ class GraphglueNeo4jOperations(
      * @return an empty [Mono] to wait for the end of the operation
      */
     private fun saveAllRelationships(
-        nodeDefinition: NodeDefinition,
-        nodeToSave: Node,
-        nodeIdLookup: Map<Node, String>
+        nodeDefinition: NodeDefinition, nodeToSave: Node, nodeIdLookup: Map<Node, String>
     ) = Flux.fromIterable(nodeDefinition.relationshipDefinitions.values).flatMap { relationshipDefinition ->
         val diffToSave = relationshipDefinition.getRelationshipDiff(nodeToSave, nodeIdLookup)
         val deleteMono = Flux.fromIterable(diffToSave.nodesToRemove).flatMap {
@@ -178,12 +182,12 @@ class GraphglueNeo4jOperations(
     /**
      * Gets a set of nodes which should be saved
      *
-     * @param node the node to traverse the relationships from
+     * @param nodes the nodes to traverse the relationships from
      * @return the set of [Node]s to be saved
      */
-    private fun getNodesToSaveRecursive(node: Node): Set<Node> {
+    private fun getNodesToSaveRecursive(nodes: Iterable<Node>): Set<Node> {
         val nodesToSave = HashSet<Node>()
-        val nodesToVisit = ArrayDeque(listOf(node))
+        val nodesToVisit = ArrayDeque(nodes.toList())
         while (nodesToVisit.isNotEmpty()) {
             val nextNode = nodesToVisit.removeFirst()
             if (nextNode !in nodesToSave) {

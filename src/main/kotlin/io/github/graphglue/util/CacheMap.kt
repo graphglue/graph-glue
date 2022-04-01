@@ -1,5 +1,6 @@
 package io.github.graphglue.util
 
+import java.util.function.Consumer
 import java.util.function.Function
 
 /**
@@ -58,6 +59,19 @@ class CacheMap<K, V>(private val backingMap: MutableMap<K, V> = HashMap()) : Map
             alternativeIfComputing
         } else {
             computeIfAbsent(key, mappingFunction)
+        }
+    }
+
+    fun putAndInitIfAbsent(key: K, value: V, initFunction: Consumer<V>): V {
+        if (key in currentlyComputing) {
+            throw IllegalArgumentException("Already computing value for key $key")
+        }
+        return if (key in this) {
+            this.getValue(key)
+        } else {
+            backingMap[key] = value
+            initFunction.accept(value)
+            value
         }
     }
 }

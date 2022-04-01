@@ -1,8 +1,8 @@
 package io.github.graphglue.model
 
+import graphql.execution.DataFetcherResult
 import io.github.graphglue.db.execution.*
 import io.github.graphglue.db.repositories.RelationshipDiff
-import graphql.execution.DataFetcherResult
 import kotlinx.coroutines.runBlocking
 import org.neo4j.cypherdsl.core.Cypher
 import kotlin.reflect.KProperty

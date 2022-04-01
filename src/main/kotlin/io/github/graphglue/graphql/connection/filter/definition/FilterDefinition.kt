@@ -1,16 +1,20 @@
 package io.github.graphglue.graphql.connection.filter.definition
 
+import graphql.schema.*
 import io.github.graphglue.graphql.connection.filter.model.*
 import io.github.graphglue.graphql.extensions.getSimpleName
 import io.github.graphglue.model.Node
 import io.github.graphglue.util.CacheMap
-import graphql.schema.*
 import kotlin.reflect.KClass
 
-class FilterDefinition<T : Node>(private val entryType: KClass<T>, entries: List<FilterEntryDefinition>) :
+class FilterDefinition<T : Node>(private val entryType: KClass<T>) :
     GraphQLInputTypeGenerator {
 
-    private val entries = entries.associateBy { it.name }
+    private lateinit var entries: Map<String, FilterEntryDefinition>
+
+    fun init(entries: List<FilterEntryDefinition>) {
+        this.entries = entries.associateBy { it.name }
+    }
 
     fun parseFilter(value: Any?): Filter {
         return Filter(parseMetaFilter(value))

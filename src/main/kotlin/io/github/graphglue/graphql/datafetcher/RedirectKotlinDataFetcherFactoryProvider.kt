@@ -3,10 +3,10 @@ package io.github.graphglue.graphql.datafetcher
 import com.expediagroup.graphql.generator.execution.KotlinDataFetcherFactoryProvider
 import com.expediagroup.graphql.server.spring.execution.SpringKotlinDataFetcherFactoryProvider
 import com.fasterxml.jackson.databind.ObjectMapper
-import io.github.graphglue.model.BaseProperty
-import io.github.graphglue.model.Node
 import graphql.schema.DataFetcher
 import graphql.schema.DataFetcherFactory
+import io.github.graphglue.model.BaseProperty
+import io.github.graphglue.model.Node
 import org.springframework.context.ApplicationContext
 import kotlin.reflect.KClass
 import kotlin.reflect.KProperty

@@ -1,7 +1,7 @@
 package io.github.graphglue.db.execution
 
-import io.github.graphglue.model.Node
 import io.github.graphglue.db.execution.definition.NodeDefinition
+import io.github.graphglue.model.Node
 
 /**
  * Defines a query which fetches Nodes of type `definition`

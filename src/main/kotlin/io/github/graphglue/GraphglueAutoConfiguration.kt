@@ -1,9 +1,9 @@
 package io.github.graphglue
 
 import com.expediagroup.graphql.server.spring.GraphQLAutoConfiguration
-import io.github.graphglue.model.NODE_ID_GENERATOR_BEAN
 import io.github.graphglue.db.GraphglueDbConfiguration
 import io.github.graphglue.graphql.GraphglueGraphQLConfiguration
+import io.github.graphglue.model.NODE_ID_GENERATOR_BEAN
 import org.springframework.boot.autoconfigure.AutoConfigureAfter
 import org.springframework.boot.autoconfigure.AutoConfigureBefore
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean

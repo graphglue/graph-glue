@@ -1,10 +1,10 @@
 package io.github.graphglue.graphql.connection.filter.definition.scalars
 
+import graphql.schema.GraphQLInputType
 import io.github.graphglue.graphql.connection.filter.definition.FilterEntryDefinition
 import io.github.graphglue.graphql.connection.filter.definition.SimpleObjectFilterDefinitionEntry
 import io.github.graphglue.graphql.connection.filter.model.FilterEntry
 import io.github.graphglue.graphql.connection.filter.model.SimpleObjectFilter
-import graphql.schema.GraphQLInputType
 
 abstract class ScalarFilterDefinition<T>(
     name: String,

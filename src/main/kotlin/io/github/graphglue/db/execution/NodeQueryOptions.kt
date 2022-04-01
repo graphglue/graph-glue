@@ -1,8 +1,8 @@
 package io.github.graphglue.db.execution
 
+import io.github.graphglue.db.CypherConditionGenerator
 import io.github.graphglue.graphql.connection.order.IdOrder
 import io.github.graphglue.graphql.connection.order.Order
-import io.github.graphglue.db.CypherConditionGenerator
 
 /**
  * Defines how a [NodeQuery] fetches data

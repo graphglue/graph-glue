@@ -13,7 +13,7 @@ fun generateFilterDefinition(
     subFilterGenerator: SubFilterGenerator
 ): FilterDefinition<out Node> {
 
-    return subFilterGenerator.filterDefinitionCache.computeIfAbsent(type) {
+    return subFilterGenerator.filterDefinitionCache.putAndInitIfAbsent(type, FilterDefinition(type)) {
         val nodeDefinition = subFilterGenerator.nodeDefinitionCollection.getOrCreate(type)
         val filterProperties = type.memberProperties.filter { it.hasAnnotation<FilterProperty>() }
         val filterFields = filterProperties.map { subFilterGenerator.filterForProperty(it, nodeDefinition) }
@@ -21,7 +21,6 @@ fun generateFilterDefinition(
         val additionalFilters = additionalFilterAnnotations.map {
             subFilterGenerator.additionalFilterBeans[it.beanName]!!
         }
-
-        FilterDefinition(type, filterFields + additionalFilters)
+        it.init(filterFields + additionalFilters)
     }
 }

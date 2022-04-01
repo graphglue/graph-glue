@@ -13,6 +13,11 @@ import com.expediagroup.graphql.server.operations.Query
 import com.expediagroup.graphql.server.operations.Subscription
 import com.expediagroup.graphql.server.spring.GraphQLConfigurationProperties
 import com.fasterxml.jackson.databind.ObjectMapper
+import graphql.schema.*
+import io.github.graphglue.db.execution.NodeQueryParser
+import io.github.graphglue.db.execution.definition.NodeDefinition
+import io.github.graphglue.db.execution.definition.NodeDefinitionCache
+import io.github.graphglue.db.execution.definition.NodeDefinitionCollection
 import io.github.graphglue.graphql.connection.ConnectionWrapperGraphQLTypeFactory
 import io.github.graphglue.graphql.connection.filter.GraphglueGraphQLFilterConfiguration
 import io.github.graphglue.graphql.connection.filter.TypeFilterDefinitionEntry
@@ -21,23 +26,18 @@ import io.github.graphglue.graphql.connection.filter.definition.FilterDefinition
 import io.github.graphglue.graphql.connection.filter.definition.FilterEntryDefinition
 import io.github.graphglue.graphql.connection.filter.definition.SubFilterGenerator
 import io.github.graphglue.graphql.connection.order.OrderDirection
+import io.github.graphglue.graphql.datafetcher.RedirectKotlinDataFetcherFactoryProvider
+import io.github.graphglue.graphql.datafetcher.rewireFieldType
 import io.github.graphglue.graphql.extensions.getSimpleName
 import io.github.graphglue.graphql.extensions.springFindAnnotation
 import io.github.graphglue.graphql.extensions.toTopLevelObjects
 import io.github.graphglue.graphql.query.GraphglueQuery
 import io.github.graphglue.graphql.query.TopLevelQueryProvider
-import io.github.graphglue.graphql.datafetcher.RedirectKotlinDataFetcherFactoryProvider
-import io.github.graphglue.graphql.datafetcher.rewireFieldType
 import io.github.graphglue.model.DomainNode
 import io.github.graphglue.model.Node
 import io.github.graphglue.model.NodeSetProperty
 import io.github.graphglue.model.PageInfo
-import io.github.graphglue.db.execution.NodeQueryParser
-import io.github.graphglue.db.execution.definition.NodeDefinition
-import io.github.graphglue.db.execution.definition.NodeDefinitionCache
-import io.github.graphglue.db.execution.definition.NodeDefinitionCollection
 import io.github.graphglue.util.CacheMap
-import graphql.schema.*
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.BeanFactory
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
@@ -61,14 +61,14 @@ import kotlin.reflect.jvm.jvmErasure
 @Import(GraphglueGraphQLFilterConfiguration::class)
 class GraphglueGraphQLConfiguration(private val neo4jMappingContext: Neo4jMappingContext) {
 
-    private val logger = LoggerFactory.getLogger(io.github.graphglue.graphql.GraphglueGraphQLConfiguration::class.java)
+    private val logger = LoggerFactory.getLogger(GraphglueGraphQLConfiguration::class.java)
 
     private val inputTypeCache = CacheMap<String, GraphQLInputType>()
     private val outputTypeCache = CacheMap<String, GraphQLOutputType>()
     private val filterDefinitions: FilterDefinitionCache = CacheMap()
     private val nodeDefinitions = CacheMap<KClass<out Node>, NodeDefinition>()
     private val nodeDefinitionCache = NodeDefinitionCache(nodeDefinitions, neo4jMappingContext)
-    private val topLevelQueries = HashMap<NodeDefinition, io.github.graphglue.graphql.TopLevelQueryDefinition>()
+    private val topLevelQueries = HashMap<NodeDefinition, TopLevelQueryDefinition>()
 
     /**
      * Code registry used as a temporary cache before its DataFetchers are added to the
@@ -142,11 +142,9 @@ class GraphglueGraphQLConfiguration(private val neo4jMappingContext: Neo4jMappin
                 val codeRegistry = schema.codeRegistry
                 val newBuilder = GraphQLSchema.newSchema(builder.build())
                 updateQueryType(schema, newBuilder)
-                newBuilder.codeRegistry(
-                    codeRegistry.transform {
-                        it.dataFetchers(tempCodeRegistry.build())
-                    }
-                )
+                newBuilder.codeRegistry(codeRegistry.transform {
+                    it.dataFetchers(tempCodeRegistry.build())
+                })
                 return newBuilder
             }
 
@@ -215,7 +213,7 @@ class GraphglueGraphQLConfiguration(private val neo4jMappingContext: Neo4jMappin
         subscriptions: Optional<List<Subscription>>,
         schemaConfig: SchemaGeneratorConfig,
         beanFactory: BeanFactory
-    ): io.github.graphglue.graphql.SchemaAndNodeDefinitionCollection {
+    ): SchemaAndNodeDefinitionCollection {
         val generator = SchemaGenerator(schemaConfig)
         val nodeDefinition = nodeDefinitionCache.getOrCreate(Node::class)
         val schema = generator.use {
@@ -231,22 +229,21 @@ class GraphglueGraphQLConfiguration(private val neo4jMappingContext: Neo4jMappin
 
         val nodeDefinitionCollection = NodeDefinitionCollection(nodeDefinitions, beanFactory)
 
-        return io.github.graphglue.graphql.SchemaAndNodeDefinitionCollection(schema, nodeDefinitionCollection)
+        return SchemaAndNodeDefinitionCollection(schema, nodeDefinitionCollection)
     }
 
     @Bean
-    fun schema(schemaAndNodeDefinitionCollection: io.github.graphglue.graphql.SchemaAndNodeDefinitionCollection): GraphQLSchema =
+    fun schema(schemaAndNodeDefinitionCollection: SchemaAndNodeDefinitionCollection): GraphQLSchema =
         schemaAndNodeDefinitionCollection.schema
 
     @Bean
-    fun nodeDefinitionCollection(schemaAndNodeDefinitionCollection: io.github.graphglue.graphql.SchemaAndNodeDefinitionCollection): NodeDefinitionCollection =
+    fun nodeDefinitionCollection(schemaAndNodeDefinitionCollection: SchemaAndNodeDefinitionCollection): NodeDefinitionCollection =
         schemaAndNodeDefinitionCollection.nodeDefinitionCollection
 
     @Bean
     @ConditionalOnMissingBean
     fun dataFetcherFactoryProvider(
-        objectMapper: ObjectMapper,
-        applicationContext: ApplicationContext
+        objectMapper: ObjectMapper, applicationContext: ApplicationContext
     ): KotlinDataFetcherFactoryProvider = RedirectKotlinDataFetcherFactoryProvider(objectMapper, applicationContext)
 
     @Bean
@@ -270,6 +267,5 @@ class GraphglueGraphQLConfiguration(private val neo4jMappingContext: Neo4jMappin
 private data class TopLevelQueryDefinition(val name: String, val graphQLWrapperType: GraphQLOutputType)
 
 data class SchemaAndNodeDefinitionCollection(
-    val schema: GraphQLSchema,
-    val nodeDefinitionCollection: NodeDefinitionCollection
+    val schema: GraphQLSchema, val nodeDefinitionCollection: NodeDefinitionCollection
 )

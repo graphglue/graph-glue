@@ -53,7 +53,8 @@ private fun generateOneRelationshipDefinitions(nodeClass: KClass<out Node>): Lis
  * @return the list of generated relationship definitions
  */
 private fun generateManyRelationshipDefinitions(nodeClass: KClass<out Node>): List<ManyRelationshipDefinition> {
-    val nodeListType = NodeSetProperty.NodeSet::class.createType(listOf(KTypeProjection.covariant(Node::class.createType())))
+    val nodeListType =
+        NodeSetProperty.NodeSet::class.createType(listOf(KTypeProjection.covariant(Node::class.createType())))
     val properties = nodeClass.memberProperties.filter { it.returnType.isSubtypeOf(nodeListType) }
     return properties.map {
         val annotation = it.findAnnotation<NodeRelationship>()

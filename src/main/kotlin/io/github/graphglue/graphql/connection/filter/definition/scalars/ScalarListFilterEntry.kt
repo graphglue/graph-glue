@@ -1,10 +1,10 @@
 package io.github.graphglue.graphql.connection.filter.definition.scalars
 
-import io.github.graphglue.graphql.connection.filter.definition.FilterEntryDefinition
-import io.github.graphglue.graphql.connection.filter.definition.SimpleFilterEntryDefinition
 import graphql.schema.GraphQLInputType
 import graphql.schema.GraphQLList
 import graphql.schema.GraphQLNonNull
+import io.github.graphglue.graphql.connection.filter.definition.FilterEntryDefinition
+import io.github.graphglue.graphql.connection.filter.definition.SimpleFilterEntryDefinition
 import org.neo4j.cypherdsl.core.Condition
 import org.neo4j.cypherdsl.core.Expression
 import org.neo4j.cypherdsl.core.Property

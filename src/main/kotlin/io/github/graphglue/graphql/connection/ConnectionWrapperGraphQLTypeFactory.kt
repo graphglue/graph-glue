@@ -1,16 +1,18 @@
 package io.github.graphglue.graphql.connection
 
 import com.expediagroup.graphql.generator.execution.KotlinDataFetcherFactoryProvider
+import graphql.Scalars
+import graphql.language.EnumValue
+import graphql.schema.*
 import io.github.graphglue.graphql.connection.filter.definition.SubFilterGenerator
 import io.github.graphglue.graphql.connection.filter.definition.generateFilterDefinition
 import io.github.graphglue.graphql.connection.order.OrderField
 import io.github.graphglue.graphql.connection.order.generateOrders
 import io.github.graphglue.graphql.extensions.getSimpleName
-import io.github.graphglue.model.*
+import io.github.graphglue.model.Connection
+import io.github.graphglue.model.Edge
+import io.github.graphglue.model.Node
 import io.github.graphglue.util.CacheMap
-import graphql.Scalars
-import graphql.language.EnumValue
-import graphql.schema.*
 import org.springframework.data.neo4j.core.mapping.Neo4jMappingContext
 import kotlin.reflect.KClass
 import kotlin.reflect.KType

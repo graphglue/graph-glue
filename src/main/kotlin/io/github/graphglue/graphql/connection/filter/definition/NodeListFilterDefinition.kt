@@ -1,8 +1,8 @@
 package io.github.graphglue.graphql.connection.filter.definition
 
+import io.github.graphglue.db.execution.definition.RelationshipDefinition
 import io.github.graphglue.graphql.connection.filter.model.*
 import io.github.graphglue.graphql.extensions.getSimpleName
-import io.github.graphglue.db.execution.definition.RelationshipDefinition
 import kotlin.reflect.KType
 import kotlin.reflect.jvm.jvmErasure
 

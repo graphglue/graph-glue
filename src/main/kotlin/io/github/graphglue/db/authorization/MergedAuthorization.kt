@@ -1,8 +1,8 @@
 package io.github.graphglue.db.authorization
 
+import io.github.graphglue.db.execution.definition.RelationshipDefinition
 import io.github.graphglue.model.Authorization
 import io.github.graphglue.model.Rule
-import io.github.graphglue.db.execution.definition.RelationshipDefinition
 
 /**
  * A merged authorization composed of any amount of [Authorization]s

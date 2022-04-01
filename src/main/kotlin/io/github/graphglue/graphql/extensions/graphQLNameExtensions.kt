@@ -19,9 +19,10 @@ package io.github.graphglue.graphql.extensions
 
 import com.expediagroup.graphql.generator.annotations.GraphQLName
 import com.expediagroup.graphql.generator.exceptions.CouldNotGetNameOfKClassException
-import com.expediagroup.graphql.generator.exceptions.CouldNotGetNameOfKParameterException
-import java.lang.reflect.Field
-import kotlin.reflect.*
+import kotlin.reflect.KAnnotatedElement
+import kotlin.reflect.KClass
+import kotlin.reflect.KParameter
+import kotlin.reflect.KProperty
 import kotlin.reflect.full.findAnnotation
 import kotlin.reflect.full.findParameterByName
 import kotlin.reflect.full.primaryConstructor

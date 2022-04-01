@@ -1,10 +1,10 @@
 package io.github.graphglue.graphql.connection.filter.definition
 
+import graphql.schema.GraphQLInputType
+import io.github.graphglue.db.execution.definition.RelationshipDefinition
 import io.github.graphglue.graphql.connection.filter.model.NodeSubFilter
 import io.github.graphglue.model.Node
-import io.github.graphglue.db.execution.definition.RelationshipDefinition
 import io.github.graphglue.util.CacheMap
-import graphql.schema.GraphQLInputType
 import kotlin.reflect.KClass
 import kotlin.reflect.KType
 import kotlin.reflect.jvm.jvmErasure

@@ -1,8 +1,9 @@
 package io.github.graphglue.graphql.datafetcher
 
 import com.expediagroup.graphql.generator.extensions.unwrapType
+import graphql.schema.GraphQLFieldDefinition
+import graphql.schema.GraphQLObjectType
 import io.github.graphglue.model.NODE_RELATIONSHIP_DIRECTIVE
-import graphql.schema.*
 
 /**
  * Redirects fields used for NodeSetProperties

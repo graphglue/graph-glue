@@ -18,7 +18,6 @@ abstract class SimpleObjectFilterDefinitionEntry<T : FilterEntryDefinition>(
         inputTypeCache: CacheMap<String, GraphQLInputType>
     ): GraphQLInputType {
         return inputTypeCache.computeIfAbsent(typeName, GraphQLTypeReference(typeName)) {
-            println(typeName)
             val builder = GraphQLInputObjectType.newInputObject()
             builder.name(typeName)
             for (field in fields.values) {

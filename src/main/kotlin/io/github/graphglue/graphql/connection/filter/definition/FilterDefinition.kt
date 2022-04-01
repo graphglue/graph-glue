@@ -57,22 +57,22 @@ class FilterDefinition<T : Node>(private val entryType: KClass<T>) :
         val filterName = "${entryType.getSimpleName()}FilterInput"
         val nodeFilterName = "${entryType.getSimpleName()}NodeFilterInput"
 
-        val nodeFilter = inputTypeCache.computeIfAbsent(nodeFilterName, GraphQLTypeReference(nodeFilterName)) {
-            val builder = GraphQLInputObjectType.newInputObject()
-            builder.name(nodeFilterName)
-            builder.description("Filter used to filter ${entryType.getSimpleName()}")
-            for (entry in entries.values) {
-                builder.field {
-                    it.name(entry.name).description(entry.description).type(entry.toGraphQLType(inputTypeCache))
-                }
-            }
-            builder.build()
-        }
-
         val subFilter = GraphQLTypeReference(filterName)
         val nonNullSubFilterList = GraphQLList(GraphQLNonNull(subFilter))
 
         return inputTypeCache.computeIfAbsent(filterName, GraphQLTypeReference(filterName)) {
+            val nodeFilter = inputTypeCache.computeIfAbsent(nodeFilterName, GraphQLTypeReference(nodeFilterName)) {
+                val builder = GraphQLInputObjectType.newInputObject()
+                builder.name(nodeFilterName)
+                builder.description("Filter used to filter ${entryType.getSimpleName()}")
+                for (entry in entries.values) {
+                    builder.field {
+                        it.name(entry.name).description(entry.description).type(entry.toGraphQLType(inputTypeCache))
+                    }
+                }
+                builder.build()
+            }
+
             GraphQLInputObjectType.newInputObject().name(filterName)
                 .description("Used to build propositional formula consisting of ${nodeFilterName}. Exactly one if its fields has to be provided")
                 .field {

@@ -68,7 +68,7 @@ class GraphglueGraphQLConfiguration(private val neo4jMappingContext: Neo4jMappin
     private val filterDefinitions: FilterDefinitionCache = CacheMap()
     private val nodeDefinitions = CacheMap<KClass<out Node>, NodeDefinition>()
     private val nodeDefinitionCache = NodeDefinitionCache(nodeDefinitions, neo4jMappingContext)
-    private val topLevelQueries = HashMap<NodeDefinition, TopLevelQueryDefinition>()
+    private val topLevelQueries = HashMap<NodeDefinition, String>()
 
     /**
      * Code registry used as a temporary cache before its DataFetchers are added to the
@@ -120,10 +120,7 @@ class GraphglueGraphQLConfiguration(private val neo4jMappingContext: Neo4jMappin
                     val domainNodeAnnotation = nodeClass.springFindAnnotation<DomainNode>()
                     val topLevelFunctionName = domainNodeAnnotation?.topLevelQueryName
                     if (topLevelFunctionName?.isNotBlank() == true) {
-                        topLevelQueries[nodeDefinition] = io.github.graphglue.graphql.TopLevelQueryDefinition(
-                            topLevelFunctionName,
-                            factory.generateWrapperGraphQLType(nodeClass, nodeClass.getSimpleName())
-                        )
+                        topLevelQueries[nodeDefinition] = topLevelFunctionName
                     }
                 }
                 return if (type.jvmErasure == NodeSetProperty.NodeSet::class) {
@@ -152,15 +149,16 @@ class GraphglueGraphQLConfiguration(private val neo4jMappingContext: Neo4jMappin
                 val queryType = schema.queryType!!
                 val newQueryType = queryType.transform {
                     val function = TopLevelQueryProvider::class.memberFunctions.first { it.name == "getFromGraphQL" }
-                    for ((nodeDefinition, queryDefinition) in topLevelQueries) {
-                        val (name, wrapperType) = queryDefinition
+                    for ((nodeDefinition, queryName) in topLevelQueries) {
+                        val nodeClass = nodeDefinition.nodeType
+                        val wrapperType = factory.generateWrapperGraphQLType(nodeClass, nodeClass.getSimpleName())
                         wrapperType as GraphQLObjectType
                         val field = wrapperType.fields.first().transform { fieldBuilder ->
-                            fieldBuilder.name(name)
-                                .description("Query for nodes of type ${nodeDefinition.nodeType.getSimpleName()}")
+                            fieldBuilder.name(queryName)
+                                .description("Query for nodes of type ${nodeClass.getSimpleName()}")
                         }
                         it.field(field)
-                        val coordinates = FieldCoordinates.coordinates(queryType.name, name)
+                        val coordinates = FieldCoordinates.coordinates(queryType.name, queryName)
                         val dataFetcherFactory = dataFetcherFactoryProvider.functionDataFetcherFactory(
                             TopLevelQueryProvider<Node>(nodeDefinition), function
                         )
@@ -263,8 +261,6 @@ class GraphglueGraphQLConfiguration(private val neo4jMappingContext: Neo4jMappin
         )
     }
 }
-
-private data class TopLevelQueryDefinition(val name: String, val graphQLWrapperType: GraphQLOutputType)
 
 data class SchemaAndNodeDefinitionCollection(
     val schema: GraphQLSchema, val nodeDefinitionCollection: NodeDefinitionCollection

@@ -1,4 +1,4 @@
-package io.github.graphglue.connection.order
+package io.github.graphglue.model
 
 @MustBeDocumented
 @Target(AnnotationTarget.PROPERTY)

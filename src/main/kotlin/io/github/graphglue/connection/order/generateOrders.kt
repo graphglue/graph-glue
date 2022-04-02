@@ -2,6 +2,7 @@ package io.github.graphglue.connection.order
 
 import io.github.graphglue.graphql.extensions.getPropertyName
 import io.github.graphglue.model.Node
+import io.github.graphglue.model.OrderProperty
 import org.springframework.data.neo4j.core.mapping.Neo4jPersistentEntity
 import kotlin.reflect.KClass
 import kotlin.reflect.full.hasAnnotation

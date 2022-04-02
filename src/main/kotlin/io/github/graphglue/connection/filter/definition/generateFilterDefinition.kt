@@ -1,6 +1,6 @@
 package io.github.graphglue.connection.filter.definition
 
-import io.github.graphglue.connection.filter.FilterProperty
+import io.github.graphglue.model.FilterProperty
 import io.github.graphglue.graphql.extensions.springFindRepeatableAnnotations
 import io.github.graphglue.model.AdditionalFilter
 import io.github.graphglue.model.Node

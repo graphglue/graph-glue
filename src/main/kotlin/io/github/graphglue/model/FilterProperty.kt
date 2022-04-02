@@ -1,4 +1,4 @@
-package io.github.graphglue.connection.filter
+package io.github.graphglue.model
 
 @Target(AnnotationTarget.PROPERTY)
 @MustBeDocumented

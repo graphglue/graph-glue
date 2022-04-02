@@ -4,11 +4,11 @@ import com.expediagroup.graphql.generator.annotations.GraphQLIgnore
 import com.fasterxml.jackson.databind.ObjectMapper
 import graphql.execution.DataFetcherResult
 import graphql.schema.DataFetchingEnvironment
-import io.github.graphglue.db.LazyLoadingContext
-import io.github.graphglue.db.execution.NodeQueryExecutor
-import io.github.graphglue.db.execution.NodeQueryParser
-import io.github.graphglue.db.execution.NodeQueryResult
-import io.github.graphglue.db.execution.definition.NodeDefinition
+import io.github.graphglue.data.LazyLoadingContext
+import io.github.graphglue.data.execution.NodeQueryExecutor
+import io.github.graphglue.data.execution.NodeQueryParser
+import io.github.graphglue.data.execution.NodeQueryResult
+import io.github.graphglue.definition.NodeDefinition
 import io.github.graphglue.graphql.extensions.requiredPermission
 import io.github.graphglue.model.Connection
 import io.github.graphglue.model.Node

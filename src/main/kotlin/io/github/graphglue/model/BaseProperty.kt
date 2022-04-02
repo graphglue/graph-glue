@@ -4,9 +4,9 @@ import com.expediagroup.graphql.generator.annotations.GraphQLIgnore
 import com.fasterxml.jackson.databind.ObjectMapper
 import graphql.execution.DataFetcherResult
 import graphql.schema.DataFetchingEnvironment
-import io.github.graphglue.db.execution.*
-import io.github.graphglue.db.execution.definition.NodeDefinitionCollection
-import io.github.graphglue.db.repositories.RelationshipDiff
+import io.github.graphglue.data.execution.*
+import io.github.graphglue.definition.NodeDefinitionCollection
+import io.github.graphglue.data.repositories.RelationshipDiff
 import io.github.graphglue.graphql.extensions.getParentNodeDefinition
 import org.springframework.beans.factory.annotation.Autowired
 import java.util.*

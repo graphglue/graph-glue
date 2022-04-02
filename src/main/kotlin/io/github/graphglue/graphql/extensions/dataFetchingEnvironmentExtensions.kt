@@ -3,11 +3,11 @@ package io.github.graphglue.graphql.extensions
 import com.expediagroup.graphql.generator.extensions.deepName
 import graphql.execution.DataFetcherResult
 import graphql.schema.DataFetchingEnvironment
-import io.github.graphglue.db.authorization.AuthorizationContext
-import io.github.graphglue.db.authorization.Permission
-import io.github.graphglue.db.execution.NodeQuery
-import io.github.graphglue.db.execution.definition.NodeDefinition
-import io.github.graphglue.db.execution.definition.NodeDefinitionCollection
+import io.github.graphglue.authorization.AuthorizationContext
+import io.github.graphglue.authorization.Permission
+import io.github.graphglue.data.execution.NodeQuery
+import io.github.graphglue.definition.NodeDefinition
+import io.github.graphglue.definition.NodeDefinitionCollection
 
 fun DataFetchingEnvironment.getParentNodeDefinition(nodeDefinitionCollection: NodeDefinitionCollection): NodeDefinition {
     val parentTypeName = parentType.deepName

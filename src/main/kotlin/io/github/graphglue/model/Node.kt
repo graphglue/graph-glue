@@ -5,11 +5,11 @@ import com.expediagroup.graphql.generator.annotations.GraphQLIgnore
 import com.expediagroup.graphql.generator.annotations.GraphQLName
 import com.expediagroup.graphql.generator.scalars.ID
 import graphql.schema.DataFetchingEnvironment
-import io.github.graphglue.db.LazyLoadingContext
-import io.github.graphglue.db.execution.NodeQuery
-import io.github.graphglue.db.execution.NodeQueryExecutor
-import io.github.graphglue.db.execution.NodeQueryOptions
-import io.github.graphglue.db.execution.NodeQueryResult
+import io.github.graphglue.data.LazyLoadingContext
+import io.github.graphglue.data.execution.NodeQuery
+import io.github.graphglue.data.execution.NodeQueryExecutor
+import io.github.graphglue.data.execution.NodeQueryOptions
+import io.github.graphglue.data.execution.NodeQueryResult
 import io.github.graphglue.graphql.extensions.requiredPermission
 import org.springframework.data.annotation.Transient
 import org.springframework.data.neo4j.core.convert.ConvertWith

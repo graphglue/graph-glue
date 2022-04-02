@@ -1,6 +1,6 @@
 package io.github.graphglue.model
 
-import io.github.graphglue.db.authorization.AuthorizationRuleGenerator
+import io.github.graphglue.authorization.AuthorizationRuleGenerator
 
 /**
  * Rule used in [Authorization] annotations

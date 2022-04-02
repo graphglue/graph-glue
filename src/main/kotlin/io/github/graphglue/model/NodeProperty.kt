@@ -1,8 +1,8 @@
 package io.github.graphglue.model
 
 import graphql.execution.DataFetcherResult
-import io.github.graphglue.db.execution.*
-import io.github.graphglue.db.repositories.RelationshipDiff
+import io.github.graphglue.data.execution.*
+import io.github.graphglue.data.repositories.RelationshipDiff
 import kotlinx.coroutines.runBlocking
 import org.neo4j.cypherdsl.core.Cypher
 import kotlin.reflect.KProperty
@@ -12,7 +12,6 @@ import kotlin.reflect.KProperty1
  * Property for the one side of a relation
  * Depending on the type of `property` may be an optional property
  *
- * @param value the current value of the property, `null` meaning not loaded
  * @param parent see [BaseProperty.parent]
  * @param property see [BaseProperty.property]
  */

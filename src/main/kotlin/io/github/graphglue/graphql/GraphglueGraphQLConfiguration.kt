@@ -14,18 +14,18 @@ import com.expediagroup.graphql.server.operations.Subscription
 import com.expediagroup.graphql.server.spring.GraphQLConfigurationProperties
 import com.fasterxml.jackson.databind.ObjectMapper
 import graphql.schema.*
-import io.github.graphglue.db.execution.NodeQueryParser
-import io.github.graphglue.db.execution.definition.NodeDefinition
-import io.github.graphglue.db.execution.definition.NodeDefinitionCache
-import io.github.graphglue.db.execution.definition.NodeDefinitionCollection
-import io.github.graphglue.graphql.connection.ConnectionWrapperGraphQLTypeFactory
-import io.github.graphglue.graphql.connection.filter.GraphglueGraphQLFilterConfiguration
-import io.github.graphglue.graphql.connection.filter.TypeFilterDefinitionEntry
-import io.github.graphglue.graphql.connection.filter.definition.FilterDefinitionCache
-import io.github.graphglue.graphql.connection.filter.definition.FilterDefinitionCollection
-import io.github.graphglue.graphql.connection.filter.definition.FilterEntryDefinition
-import io.github.graphglue.graphql.connection.filter.definition.SubFilterGenerator
-import io.github.graphglue.graphql.connection.order.OrderDirection
+import io.github.graphglue.data.execution.NodeQueryParser
+import io.github.graphglue.definition.NodeDefinition
+import io.github.graphglue.definition.NodeDefinitionCache
+import io.github.graphglue.definition.NodeDefinitionCollection
+import io.github.graphglue.connection.ConnectionWrapperGraphQLTypeFactory
+import io.github.graphglue.connection.GraphglueConnectionConfiguration
+import io.github.graphglue.connection.filter.TypeFilterDefinitionEntry
+import io.github.graphglue.connection.filter.definition.FilterDefinitionCache
+import io.github.graphglue.connection.filter.definition.FilterDefinitionCollection
+import io.github.graphglue.connection.filter.definition.FilterEntryDefinition
+import io.github.graphglue.connection.filter.definition.SubFilterGenerator
+import io.github.graphglue.connection.order.OrderDirection
 import io.github.graphglue.graphql.datafetcher.RedirectKotlinDataFetcherFactoryProvider
 import io.github.graphglue.graphql.datafetcher.rewireFieldType
 import io.github.graphglue.graphql.extensions.getSimpleName
@@ -44,7 +44,6 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
 import org.springframework.context.ApplicationContext
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
-import org.springframework.context.annotation.Import
 import org.springframework.data.neo4j.core.mapping.Neo4jMappingContext
 import java.util.*
 import kotlin.reflect.KClass
@@ -58,7 +57,6 @@ import kotlin.reflect.jvm.jvmErasure
  * Configures beans used in combination with graphql-kotlin and graphql-java
  */
 @Configuration
-@Import(GraphglueGraphQLFilterConfiguration::class)
 class GraphglueGraphQLConfiguration(private val neo4jMappingContext: Neo4jMappingContext) {
 
     private val logger = LoggerFactory.getLogger(GraphglueGraphQLConfiguration::class.java)

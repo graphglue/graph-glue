@@ -4,7 +4,7 @@ import com.expediagroup.graphql.generator.annotations.GraphQLIgnore
 import com.fasterxml.jackson.databind.ObjectMapper
 import graphql.execution.DataFetcherResult
 import graphql.schema.DataFetchingEnvironment
-import io.github.graphglue.graphql.connection.order.Order
+import io.github.graphglue.connection.order.Order
 import io.github.graphglue.graphql.extensions.getDataFetcherResult
 import org.springframework.beans.factory.annotation.Autowired
 

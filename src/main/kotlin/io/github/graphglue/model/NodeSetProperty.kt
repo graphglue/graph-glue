@@ -1,10 +1,10 @@
 package io.github.graphglue.model
 
 import graphql.execution.DataFetcherResult
-import io.github.graphglue.db.execution.NodeQuery
-import io.github.graphglue.db.execution.NodeQueryParser
-import io.github.graphglue.db.execution.NodeQueryResult
-import io.github.graphglue.db.repositories.RelationshipDiff
+import io.github.graphglue.data.execution.NodeQuery
+import io.github.graphglue.data.execution.NodeQueryParser
+import io.github.graphglue.data.execution.NodeQueryResult
+import io.github.graphglue.data.repositories.RelationshipDiff
 import kotlinx.coroutines.runBlocking
 import org.neo4j.cypherdsl.core.Cypher
 import java.util.*
@@ -15,7 +15,6 @@ import kotlin.reflect.KProperty1
  * Property for the many side of a relation
  * Is mapped to a [Connection] in GraphQL
  *
- * @param value the current value of the property, `null` meaning not loaded
  * @param parent see [BaseProperty.parent]
  * @param property see [BaseProperty.property]
  */

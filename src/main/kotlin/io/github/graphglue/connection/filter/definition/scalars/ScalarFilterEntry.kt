@@ -7,6 +7,14 @@ import org.neo4j.cypherdsl.core.Condition
 import org.neo4j.cypherdsl.core.Expression
 import org.neo4j.cypherdsl.core.Property
 
+/**
+ * [ScalarFilterEntryBase] which takes a single scalar as input
+ * Can be used e.g. for a `eq` filter
+ *
+ * @param name the name of the field in the filter
+ * @param description the description of the field
+ * @param conditionGenerator used to generate the condition which applies the filter in the database
+ */
 class ScalarFilterEntry<T>(
     name: String,
     description: String,

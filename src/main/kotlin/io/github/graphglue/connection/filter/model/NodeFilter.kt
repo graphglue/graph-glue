@@ -5,6 +5,12 @@ import org.neo4j.cypherdsl.core.Condition
 import org.neo4j.cypherdsl.core.Conditions
 import org.neo4j.cypherdsl.core.Node
 
+/**
+ * Filter for a specific type of node
+ * Filters instances of this type by applying a list of filter entries joined by AND
+ *
+ * @param entries the entries to join
+ */
 data class NodeFilter(val entries: List<FilterEntry> = emptyList()) : CypherConditionGenerator {
     override fun generateCondition(node: Node): Condition {
         return if (entries.isEmpty()) {
@@ -15,5 +21,4 @@ data class NodeFilter(val entries: List<FilterEntry> = emptyList()) : CypherCond
             }
         }
     }
-
 }

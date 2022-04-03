@@ -7,19 +7,52 @@ import io.github.graphglue.model.Node
 import io.github.graphglue.util.CacheMap
 import kotlin.reflect.KClass
 
+/**
+ * Defines a filter for a specific [Node] type
+ * Also handles parsing filters of that node type, including meta filters (filters joined by and, or, not)
+ *
+ * @param T the type of [Node]
+ * @param entryType class of the type, used to have runtime type information
+ */
 class FilterDefinition<T : Node>(private val entryType: KClass<T>) :
     GraphQLInputTypeGenerator {
 
+    /**
+     * Entries of the filter (typically for fields of the type)
+     * Joined by AND in the filter generation
+     */
     private lateinit var entries: Map<String, FilterEntryDefinition>
 
+    /**
+     * Initializes [FilterDefinition.entries]
+     * Used so that the [FilterDefinition] can be created before its entries are created,
+     * allowing for cyclic filter definition.
+     * Should be called only once
+     *
+     * @param entries value for [FilterDefinition.entries]
+     */
     fun init(entries: List<FilterEntryDefinition>) {
         this.entries = entries.associateBy { it.name }
     }
 
+    /**
+     * Parses the GraphQL input into a filter
+     *
+     * @param value the input
+     * @return the parsed [Filter]
+     */
     fun parseFilter(value: Any?): Filter {
         return Filter(parseMetaFilter(value))
     }
 
+    /**
+     * Parses a meta filter.
+     * Requires that value contains exactly one of node, and, or, not are provided.
+     *
+     * @param value the meta filter to parse
+     * @return the parsed meta filter
+     * @throws IllegalStateException if the input type contains not one of node, and, or, not
+     */
     private fun parseMetaFilter(value: Any?): MetaFilter {
         value as Map<*, *>
         if (value.size != 1) {
@@ -41,6 +74,13 @@ class FilterDefinition<T : Node>(private val entryType: KClass<T>) :
         }
     }
 
+    /**
+     * Parses a node filter
+     * Requires that there is a definition present for all provided fields
+     *
+     * @param value the node filter to parse
+     * @return the parsed filter
+     */
     private fun parseNodeFilter(value: Any): NodeFilter {
         value as Map<*, *>
         val entries = value.map {
@@ -72,26 +112,43 @@ class FilterDefinition<T : Node>(private val entryType: KClass<T>) :
                 }
                 builder.build()
             }
-
-            GraphQLInputObjectType.newInputObject().name(filterName)
-                .description("Used to build propositional formula consisting of ${nodeFilterName}. Exactly one if its fields has to be provided")
-                .field {
-                    it.name("and")
-                        .description("Connects all subformulas via and")
-                        .type(nonNullSubFilterList)
-                }.field {
-                    it.name("or")
-                        .description("Connects all subformulas via or")
-                        .type(nonNullSubFilterList)
-                }.field {
-                    it.name("not")
-                        .description("Negates the subformula")
-                        .type(subFilter)
-                }.field {
-                    it.name("node")
-                        .description("Wrapper around $nodeFilterName")
-                        .type(nodeFilter)
-                }.build()
+            createMetaFilterInputType(filterName, nodeFilterName, nonNullSubFilterList, subFilter, nodeFilter)
         }
     }
+
+    /**
+     * Creates the [GraphQLInputType] for a meta filter
+     *
+     * @param filterName the name of the meta filter
+     * @param nodeFilterName the name of the node filter
+     * @param nonNullSubFilterList [GraphQLInputType] for a list of non-null meta filters
+     * @param subFilter [GraphQLInputType] for a non-null meta filter
+     * @param nodeFilter [GraphQLInputType] for the node filter
+     * @return the generated [GraphQLInputType] of the meta filter
+     */
+    private fun createMetaFilterInputType(
+        filterName: String,
+        nodeFilterName: String,
+        nonNullSubFilterList: GraphQLInputType,
+        subFilter: GraphQLInputType,
+        nodeFilter: GraphQLInputType
+    ): GraphQLInputType = GraphQLInputObjectType.newInputObject().name(filterName)
+        .description("Used to build propositional formula consisting of ${nodeFilterName}. Exactly one if its fields has to be provided")
+        .field {
+            it.name("and")
+                .description("Connects all subformulas via and")
+                .type(nonNullSubFilterList)
+        }.field {
+            it.name("or")
+                .description("Connects all subformulas via or")
+                .type(nonNullSubFilterList)
+        }.field {
+            it.name("not")
+                .description("Negates the subformula")
+                .type(subFilter)
+        }.field {
+            it.name("node")
+                .description("Wrapper around $nodeFilterName")
+                .type(nodeFilter)
+        }.build()
 }

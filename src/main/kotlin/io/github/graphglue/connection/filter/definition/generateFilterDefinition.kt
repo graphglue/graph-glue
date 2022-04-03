@@ -8,6 +8,14 @@ import kotlin.reflect.KClass
 import kotlin.reflect.full.hasAnnotation
 import kotlin.reflect.full.memberProperties
 
+/**
+ * Generates a [FilterDefinition] for a specific [Node] type
+ * Handles retrieving the definition from the cache
+ *
+ * @param type the [Node] type to generate the filter for
+ * @param subFilterGenerator used to generate filter entries for properties
+ * @return the generated [FilterDefinition]
+ */
 fun generateFilterDefinition(
     type: KClass<out Node>,
     subFilterGenerator: SubFilterGenerator

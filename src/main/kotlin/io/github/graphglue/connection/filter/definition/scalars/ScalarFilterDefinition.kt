@@ -45,7 +45,7 @@ abstract class ScalarFilterDefinition<T>(
 }
 
 /**
- * Provides a default list filter entries: eq and in
+ * Provides a default filter entries: eq and in
  *
  * @return the list of generated filter entries
  */

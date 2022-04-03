@@ -32,6 +32,11 @@ abstract class ComparableFilterDefinition<T>(
     entries + getDefaultFilterEntries<T>()
 )
 
+/**
+ * Provides a default comparable filter entries:
+ *
+ * @return the list of generated filter entries
+ */
 private fun <T> getDefaultFilterEntries(): List<ScalarFilterEntry<T>> {
     return listOf(
         ScalarFilterEntry(

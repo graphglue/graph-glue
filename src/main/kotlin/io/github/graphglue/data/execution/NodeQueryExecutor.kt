@@ -326,7 +326,7 @@ class NodeQueryExecutor(
         return order.field.parts.asReversed().foldIndexed(Conditions.noCondition()) { index, filterExpression, part ->
             var newFilterExpression = filterExpression
             val property = node.property(part.neo4jPropertyName)
-            val propertyValue = Cypher.anonParameter<Any?>(cursor[part.property.name])
+            val propertyValue = Cypher.anonParameter<Any?>(cursor[part.name])
             if (index > 0) {
                 newFilterExpression = property.eq(propertyValue).and(newFilterExpression)
             }

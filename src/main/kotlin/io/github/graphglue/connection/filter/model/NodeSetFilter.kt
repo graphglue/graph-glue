@@ -1,24 +1,27 @@
 package io.github.graphglue.connection.filter.model
 
-import io.github.graphglue.connection.filter.definition.NodeListFilterDefinition
+import io.github.graphglue.connection.filter.definition.NodeSetFilterDefinition
 import io.github.graphglue.connection.filter.definition.NodeSubFilterDefinition
 import org.neo4j.cypherdsl.core.*
 
 /**
+ * [SimpleObjectFilter] with a [NodeSetFilterDefinition] definition
  *
+ * @param definition associated definition of the filter
+ * @param entries filter entries joined by AND
  */
-class NodeListFilter(definition: NodeListFilterDefinition, entries: List<NodeListFilterEntry>) :
+class NodeSetFilter(definition: NodeSetFilterDefinition, entries: List<NodeSetFilterEntry>) :
     SimpleObjectFilter(definition, entries)
 
 /**
- * [FilterEntry] used to filter when the entry is a list
- * can be used for filters where either all, any or none of the elements of the list have to
+ * [FilterEntry] used to filter when the entry is a set
+ * can be used for filters where either all, any or none of the elements of the set have to
  * match a filter
  *
  * @param subFilterDefinition associated definition of the entry
- * @param filter filter to filter the elements of the list
+ * @param filter filter to filter the elements of the set
  */
-abstract class NodeListFilterEntry(
+abstract class NodeSetFilterEntry(
     private val subFilterDefinition: NodeSubFilterDefinition,
     val filter: NodeSubFilter
 ) : FilterEntry(subFilterDefinition) {
@@ -32,7 +35,7 @@ abstract class NodeListFilterEntry(
     }
 
     /**
-     * Generates the predicate which defines how nodes of the list have to match the filter,
+     * Generates the predicate which defines how nodes of the set have to match the filter,
      * so that the overall filter evaluates to true
      * Examples include all, any and none
      *
@@ -43,34 +46,34 @@ abstract class NodeListFilterEntry(
 }
 
 /**
- * [NodeListFilterEntry] where all of the nodes have to match the filter
+ * [NodeSetFilterEntry] where all of the nodes have to match the filter
  *
  * @param definition associated definition of the entry
- * @param filter filter to filter the elements of the list
+ * @param filter filter to filter the elements of the set
  */
-class AllNodeListFilterEntry(definition: NodeSubFilterDefinition, filter: NodeSubFilter) :
-    NodeListFilterEntry(definition, filter) {
+class AllNodeSetFilterEntry(definition: NodeSubFilterDefinition, filter: NodeSubFilter) :
+    NodeSetFilterEntry(definition, filter) {
     override fun generatePredicate(variable: SymbolicName) = Predicates.all(variable)
 }
 
 /**
- * [NodeListFilterEntry] where any of the nodes have to match the filter
+ * [NodeSetFilterEntry] where any of the nodes have to match the filter
  *
  * @param definition associated definition of the entry
- * @param filter filter to filter the elements of the list
+ * @param filter filter to filter the elements of the set
  */
-class AnyNodeListFilterEntry(definition: NodeSubFilterDefinition, filter: NodeSubFilter) :
-    NodeListFilterEntry(definition, filter) {
+class AnyNodeSetFilterEntry(definition: NodeSubFilterDefinition, filter: NodeSubFilter) :
+    NodeSetFilterEntry(definition, filter) {
     override fun generatePredicate(variable: SymbolicName) = Predicates.any(variable)
 }
 
 /**
- * [NodeListFilterEntry] where none of the nodes have to match the filter
+ * [NodeSetFilterEntry] where none of the nodes have to match the filter
  *
  * @param definition associated definition of the entry
- * @param filter filter to filter the elements of the list
+ * @param filter filter to filter the elements of the set
  */
-class NoneNodeListFilterEntry(definition: NodeSubFilterDefinition, filter: NodeSubFilter) :
-    NodeListFilterEntry(definition, filter) {
+class NoneNodeSetFilterEntry(definition: NodeSubFilterDefinition, filter: NodeSubFilter) :
+    NodeSetFilterEntry(definition, filter) {
     override fun generatePredicate(variable: SymbolicName) = Predicates.none(variable)
 }

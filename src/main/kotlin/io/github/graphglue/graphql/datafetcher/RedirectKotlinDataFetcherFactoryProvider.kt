@@ -24,7 +24,7 @@ import kotlin.reflect.jvm.javaField
  * @param applicationContext used for the delegated [SpringKotlinDataFetcherFactoryProvider]
  * @param delegate the [KotlinDataFetcherFactoryProvider] used as delegate, defaults to a [SpringKotlinDataFetcherFactoryProvider]
  */
-class RedirectKotlinDataFetcherFactoryProvider(
+open class RedirectKotlinDataFetcherFactoryProvider(
     private val objectMapper: ObjectMapper,
     private val applicationContext: ApplicationContext,
     private val delegate: KotlinDataFetcherFactoryProvider = SpringKotlinDataFetcherFactoryProvider(

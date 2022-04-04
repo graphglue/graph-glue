@@ -13,9 +13,27 @@ import io.github.graphglue.graphql.extensions.requiredPermission
 import io.github.graphglue.model.Connection
 import io.github.graphglue.model.Node
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.data.neo4j.core.ReactiveNeo4jClient
+import org.springframework.data.neo4j.core.mapping.Neo4jMappingContext
 
+/**
+ * Provider for top level queries for specific [Node] types
+ * Used to generate connection like top level queries
+ *
+ * @param T the type of node for which to create the query
+ * @param nodeDefinition the definition of the [Node] type to query for
+ */
 class TopLevelQueryProvider<T : Node>(private val nodeDefinition: NodeDefinition) {
 
+    /**
+     * Handles the query for the specific [Node] type
+     *
+     * @param nodeQueryParser used to parse the query
+     * @param dataFetchingEnvironment necessary to generate the node query, used for caching
+     * @param lazyLoadingContext used to get the [ReactiveNeo4jClient] and the [Neo4jMappingContext]
+     * @param objectMapper necessary for cursor encoding and decoding
+     * @return the result with the correct local context
+     */
     @Suppress("UNCHECKED_CAST")
     suspend fun getFromGraphQL(
         @Autowired @GraphQLIgnore

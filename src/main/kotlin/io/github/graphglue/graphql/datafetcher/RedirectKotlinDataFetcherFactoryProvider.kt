@@ -14,6 +14,16 @@ import kotlin.reflect.KProperty1
 import kotlin.reflect.full.isSubclassOf
 import kotlin.reflect.jvm.javaField
 
+/**
+ * [KotlinDataFetcherFactoryProvider] which provides a [DataFetcherFactory] for properties which automatically
+ * redirects properties based on delegated [BaseProperty]s
+ * Delegates those data fetches to the `getFromGraphQL` function of the delegate obtained from
+ * [Node.propertyLookup]
+ *
+ * @param objectMapper necessary for the delegated [SpringKotlinDataFetcherFactoryProvider]
+ * @param applicationContext used for the delegated [SpringKotlinDataFetcherFactoryProvider]
+ * @param delegate the [KotlinDataFetcherFactoryProvider] used as delegate, defaults to a [SpringKotlinDataFetcherFactoryProvider]
+ */
 class RedirectKotlinDataFetcherFactoryProvider(
     private val objectMapper: ObjectMapper,
     private val applicationContext: ApplicationContext,
@@ -22,6 +32,14 @@ class RedirectKotlinDataFetcherFactoryProvider(
     )
 ) : KotlinDataFetcherFactoryProvider by delegate {
 
+    /**
+     * Property data fetcher factory which uses [createBasePropertyDataFetcherFactory] of the property is
+     * backed by a delegated [BaseProperty], otherwise uses [delegate] to resolve the data fetcher factory
+     *
+     * @param kClass parent class that contains this property
+     * @param kProperty Kotlin property that should be resolved
+     * @return the created [DataFetcherFactory] for the property
+     */
     override fun propertyDataFetcherFactory(kClass: KClass<*>, kProperty: KProperty<*>): DataFetcherFactory<Any?> {
         if (kProperty is KProperty1<*, *>) {
             val field = kProperty.javaField
@@ -35,9 +53,14 @@ class RedirectKotlinDataFetcherFactoryProvider(
         return delegate.propertyDataFetcherFactory(kClass, kProperty)
     }
 
-    private fun createBasePropertyDataFetcherFactory(
-        kProperty: KProperty1<*, *>
-    ): DataFetcherFactory<Any?> {
+    /**
+     * Creates a [DataFetcherFactory] for a [BaseProperty] backed property which uses [Node.propertyLookup]
+     * to get the delegate, and then use [BaseProperty.getFromGraphQL] for data fetching
+     *
+     * @param kProperty Kotlin property that should be resolved
+     * @return the created [DataFetcherFactory] for the property
+     */
+    private fun createBasePropertyDataFetcherFactory(kProperty: KProperty1<*, *>): DataFetcherFactory<Any?> {
         val functionDataFetcherFactory = delegate.functionDataFetcherFactory(null, BaseProperty<*>::getFromGraphQL)
         return DataFetcherFactory { dataFetcherFactoryEnvironment ->
             val functionDataFetcher = functionDataFetcherFactory.get(dataFetcherFactoryEnvironment)

@@ -6,8 +6,8 @@ import com.expediagroup.graphql.generator.scalars.ID
 import com.expediagroup.graphql.server.operations.Query
 import graphql.execution.DataFetcherResult
 import graphql.schema.DataFetchingEnvironment
-import io.github.graphglue.data.execution.CypherConditionGenerator
 import io.github.graphglue.data.LazyLoadingContext
+import io.github.graphglue.data.execution.CypherConditionGenerator
 import io.github.graphglue.data.execution.DEFAULT_PART_ID
 import io.github.graphglue.data.execution.NodeQueryExecutor
 import io.github.graphglue.data.execution.NodeQueryParser
@@ -16,16 +16,30 @@ import io.github.graphglue.graphql.extensions.requiredPermission
 import io.github.graphglue.model.Node
 import org.neo4j.cypherdsl.core.Cypher
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.data.neo4j.core.ReactiveNeo4jClient
+import org.springframework.data.neo4j.core.mapping.Neo4jMappingContext
 
+/**
+ * [Query] used to provide the `node` query, which allows for querying [Node]s by id
+ *
+ * @param nodeDefinition the definition of the [Node] class
+ */
 class GraphglueQuery(private val nodeDefinition: NodeDefinition) : Query {
+
+    /**
+     * `node` query which finds a node by id
+     *
+     * @param nodeQueryParser used to parse the query
+     * @param dataFetchingEnvironment necessary to generate the node query, used for caching
+     * @param lazyLoadingContext used to get the [ReactiveNeo4jClient] and the [Neo4jMappingContext]
+     * @return the result with the correct local context
+     */
     @GraphQLDescription("Get a Node by id")
     suspend fun node(
         @GraphQLDescription("The id of the node to get") id: ID,
-        @Autowired @GraphQLIgnore
-        nodeQueryParser: NodeQueryParser,
+        @Autowired @GraphQLIgnore nodeQueryParser: NodeQueryParser,
         dataFetchingEnvironment: DataFetchingEnvironment,
-        @Autowired @GraphQLIgnore
-        lazyLoadingContext: LazyLoadingContext
+        @Autowired @GraphQLIgnore lazyLoadingContext: LazyLoadingContext
     ): DataFetcherResult<Node?> {
         val idConditionGenerator = CypherConditionGenerator {
             it.property("id").isEqualTo(Cypher.anonParameter(id.value))
@@ -39,9 +53,7 @@ class GraphglueQuery(private val nodeDefinition: NodeDefinition) : Query {
         val queryExecutor =
             NodeQueryExecutor(nodeQuery, lazyLoadingContext.neo4jClient, lazyLoadingContext.neo4jMappingContext)
         val queryResult = queryExecutor.execute()
-        return DataFetcherResult.newResult<Node?>()
-            .data(queryResult.nodes.firstOrNull())
-            .localContext(nodeQuery.parts[DEFAULT_PART_ID])
-            .build()
+        return DataFetcherResult.newResult<Node?>().data(queryResult.nodes.firstOrNull())
+            .localContext(nodeQuery.parts[DEFAULT_PART_ID]).build()
     }
 }

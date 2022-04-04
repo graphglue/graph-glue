@@ -60,7 +60,6 @@ import kotlin.reflect.jvm.jvmErasure
 class GraphglueGraphQLConfiguration(private val neo4jMappingContext: Neo4jMappingContext) {
 
     private val logger = LoggerFactory.getLogger(GraphglueGraphQLConfiguration::class.java)
-
     private val inputTypeCache = CacheMap<String, GraphQLInputType>()
     private val outputTypeCache = CacheMap<String, GraphQLOutputType>()
     private val filterDefinitions: FilterDefinitionCache = CacheMap()

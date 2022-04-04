@@ -2,6 +2,9 @@ package io.github.graphglue.model
 
 import com.expediagroup.graphql.generator.annotations.GraphQLDirective
 
+/**
+ * Name of the [NodeRelationship] directive
+ */
 const val NODE_RELATIONSHIP_DIRECTIVE = "nodeRelationship"
 
 /**

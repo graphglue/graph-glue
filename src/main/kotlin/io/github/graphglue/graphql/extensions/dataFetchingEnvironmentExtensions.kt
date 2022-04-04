@@ -9,11 +9,26 @@ import io.github.graphglue.data.execution.NodeQuery
 import io.github.graphglue.definition.NodeDefinition
 import io.github.graphglue.definition.NodeDefinitionCollection
 
+/**
+ * Gets the [NodeDefinition] associated with the parent type
+ * Uses [NodeDefinitionCollection.getNodeDefinitionsFromGraphQLNames] to find the correct [NodeDefinition]
+ *
+ * @param nodeDefinitionCollection collection of all known  [NodeDefinition]s
+ * @return the found [NodeDefinition]
+ */
 fun DataFetchingEnvironment.getParentNodeDefinition(nodeDefinitionCollection: NodeDefinitionCollection): NodeDefinition {
     val parentTypeName = parentType.deepName
     return nodeDefinitionCollection.getNodeDefinitionsFromGraphQLNames(listOf(parentTypeName)).first()
 }
 
+/**
+ * Constructs a [DataFetcherResult] based on the provided [result] and replaces - if present - the local context
+ * with the part of the [NodeQuery] local context specified by [partId]
+ *
+ * @param R the type of the result
+ * @param result the result part of the  [DataFetcherResult]
+ * @param partId the id of the part of the [NodeQuery] which is the new local context
+ */
 fun <R> DataFetchingEnvironment.getDataFetcherResult(
     result: R,
     partId: String

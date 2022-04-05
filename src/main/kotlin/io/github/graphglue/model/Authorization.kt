@@ -16,7 +16,7 @@ package io.github.graphglue.model
 @Target(AnnotationTarget.CLASS)
 @MustBeDocumented
 @Repeatable
-@Retention(AnnotationRetention.SOURCE)
+@Retention(AnnotationRetention.RUNTIME)
 annotation class Authorization(
     val name: String,
     val allow: Array<Rule> = [],

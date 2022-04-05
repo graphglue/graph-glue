@@ -13,4 +13,5 @@ import java.lang.annotation.Inherited
 @Target(AnnotationTarget.CLASS)
 @MustBeDocumented
 @Inherited
+@Retention(AnnotationRetention.SOURCE)
 annotation class AdditionalFilter(val beanName: String)

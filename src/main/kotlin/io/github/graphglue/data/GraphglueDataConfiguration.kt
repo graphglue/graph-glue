@@ -1,6 +1,8 @@
 package io.github.graphglue.data
 
 import io.github.graphglue.data.execution.NodeQueryParser
+import io.github.graphglue.data.repositories.AuthorizationChecker
+import io.github.graphglue.data.repositories.AuthorizationCheckerImpl
 import io.github.graphglue.definition.NodeDefinitionCollection
 import io.github.graphglue.data.repositories.GraphglueNeo4jOperations
 import org.neo4j.driver.Driver
@@ -96,4 +98,17 @@ class GraphglueDataConfiguration {
         neo4jClient: ReactiveNeo4jClient,
         beanFactory: BeanFactory
     ) = GraphglueNeo4jOperations(neo4jTemplate, neo4jClient, beanFactory)
+
+    /***
+     * Bean to provide [AuthorizationChecker] which support checking if a certain permission is given
+     *
+     * @param collection collection in which the node is defined
+     * @param client client used to execute queries
+     * @return the created [AuthorizationChecker] which supports checking if a certain permission is given
+     */
+    @Bean
+    fun authorizationChecker(
+        collection: NodeDefinitionCollection,
+        client: ReactiveNeo4jClient
+    ): AuthorizationChecker = AuthorizationCheckerImpl(collection, client)
 }

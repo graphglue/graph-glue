@@ -467,10 +467,10 @@ class NodeDefinitionCollection(
      * @return the found  [MergedAuthorization] or a default empty one
      * @throws IllegalArgumentException if the name is completely unknown
      */
-    private fun getAuthorization(name: String, nodeDefinition: NodeDefinition):  MergedAuthorization {
-        return nodeDefinition.authorizations[name] ?: if(name in allAuthorizationNames) {
+    private fun getAuthorization(name: String, nodeDefinition: NodeDefinition): MergedAuthorization {
+        return nodeDefinition.authorizations[name] ?: if (name in allAuthorizationNames) {
             MergedAuthorization(name, emptySet(), emptySet(), emptySet())
-        }  else {
+        } else {
             throw IllegalArgumentException("Potentially wrong permission name: $name")
         }
     }

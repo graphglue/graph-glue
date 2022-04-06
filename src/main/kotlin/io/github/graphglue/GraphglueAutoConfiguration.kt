@@ -4,6 +4,7 @@ import com.expediagroup.graphql.server.spring.GraphQLAutoConfiguration
 import io.github.graphglue.connection.GraphglueConnectionConfiguration
 import io.github.graphglue.data.GraphglueDataConfiguration
 import io.github.graphglue.graphql.GraphglueGraphQLConfiguration
+import io.github.graphglue.model.GraphglueModelConfiguration
 import io.github.graphglue.model.NODE_ID_GENERATOR_BEAN
 import org.springframework.boot.autoconfigure.AutoConfigureAfter
 import org.springframework.boot.autoconfigure.AutoConfigureBefore
@@ -21,6 +22,7 @@ import org.springframework.data.neo4j.core.support.UUIDStringGenerator
  */
 @Configuration
 @Import(
+    GraphglueModelConfiguration::class,
     GraphglueGraphQLConfiguration::class,
     GraphglueDataConfiguration::class,
     GraphglueConnectionConfiguration::class
@@ -31,13 +33,4 @@ import org.springframework.data.neo4j.core.support.UUIDStringGenerator
 @AutoConfigureAfter(
     value = [Neo4jAutoConfiguration::class, Neo4jReactiveDataAutoConfiguration::class]
 )
-class GraphglueAutoConfiguration {
-
-    /**
-     * Default node id generator
-     * @return the generator for node ids
-     */
-    @Bean(NODE_ID_GENERATOR_BEAN)
-    @ConditionalOnMissingBean
-    fun nodeIdGenerator() = UUIDStringGenerator()
-}
+class GraphglueAutoConfiguration

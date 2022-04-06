@@ -13,4 +13,5 @@ import java.lang.annotation.Inherited
 @Target(AnnotationTarget.CLASS)
 @MustBeDocumented
 @Inherited
+@Retention(AnnotationRetention.RUNTIME)
 annotation class AdditionalFilter(val beanName: String)

@@ -1,9 +1,9 @@
 package io.github.graphglue.definition
 
-import io.github.graphglue.data.execution.CypherConditionGenerator
 import io.github.graphglue.authorization.AuthorizationRuleGenerator
 import io.github.graphglue.authorization.MergedAuthorization
 import io.github.graphglue.authorization.Permission
+import io.github.graphglue.data.execution.CypherConditionGenerator
 import io.github.graphglue.graphql.extensions.getSimpleName
 import io.github.graphglue.model.Node
 import io.github.graphglue.model.Rule
@@ -47,6 +47,12 @@ class NodeDefinitionCollection(
      * Used to generate authorization
      */
     private val authorizationSubtypeNodeDefinitionLookup: Map<NodeDefinition, Set<NodeDefinition>>
+
+    /**
+     * Set of all known authorization names
+     * Used to detect misspelled authorization names
+     */
+    private val allAuthorizationNames = backingCollection.values.flatMap { it.authorizations.keys }.toSet()
 
     init {
         this.supertypeNodeDefinitionLookup = generateSupertypeNodeDefinitionLookup()
@@ -196,13 +202,13 @@ class NodeDefinitionCollection(
         authorizationName: String
     ): Boolean {
         val nodeDefinition = getNodeDefinition(relationshipDefinition.nodeKClass)
-        val nodeAuthorization = nodeDefinition.authorizations[authorizationName]!!
+        val nodeAuthorization = getAuthorization(authorizationName, nodeDefinition)
         val inverseRelationshipDefinition = getInverseRelationshipDefinition(relationshipDefinition)
         return if (inverseRelationshipDefinition in nodeAuthorization.allowFromRelated) {
             true
         } else if (relationshipDefinition is OneRelationshipDefinition) {
             val parentNodeDefinition = getNodeDefinition(relationshipDefinition.parentKClass)
-            val parentAuthorization = parentNodeDefinition.authorizations[authorizationName]!!
+            val parentAuthorization = getAuthorization(authorizationName, parentNodeDefinition)
             parentAuthorization.allow.isEmpty()
                     && parentAuthorization.allowFromRelated.size == 1
                     && relationshipDefinition in parentAuthorization.allowFromRelated
@@ -279,7 +285,7 @@ class NodeDefinitionCollection(
         permission: Permission,
         isAllowed: Boolean
     ): AuthorizationConditionPart {
-        val authorization = nodeDefinition.authorizations[permission.name]!!
+        val authorization = getAuthorization(permission.name, nodeDefinition)
         return if (isAllowed) {
             AuthorizationConditionPart(null, generateDisallowCondition(node, authorization, permission))
         } else {
@@ -402,9 +408,14 @@ class NodeDefinitionCollection(
         authorization: MergedAuthorization,
         permission: Permission
     ): Condition {
-        return authorization.allow.fold(Conditions.noCondition()) { condition, rule ->
-            condition.or(generateConditionForRule(rule, node, permission))
+        return if (authorization.allow.isEmpty()) {
+            Conditions.isFalse()
+        } else {
+            authorization.allow.fold(Conditions.noCondition()) { condition, rule ->
+                condition.or(generateConditionForRule(rule, node, permission))
+            }
         }
+
     }
 
     /**
@@ -444,6 +455,24 @@ class NodeDefinitionCollection(
     ): Condition {
         val bean = beanFactory.getBean(rule.beanRef, AuthorizationRuleGenerator::class.java)
         return bean.generateCondition(node, rule, permission)
+    }
+
+    /**
+     * If present, returns `nodeDefinition.authorizations[name]`
+     * If not, checks if the name is known, it returns an empty [MergedAuthorization]
+     * Otherwise throws an exception, has this hints at a misspelled name
+     *
+     * @param name the name of the authorization
+     * @param nodeDefinition the [NodeDefinition] to get the authorization from
+     * @return the found  [MergedAuthorization] or a default empty one
+     * @throws IllegalArgumentException if the name is completely unknown
+     */
+    private fun getAuthorization(name: String, nodeDefinition: NodeDefinition): MergedAuthorization {
+        return nodeDefinition.authorizations[name] ?: if (name in allAuthorizationNames) {
+            MergedAuthorization(name, emptySet(), emptySet(), emptySet())
+        } else {
+            throw IllegalArgumentException("Potentially wrong permission name: $name")
+        }
     }
 }
 

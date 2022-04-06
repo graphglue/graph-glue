@@ -3,6 +3,11 @@ package io.github.graphglue.model
 import io.github.graphglue.authorization.AuthorizationRuleGenerator
 
 /**
+ * Name of a bean which allows all access
+ */
+const val ALL_RULE = "allRule"
+
+/**
  * Rule used in [Authorization] annotations
  * Can be used to define which conditions allow or deny access to a [Node]
  *

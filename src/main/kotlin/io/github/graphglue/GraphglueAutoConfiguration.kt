@@ -1,6 +1,7 @@
 package io.github.graphglue
 
 import com.expediagroup.graphql.server.spring.GraphQLAutoConfiguration
+import io.github.graphglue.authorization.GraphglueAuthorizationConfiguration
 import io.github.graphglue.connection.GraphglueConnectionConfiguration
 import io.github.graphglue.data.GraphglueDataConfiguration
 import io.github.graphglue.graphql.GraphglueGraphQLConfiguration
@@ -25,6 +26,7 @@ import org.springframework.data.neo4j.core.support.UUIDStringGenerator
     GraphglueModelConfiguration::class,
     GraphglueGraphQLConfiguration::class,
     GraphglueDataConfiguration::class,
+    GraphglueAuthorizationConfiguration::class,
     GraphglueConnectionConfiguration::class
 )
 @AutoConfigureBefore(

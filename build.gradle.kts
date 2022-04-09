@@ -1,7 +1,8 @@
 import org.jetbrains.dokka.gradle.DokkaTask
 
 description = "A library to develop annotation-based code-first GraphQL servers using GraphQL Kotlin, Spring Boot and Neo4j"
-version = "1.0.0-SNAPSHOT"
+version = "1.0.0"
+group = "io.github.graphglue"
 
 val graphqlKotlinVersion = "5.3.2"
 val springBootVersion = "2.6.6"
@@ -64,7 +65,6 @@ tasks {
     publishing {
         publications {
             create<MavenPublication>("mavenJava") {
-                groupId = "io.github.graphglue"
                 artifactId = "graphglue"
 
                 pom {

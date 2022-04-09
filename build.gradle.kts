@@ -3,9 +3,8 @@ import org.jetbrains.dokka.gradle.DokkaTask
 description = "A library to develop annotation-based code-first GraphQL servers using GraphQL Kotlin, Spring Boot and Neo4j"
 version = "1.0.0-SNAPSHOT"
 
-val reactorVersion = "5.3.10"
-val graphqlKotlinVersion = "5.3.1"
-val neo4jVersion = "2.6.2"
+val graphqlKotlinVersion = "5.3.2"
+val springBootVersion = "2.6.6"
 
 plugins {
 	kotlin("jvm") version "1.6.10"
@@ -21,8 +20,9 @@ repositories {
 }
 
 dependencies {
-    api("com.expediagroup", "graphql-kotlin-spring-server",graphqlKotlinVersion)
-    api("org.springframework.boot", "spring-boot-starter-data-neo4j", neo4jVersion)
+    api("org.springframework.boot", "spring-boot-starter-webflux", springBootVersion)
+    api("com.expediagroup", "graphql-kotlin-spring-server", graphqlKotlinVersion)
+    api("org.springframework.boot", "spring-boot-starter-data-neo4j", springBootVersion)
 }
 
 extra["isReleaseVersion"] = !version.toString().endsWith("SNAPSHOT")

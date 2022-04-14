@@ -22,7 +22,7 @@ fun generateFilterDefinition(
 ): FilterDefinition<out Node> {
 
     return subFilterGenerator.filterDefinitionCache.putAndInitIfAbsent(type, FilterDefinition(type)) {
-        val nodeDefinition = subFilterGenerator.nodeDefinitionCollection.getOrCreate(type)
+        val nodeDefinition = subFilterGenerator.nodeDefinitionCollection.getNodeDefinition(type)
         val filterProperties = type.memberProperties.filter { it.hasAnnotation<FilterProperty>() }
         val filterFields = filterProperties.map { subFilterGenerator.filterForProperty(it, nodeDefinition) }
         val additionalFilterAnnotations = type.springFindRepeatableAnnotations<AdditionalFilter>()

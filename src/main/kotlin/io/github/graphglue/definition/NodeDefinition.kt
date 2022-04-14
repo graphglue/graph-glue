@@ -1,6 +1,7 @@
 package io.github.graphglue.definition
 
 import io.github.graphglue.authorization.MergedAuthorization
+import io.github.graphglue.graphql.extensions.getGraphQLName
 import io.github.graphglue.graphql.extensions.getSimpleName
 import io.github.graphglue.graphql.extensions.springFindRepeatableAnnotations
 import io.github.graphglue.model.Authorization
@@ -61,6 +62,11 @@ class NodeDefinition(
      * The primary label of the [Node]
      */
     val primaryLabel: String get() = persistentEntity.primaryLabel
+
+    /**
+     * GraphQL type name
+     */
+    val name get() = nodeType.getSimpleName()
 
     init {
         val expressions = CypherGenerator.INSTANCE.createReturnStatementForMatch(persistentEntity)

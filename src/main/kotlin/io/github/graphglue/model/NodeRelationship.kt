@@ -1,11 +1,5 @@
 package io.github.graphglue.model
 
-import com.expediagroup.graphql.generator.annotations.GraphQLDirective
-
-/**
- * Name of the [NodeRelationship] directive
- */
-const val NODE_RELATIONSHIP_DIRECTIVE = "nodeRelationship"
 
 /**
  * Used to mark manually handled node relationships
@@ -16,5 +10,4 @@ const val NODE_RELATIONSHIP_DIRECTIVE = "nodeRelationship"
  */
 @MustBeDocumented
 @Target(AnnotationTarget.PROPERTY)
-@GraphQLDirective(NODE_RELATIONSHIP_DIRECTIVE)
 annotation class NodeRelationship(val type: String, val direction: Direction)

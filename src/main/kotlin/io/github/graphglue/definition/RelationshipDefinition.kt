@@ -2,6 +2,7 @@ package io.github.graphglue.definition
 
 import com.expediagroup.graphql.generator.annotations.GraphQLDescription
 import com.expediagroup.graphql.generator.annotations.GraphQLIgnore
+import graphql.schema.GraphQLDirective
 import graphql.schema.GraphQLFieldDefinition
 import io.github.graphglue.data.execution.NodeQueryResult
 import io.github.graphglue.data.repositories.RelationshipDiff
@@ -18,6 +19,16 @@ import kotlin.reflect.KClass
 import kotlin.reflect.KProperty1
 import kotlin.reflect.KVisibility
 import kotlin.reflect.full.*
+
+/**
+ * Name of the [NodeRelationship] directive
+ */
+const val NODE_RELATIONSHIP_DIRECTIVE_NAME = "nodeRelationship"
+
+/**
+ * Directive which has to be applied to each field
+ */
+val NODE_RELATIONSHIP_DIRECTIVE = GraphQLDirective.newDirective().name(NODE_RELATIONSHIP_DIRECTIVE_NAME).build()!!
 
 /**
  * Defines a relationship between two [Node]s
@@ -152,6 +163,10 @@ abstract class RelationshipDefinition(
 
     /**
      * Generates a field definition
+     * Important: the field has to be annotated with  [NODE_RELATIONSHIP_DIRECTIVE], otherwise data fetching does
+     * not work
+     *
+     * @param transformationContext used to generate GraphQL types, register data fetchers, ...
      */
     internal abstract fun generateFieldDefinition(transformationContext: SchemaTransformationContext): GraphQLFieldDefinition
 }

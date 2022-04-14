@@ -1,5 +1,6 @@
 package io.github.graphglue.definition
 
+import graphql.schema.GraphQLDirective
 import graphql.schema.GraphQLFieldDefinition
 import graphql.schema.GraphQLNonNull
 import graphql.schema.GraphQLTypeReference
@@ -39,6 +40,7 @@ class OneRelationshipDefinition(
             }
         }
         return GraphQLFieldDefinition.newFieldDefinition().name(graphQLName).description(graphQLDescription)
+            .withDirective(NODE_RELATIONSHIP_DIRECTIVE)
             .type(graphQLType).build()
     }
 }

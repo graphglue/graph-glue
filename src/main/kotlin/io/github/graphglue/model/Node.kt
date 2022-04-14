@@ -80,9 +80,10 @@ abstract class Node {
      * Lookup for all node properties
      * Trades memory (additional HashMap) for a cleaner and more extensible way to lookup the delegates
      * (compared to reflection)
+     * Name of property as key
      */
     @Transient
-    internal val propertyLookup: MutableMap<KProperty<*>, BaseProperty<*>> = mutableMapOf()
+    internal val propertyLookup: MutableMap<String, BaseProperty<*>> = mutableMapOf()
 
     /**
      * Creates a new node property used for many sides
@@ -152,7 +153,7 @@ abstract class Node {
      */
     @Suppress("UNCHECKED_CAST")
     internal fun <T : Node?> getProperty(property: KProperty<*>): BaseProperty<T> {
-        return propertyLookup[property]!! as BaseProperty<T>
+        return propertyLookup[property.name]!! as BaseProperty<T>
     }
 }
 
@@ -173,7 +174,7 @@ private class NodePropertyProvider<T : Node?> : PropertyDelegateProvider<Node, N
             thisRef,
             property as KProperty1<*, *>
         )
-        thisRef.propertyLookup[property] = nodeProperty
+        thisRef.propertyLookup[property.name] = nodeProperty
         return nodeProperty
     }
 }
@@ -195,7 +196,7 @@ private class NodeSetPropertyProvider<T : Node> : PropertyDelegateProvider<Node,
             thisRef,
             property as KProperty1<*, *>
         )
-        thisRef.propertyLookup[property] = nodeSetProperty
+        thisRef.propertyLookup[property.name] = nodeSetProperty
         return nodeSetProperty
     }
 }

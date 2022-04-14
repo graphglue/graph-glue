@@ -38,9 +38,10 @@ class NodeDefinition(
 
     /**
      * map of all relationship definitions by defining property
+     * Name of property as key
      */
     private val relationshipDefinitionsByProperty =
-        (oneRelationshipDefinitions + manyRelationshipDefinitions).associateBy { it.property }
+        (oneRelationshipDefinitions + manyRelationshipDefinitions).associateBy { it.property.name }
 
     /**
      * Expression which can be used when creating a query using Cypher-DSL
@@ -92,7 +93,7 @@ class NodeDefinition(
                     authorizations.flatMap { it.allowFromRelated.toList() }
                         .map { propertyName ->
                             val property = nodeType.memberProperties.first { it.name == propertyName }
-                            relationshipDefinitionsByProperty[property]!!
+                            relationshipDefinitionsByProperty[property.name]!!
                         }.toSet(),
                     authorizations.flatMap { it.disallow.toList() }.toSet()
                 )
@@ -118,7 +119,7 @@ class NodeDefinition(
      * @throws Exception if property is not used as relation
      */
     fun getRelationshipDefinitionOfProperty(property: KProperty1<*, *>): RelationshipDefinition {
-        return relationshipDefinitionsByProperty[property]!!
+        return relationshipDefinitionsByProperty[property.name]!!
     }
 
     override fun toString() = nodeType.getSimpleName()

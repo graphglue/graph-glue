@@ -156,7 +156,7 @@ class DefaultSchemaTransformer(
             val functionDataFetcher = functionDataFetcherFactory.get(dataFetcherFactoryEnvironment)
             DataFetcher {
                 val node = it.getSource<Node>()
-                val environment = DelegateDataFetchingEnvironment(it, node.propertyLookup[kProperty]!!)
+                val environment = DelegateDataFetchingEnvironment(it, node.getProperty<Node>(kProperty))
                 functionDataFetcher.get(environment)
             }
         }

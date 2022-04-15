@@ -1,10 +1,9 @@
 package io.github.graphglue.definition
 
-import graphql.schema.GraphQLDirective
 import graphql.schema.GraphQLFieldDefinition
 import graphql.schema.GraphQLNonNull
 import graphql.schema.GraphQLTypeReference
-import io.github.graphglue.graphql.SchemaTransformationContext
+import io.github.graphglue.graphql.schema.SchemaTransformationContext
 import io.github.graphglue.graphql.extensions.getSimpleName
 import io.github.graphglue.model.Direction
 import io.github.graphglue.model.Node

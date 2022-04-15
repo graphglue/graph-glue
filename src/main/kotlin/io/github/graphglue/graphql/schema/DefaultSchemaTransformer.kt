@@ -1,4 +1,4 @@
-package io.github.graphglue.graphql
+package io.github.graphglue.graphql.schema
 
 import com.expediagroup.graphql.generator.execution.KotlinDataFetcherFactoryProvider
 import graphql.schema.*
@@ -10,7 +10,7 @@ import io.github.graphglue.connection.generateConnectionFieldDefinition
 import io.github.graphglue.definition.NodeDefinition
 import io.github.graphglue.definition.NodeDefinitionCollection
 import io.github.graphglue.definition.RelationshipDefinition
-import io.github.graphglue.graphql.datafetcher.DelegateDataFetchingEnvironment
+import io.github.graphglue.graphql.SchemaTransformer
 import io.github.graphglue.graphql.extensions.getSimpleName
 import io.github.graphglue.graphql.extensions.springFindAnnotation
 import io.github.graphglue.graphql.query.TopLevelQueryProvider
@@ -19,31 +19,19 @@ import io.github.graphglue.model.DomainNode
 import io.github.graphglue.model.Node
 import io.github.graphglue.util.CacheMap
 import org.springframework.data.neo4j.core.mapping.Neo4jMappingContext
-import kotlin.reflect.KClass
 import kotlin.reflect.full.memberFunctions
-import kotlin.reflect.full.memberProperties
 
-interface SchemaTransformer {
-    val mappingContext: Neo4jMappingContext
-    val nodeDefinitionCollection: NodeDefinitionCollection
-    val dataFetcherFactoryProvider: KotlinDataFetcherFactoryProvider
-    val subFilterGenerator: SubFilterGenerator
-
-    /**
-     * Cache for [GraphQLInputType]s
-     */
-    val inputTypeCache: CacheMap<String, GraphQLInputType>
-
-    /**
-     * Cache for [GraphQLOutputType]s
-     */
-    val outputTypeCache: CacheMap<String, GraphQLOutputType>
-
-    val schema: GraphQLSchema
-
-    val filterDefinitionCollection: FilterDefinitionCollection
-}
-
+/**
+ * Default implementation of [SchemaTransformer]
+ * The transformation result can be found in [schema]
+ * The generated filter collection can be found in [filterDefinitionCollection]
+ *
+ * @param oldSchema the schema to transform
+ * @param mappingContext mapping context used to get type information from Neo4j
+ * @param nodeDefinitionCollection collection of all [NodeDefinition]s
+ * @param dataFetcherFactoryProvider provides function and property data fetchers
+ * @param subFilterGenerator used to generate the filter entries
+ */
 class DefaultSchemaTransformer(
     private val oldSchema: GraphQLSchema,
     override val mappingContext: Neo4jMappingContext,
@@ -51,19 +39,16 @@ class DefaultSchemaTransformer(
     override val dataFetcherFactoryProvider: KotlinDataFetcherFactoryProvider,
     override val subFilterGenerator: SubFilterGenerator
 ) : SchemaTransformer {
-    /**
-     * Cache for [GraphQLInputType]s
-     */
+
     override val inputTypeCache = CacheMap<String, GraphQLInputType>()
+    override val outputTypeCache = CacheMap<String, GraphQLOutputType>()
+    override val schema: GraphQLSchema
+    override val filterDefinitionCollection: FilterDefinitionCollection
 
     /**
-     * Cache for [GraphQLOutputType]s
+     * Lookup from [NodeDefinition] graphql name to [NodeDefinition]
      */
-    override val outputTypeCache = CacheMap<String, GraphQLOutputType>()
-
-    override val schema: GraphQLSchema
-
-    override val filterDefinitionCollection: FilterDefinitionCollection
+    private val nodeDefinitionLookup = nodeDefinitionCollection.associateBy { it.name }
 
     init {
         schema = this.completeSchema()
@@ -76,44 +61,57 @@ class DefaultSchemaTransformer(
      * @return a builder for the new schema with the additional queries
      */
     private fun completeSchema(): GraphQLSchema {
-        val nodeDefinitionLookup = nodeDefinitionCollection.associateBy { it.name }
-        return graphql.schema.SchemaTransformer.transformSchema(oldSchema, object : GraphQLTypeVisitorStub() {
-            override fun visitGraphQLObjectType(
-                node: GraphQLObjectType, context: TraverserContext<GraphQLSchemaElement>
-            ): TraversalControl {
-                val transformationContext = SchemaTransformationContext(
-                    context, this@DefaultSchemaTransformer
-                )
-
-                return if (node == oldSchema.queryType) {
-                    changeNode(context, updateQueryType(node, transformationContext))
-                } else if (node.name in nodeDefinitionLookup) {
-                    changeNode(
-                        context, updateObjectNodeType(node, nodeDefinitionLookup[node.name]!!, transformationContext)
-                    )
-                } else {
-                    super.visitGraphQLObjectType(node, context)
-                }
-            }
-
-            override fun visitGraphQLInterfaceType(
-                node: GraphQLInterfaceType, context: TraverserContext<GraphQLSchemaElement>
-            ): TraversalControl {
-                val transformationContext = SchemaTransformationContext(
-                    context, this@DefaultSchemaTransformer
-                )
-
-                return if (node.name in nodeDefinitionLookup) {
-                    changeNode(
-                        context, updateInterfaceNodeType(node, nodeDefinitionLookup[node.name]!!, transformationContext)
-                    )
-                } else {
-                    super.visitGraphQLInterfaceType(node, context)
-                }
-            }
-        })
+        return graphql.schema.SchemaTransformer.transformSchema(oldSchema, schemaTransformationVisitor)
     }
 
+    /**
+     * Visitor used to transform the GraphQL schema
+     * Transforms the query type, and all [Node] types and interfaces
+     */
+    private val schemaTransformationVisitor = object : GraphQLTypeVisitorStub() {
+        override fun visitGraphQLObjectType(
+            node: GraphQLObjectType, context: TraverserContext<GraphQLSchemaElement>
+        ): TraversalControl {
+            val transformationContext = SchemaTransformationContext(
+                context, this@DefaultSchemaTransformer
+            )
+
+            return if (node == oldSchema.queryType) {
+                changeNode(context, updateQueryType(node, transformationContext))
+            } else if (node.name in nodeDefinitionLookup) {
+                changeNode(
+                    context, updateObjectNodeType(node, nodeDefinitionLookup[node.name]!!, transformationContext)
+                )
+            } else {
+                super.visitGraphQLObjectType(node, context)
+            }
+        }
+
+        override fun visitGraphQLInterfaceType(
+            node: GraphQLInterfaceType, context: TraverserContext<GraphQLSchemaElement>
+        ): TraversalControl {
+            val transformationContext = SchemaTransformationContext(
+                context, this@DefaultSchemaTransformer
+            )
+
+            return if (node.name in nodeDefinitionLookup) {
+                changeNode(
+                    context, updateInterfaceNodeType(node, nodeDefinitionLookup[node.name]!!, transformationContext)
+                )
+            } else {
+                super.visitGraphQLInterfaceType(node, context)
+            }
+        }
+    }
+
+    /**
+     * Updates an [GraphQLObjectType], by adding all fields defined by [NodeDefinition.relationshipDefinitions]
+     *
+     * @param type the GraphQL type to modify
+     * @param nodeDefinition the associated [NodeDefinition] used to retrieve relationship information
+     * @param context context of the transformation, used to access necessary caches, builders etc.
+     * @return the updated type
+     */
     private fun updateObjectNodeType(
         type: GraphQLObjectType, nodeDefinition: NodeDefinition, context: SchemaTransformationContext
     ): GraphQLObjectType {
@@ -126,6 +124,14 @@ class DefaultSchemaTransformer(
         }
     }
 
+    /**
+     * Updates an [GraphQLInterfaceType], by adding all fields defined by [NodeDefinition.relationshipDefinitions]
+     *
+     * @param type the GraphQL type to modify
+     * @param nodeDefinition the associated [NodeDefinition] used to retrieve relationship information
+     * @param context context of the transformation, used to access necessary caches, builders etc.
+     * @return the updated type
+     */
     private fun updateInterfaceNodeType(
         type: GraphQLInterfaceType, nodeDefinition: NodeDefinition, context: SchemaTransformationContext
     ): GraphQLInterfaceType {
@@ -168,6 +174,10 @@ class DefaultSchemaTransformer(
 
     /**
      * Adds the missing connection like queries for [Node] types declared using the [DomainNode] annotation
+     *
+     * @param queryType the existing query type
+     * @param context used to access the [GraphQLCodeRegistry.Builder]
+     * @return the new query type
      */
     private fun updateQueryType(queryType: GraphQLObjectType, context: SchemaTransformationContext): GraphQLObjectType {
         val newQueryType = queryType.transform {
@@ -188,6 +198,10 @@ class DefaultSchemaTransformer(
         return newQueryType
     }
 
+    /**
+     * Gets all [NodeDefinition] which define a top level query
+     * The name of the query is provided as value of the map
+     */
     private val topLevelQueries: Map<NodeDefinition, String>
         get() = nodeDefinitionCollection.mapNotNull {
             val nodeClass = it.nodeType
@@ -199,53 +213,4 @@ class DefaultSchemaTransformer(
                 null
             }
         }.toMap()
-}
-
-class SchemaTransformationContext(
-    context: TraverserContext<*>, schemaTransformer: SchemaTransformer
-) : SchemaTransformer by schemaTransformer {
-    /**
-     * Code Registry to register new [DataFetcher]s
-     */
-    val codeRegistry = context.getVarFromParents(GraphQLCodeRegistry.Builder::class.java)!!
-
-    /**
-     * Registers a data fetcher for a specific property
-     *
-     * @param type the container type on which to register the data fetcher
-     * @param fieldName the name of the property
-     * @param kClass the class which contains the property to use for data fetching
-     */
-    fun registerPropertyDataFetcher(type: GraphQLFieldsContainer, fieldName: String, kClass: KClass<*>) {
-        val property = kClass.memberProperties.first { it.name == fieldName }
-        val dataFetcherFactory = dataFetcherFactoryProvider.propertyDataFetcherFactory(kClass, property)
-        registerDataFetcher(type, fieldName, dataFetcherFactory)
-    }
-
-    /**
-     * Registers a data fetcher for a specific function
-     *
-     * @param type the container type on which to register the data fetcher
-     * @param fieldName the name of the function
-     * @param kClass the class which contains the function to use for data fetching
-     */
-    fun registerFunctionDataFetcher(type: GraphQLFieldsContainer, fieldName: String, kClass: KClass<*>) {
-        val function = kClass.memberFunctions.first { it.name == fieldName }
-        val dataFetcherFactory = dataFetcherFactoryProvider.functionDataFetcherFactory(null, function)
-        registerDataFetcher(type, fieldName, dataFetcherFactory)
-    }
-
-    /**
-     * Registers a [DataFetcherFactory] for a specific [fieldName] on a specific [GraphQLFieldsContainer]
-     *
-     * @param type the container for which to register the data fetcher
-     * @param fieldName the name of the field for which to register the data fetcher
-     * @param dataFetcherFactory the data fetcher to register
-     */
-    private fun registerDataFetcher(
-        type: GraphQLFieldsContainer, fieldName: String, dataFetcherFactory: DataFetcherFactory<Any?>
-    ) {
-        val fieldCoordinates = FieldCoordinates.coordinates(type, fieldName)
-        codeRegistry.dataFetcher(fieldCoordinates, dataFetcherFactory)
-    }
 }

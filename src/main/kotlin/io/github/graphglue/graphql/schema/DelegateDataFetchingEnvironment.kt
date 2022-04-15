@@ -1,4 +1,4 @@
-package io.github.graphglue.graphql.datafetcher
+package io.github.graphglue.graphql.schema
 
 import graphql.schema.DataFetchingEnvironment
 import io.github.graphglue.model.BaseProperty

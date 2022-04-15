@@ -6,7 +6,7 @@ import graphql.schema.*
 import io.github.graphglue.connection.filter.definition.generateFilterDefinition
 import io.github.graphglue.connection.order.OrderField
 import io.github.graphglue.connection.order.generateOrders
-import io.github.graphglue.graphql.SchemaTransformationContext
+import io.github.graphglue.graphql.schema.SchemaTransformationContext
 import io.github.graphglue.graphql.extensions.getSimpleName
 import io.github.graphglue.model.Connection
 import io.github.graphglue.model.Edge

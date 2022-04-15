@@ -23,6 +23,7 @@ import io.github.graphglue.connection.filter.definition.*
 import io.github.graphglue.connection.order.OrderDirection
 import io.github.graphglue.graphql.extensions.toTopLevelObjects
 import io.github.graphglue.graphql.query.GraphglueQuery
+import io.github.graphglue.graphql.schema.DefaultSchemaTransformer
 import io.github.graphglue.model.*
 import io.github.graphglue.util.CacheMap
 import org.slf4j.LoggerFactory

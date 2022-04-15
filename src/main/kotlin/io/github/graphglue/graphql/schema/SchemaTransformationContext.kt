@@ -5,7 +5,6 @@ import graphql.schema.FieldCoordinates
 import graphql.schema.GraphQLCodeRegistry
 import graphql.schema.GraphQLFieldsContainer
 import graphql.util.TraverserContext
-import io.github.graphglue.graphql.SchemaTransformer
 import kotlin.reflect.KClass
 import kotlin.reflect.full.memberFunctions
 import kotlin.reflect.full.memberProperties

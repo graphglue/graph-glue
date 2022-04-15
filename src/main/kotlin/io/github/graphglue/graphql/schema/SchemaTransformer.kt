@@ -1,4 +1,4 @@
-package io.github.graphglue.graphql
+package io.github.graphglue.graphql.schema
 
 import com.expediagroup.graphql.generator.execution.KotlinDataFetcherFactoryProvider
 import graphql.schema.*

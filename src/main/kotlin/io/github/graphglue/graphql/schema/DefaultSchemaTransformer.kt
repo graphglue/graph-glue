@@ -10,7 +10,6 @@ import io.github.graphglue.connection.generateConnectionFieldDefinition
 import io.github.graphglue.definition.NodeDefinition
 import io.github.graphglue.definition.NodeDefinitionCollection
 import io.github.graphglue.definition.RelationshipDefinition
-import io.github.graphglue.graphql.SchemaTransformer
 import io.github.graphglue.graphql.extensions.getSimpleName
 import io.github.graphglue.graphql.extensions.springFindAnnotation
 import io.github.graphglue.graphql.query.TopLevelQueryProvider

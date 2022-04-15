@@ -40,7 +40,6 @@ class OneRelationshipDefinition(
             }
         }
         return GraphQLFieldDefinition.newFieldDefinition().name(graphQLName).description(graphQLDescription)
-            .withDirective(NODE_RELATIONSHIP_DIRECTIVE)
             .type(graphQLType).build()
     }
 }

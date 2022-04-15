@@ -199,7 +199,7 @@ class NodeQueryParser(
         val parts = fieldParts.mapValues {
             val (_, fields) = it
             for (field in fields) {
-                if (field.fieldDefinitions.first().hasDirective(NODE_RELATIONSHIP_DIRECTIVE_NAME)) {
+                if (field.fieldDefinitions.first().name in definition.relationshipGraphQLNames) {
                     val onlyOnTypes = nodeDefinitionCollection.getNodeDefinitionsFromGraphQLNames(field.objectTypeNames)
                     val firstPossibleType = onlyOnTypes.first()
                     val relationshipDefinition = firstPossibleType.relationshipDefinitions[field.name]!!

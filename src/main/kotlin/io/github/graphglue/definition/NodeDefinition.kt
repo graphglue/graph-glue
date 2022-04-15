@@ -44,6 +44,12 @@ class NodeDefinition(
         (oneRelationshipDefinitions + manyRelationshipDefinitions).associateBy { it.property.name }
 
     /**
+     * Set of all relationship GraphQL names
+     * Can be used to check if a field is a relationship
+     */
+    val relationshipGraphQLNames = relationshipDefinitions.values.map(RelationshipDefinition::graphQLName).toSet()
+
+    /**
      * Expression which can be used when creating a query using Cypher-DSL
      * Fetches all necessary data to map the result to a [Node]
      */

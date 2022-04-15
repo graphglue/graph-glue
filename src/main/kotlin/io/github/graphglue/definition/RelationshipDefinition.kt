@@ -2,6 +2,7 @@ package io.github.graphglue.definition
 
 import com.expediagroup.graphql.generator.annotations.GraphQLDescription
 import com.expediagroup.graphql.generator.annotations.GraphQLIgnore
+import graphql.language.DirectiveDefinition
 import graphql.schema.GraphQLDirective
 import graphql.schema.GraphQLFieldDefinition
 import io.github.graphglue.data.execution.NodeQueryResult
@@ -20,15 +21,6 @@ import kotlin.reflect.KProperty1
 import kotlin.reflect.KVisibility
 import kotlin.reflect.full.*
 
-/**
- * Name of the [NodeRelationship] directive
- */
-const val NODE_RELATIONSHIP_DIRECTIVE_NAME = "nodeRelationship"
-
-/**
- * Directive which has to be applied to each field
- */
-val NODE_RELATIONSHIP_DIRECTIVE = GraphQLDirective.newDirective().name(NODE_RELATIONSHIP_DIRECTIVE_NAME).build()!!
 
 /**
  * Defines a relationship between two [Node]s

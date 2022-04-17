@@ -1,0 +1,76 @@
+---
+sidebar_position: 1
+slug: /
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+# Getting started
+
+## About
+GraphGlue is a library to develop annotation-based code-first GraphQL servers using GraphQL Kotlin, Spring Boot and Neo4j.
+
+## Installation
+
+Using a JVM dependency manager, link any `graphql-kotlin-*` library to your project.
+
+<Tabs
+  defaultValue="gradle"
+  values={[
+    { label: 'Gradle Kotlin', value: 'gradle' },
+    { label: 'Maven', value: 'maven' }
+  ]
+}>
+
+<TabItem value="gradle">
+
+```kts
+implementation("io.github.graphglue", "graphglue", "1.0.0")
+```
+
+</TabItem>
+<TabItem value="maven">
+
+```xml
+<dependency>
+    <groupId>io.github.graphglue</groupId>
+    <artifactId>graphglue</artifactId>
+    <version>1.0.0</version>
+</dependency>
+```
+
+</TabItem>
+</Tabs>
+
+## Features
+
+- Declare relations in Kotlin
+  - Many side of relations are automatically transformed to connections in GraphQL
+  - Lazy loading support in Kotlin for easy algorithm implementation
+- GraphQL queries directly translated into Neo4j Cypher
+  - One GraphQL quey maps to one Cypher query (in almost all cases)
+- Declarative & extensible authorization aproach
+  - Specify Node-based authorization using annotations
+  - Implement custom logic using Spring beans
+  - "Inherit" permissions from other nodes via relations
+  - Automatic permission checking when using relations
+- Automatic `node` GraphQL query and connection-like queries if specified
+- Ordering & Filtering
+  - Filter by properties, and even across relations
+  - Add custom, property-independent filter using annotations and Spring beans
+  - Order by properties
+  - Always performed directly in the database
+- Use your favorite [GraphQL Kotlin](https://opensource.expediagroup.com/graphql-kotlin) and [Spring Data Neo4j](https://spring.io/projects/spring-data-neo4j) features
+
+## Building locally
+
+Build the project:
+```sh
+./gradlew clean build
+```
+
+Deploy to the local maven repository
+```sh
+./gradlew publishToMavenLocal
+```

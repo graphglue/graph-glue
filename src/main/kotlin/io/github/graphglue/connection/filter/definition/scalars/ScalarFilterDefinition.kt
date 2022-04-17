@@ -20,13 +20,13 @@ import io.github.graphglue.connection.filter.model.SimpleObjectFilter
  * @param neo4jName the name of the property of the node in the database (might be different from [name])
  * @param entries additional fields of this filter, define how the property can be filtered (e.g. startsWith, ...)
  */
-abstract class ScalarFilterDefinition<T>(
+abstract class ScalarFilterDefinition(
     name: String,
     description: String,
     typeName: String,
     scalarType: GraphQLInputType,
     neo4jName: String,
-    entries: List<ScalarFilterEntryBase<T>>
+    entries: List<ScalarFilterEntryBase>
 ) : SimpleObjectFilterDefinitionEntry<FilterEntryDefinition>(name,
     description,
     typeName,
@@ -49,7 +49,7 @@ abstract class ScalarFilterDefinition<T>(
  *
  * @return the list of generated filter entries
  */
-private fun <T> getDefaultFilterEntries(): List<ScalarFilterEntryBase<T>> {
+private fun getDefaultFilterEntries(): List<ScalarFilterEntryBase> {
     return listOf(ScalarFilterEntry(
         "eq", "Matches values which are equal to the provided value"
     ) { property, value ->

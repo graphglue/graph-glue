@@ -44,13 +44,13 @@ class GraphglueConnectionConfiguration {
     }
 
     /**
-     * Filter factory for [Float] properties
+     * Filter factory for [Double] properties (float in GraphQL spec)
      *
      * @return the generated filter factory
      */
     @Bean
-    fun floatFilter() =
-        TypeFilterDefinitionEntry(Float::class.createType()) { name, property, parentNodeDefinition, _ ->
+    fun doubleFilter() =
+        TypeFilterDefinitionEntry(Double::class.createType()) { name, property, parentNodeDefinition, _ ->
             FloatFilterDefinition(name, parentNodeDefinition.getNeo4jNameOfProperty(property))
         }
 

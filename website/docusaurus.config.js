@@ -19,7 +19,7 @@ const config = {
 
     presets: [
         [
-            'classic',
+            '@docusaurus/preset-classic',
             /** @type {import('@docusaurus/preset-classic').Options} */
             ({
                 docs: {
@@ -27,7 +27,9 @@ const config = {
                     routeBasePath: '/',
                 },
                 blog: false,
-                theme: {},
+                theme: {
+                    customCss: [require.resolve('./src/css/custom.css')],
+                },
             }),
         ],
     ],

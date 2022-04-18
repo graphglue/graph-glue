@@ -120,6 +120,13 @@ When returing this, `leaf` is NOT checked, however, note that the permission is 
 
 :::
 
+:::info
+
+Permissions are only checked if necessary. 
+Considering the [above](#overview), if `leafs` is accessed on `Tree`, allow is not checked as `Leaf` allows from related `tree`.
+
+:::
+
 ### Manually
 
 Permissions can be manually checked by injecting a `AuthorizationChecker` bean.

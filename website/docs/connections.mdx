@@ -3,3 +3,107 @@ sidebar_position: 4
 ---
 
 # Connections
+
+GraphGlue uses connections both for queries generated using the `name` parameter of the `@DomainNode` annotation and `NodeSetProperty` [GraphGlue relationship properties](./modeling#graphglue-relationships).
+
+The generated connections adhere mostly to the [GraphQL Cursor Connections Specification](https://relay.dev/graphql/connections.htm), except:
+
+:::warning
+
+In contrast to the specification, providing both `first` and `last` is not supported
+
+:::
+
+## Schema
+
+The genrated connections have the following schema:
+
+```graphql
+type Query {
+    types(
+        after: String,
+        before: String,
+        filter: TypeFilterInput,
+        first: Int,
+        last: Int,
+        orderBy: TypeOrder
+    ): TypeConnection
+}
+
+type TypeConnection {
+    edges: [TypeEdge!]!
+    nodes: [Type!]!
+    pageInfo: PageInfo!
+    totalCount: Int!
+}
+
+type TypeEdge {
+    cursor: String!
+    node: Type!
+}
+
+type PageInfo {
+    endCursor: String
+    hasNextPage: Boolean!
+    hasPreviousPage: Boolean!
+    startCursor: String
+}
+
+type Type implements Node {
+    # ...
+}
+
+input TypeFilterInput {
+    # ...
+}
+
+input TypeOrder {
+    direction: OrderDirection = ASC
+    field: TypeOrderField = ID
+}
+
+enum TypeOrderField {
+    ID
+    # ...
+}
+
+enum OrderDirection {
+    ASC
+    DESC
+}
+```
+
+## Inputs
+
+- `after`: cursor, only nodes after the cursor are returned.
+- `before`: cursor, only nodes before the cursor are returned.
+- `filter`: filters the returned nodes, for filter generation see [Filtering](./modeling#filtering).
+- `first`: only the first `n` nodes are returned, must not be present if `last` is present.
+- `last`: only the last `n` nodes are returned, must not be present if `first` is present.
+- `orderBy`: allows specifiying the order of the returned nodes (including the direction). Defaults to order ascending by ID. If a field other than id is specified, the id is used to guarantee strict total order, as the field may not be unique. For order field generation, see [Ordering](./modeling#ordering)
+
+:::info
+
+If [GrarphQL permission checking](./authorization#graphql) has been set up, connections are automatically filtered to only include nodes where the specified `Permission` is granted.
+This is done before `first` or `last` is applied, meaning it is not possible to extract information this way.
+
+:::
+
+## Outputs
+
+- `edges`: all nodes, with their specific cursor
+- `nodes`: all nodes
+- `totalCount`: total count of nodes after filtering, but before pagination
+- `pageInfo`: allows checking if there are nodes after/before, and get the cursor for the first/last node returned
+
+:::caution
+
+Cursors are ordering dependent and are meant to be used for pagination, they are not meant to be stored long-time.
+
+:::
+
+:::info
+
+`totalCount` is only fetched if specified, as it is rather expensive to fetch.
+
+:::

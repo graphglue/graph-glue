@@ -39,7 +39,7 @@ class GraphglueDataConfiguration {
     @Bean("lazyLoadingContextConverter")
     fun lazyLoadingContextConverter(lazyLoadingContext: LazyLoadingContext): Neo4jPersistentPropertyConverter<Optional<LazyLoadingContext>> {
         return object : Neo4jPersistentPropertyConverter<Optional<LazyLoadingContext>> {
-            override fun write(source: Optional<LazyLoadingContext>): Value {
+            override fun write(source: Optional<LazyLoadingContext>?): Value {
                 return Values.value(0)
             }
 

@@ -3,3 +3,143 @@ sidebar_position: 3
 ---
 
 # Authorization
+
+:::caution
+
+GraphGlue only provides Authorization features. Authentication must be implemented by the user, for example using OpenID Connect
+
+:::
+
+## Declaration
+
+To declare Permissions, GraphGlue uses a declarative approach, meaning authorizations are declared using the `@Authorization` annotation on `Node` subtypes.
+Currently, only node-level permissions are supported, while field-level permissions are not.
+However, if you need field-level permissions, [checking manually](#manually) is possible.
+
+### Overview
+
+Declaraing a permission looks like this:
+```kotlin
+@DomainNode
+@Authorization(
+    name = "READ",
+    allow = [Rule("leafAllowedBean")],
+    allowFromRelated = ["tree"],
+    disallow = [Rule("leafDisallowedBean")]
+)
+class Leaf : Node() {
+    @NodeRelationship("LEAF", Direction.OUTGOING)
+    @delegate:Transient
+    val tree by NodeProperty<Tree>()
+}
+```
+
+The `name` is used to identify the permission to check, it is later referenced in [Checking](#checking).
+
+The checking algorithm works in two steps:
+1. Check if access is allowed. Access is allowed if any `Rule` in `allow` evaluates to `true`, OR if the permission with `name` is granted to any node referenced in `allowFromRelated`.
+   If neither of these conditions is fulfilled, the permission is NOT granted.
+   Especially, if `allow` and `allowFromRelated` are both empty, allow is not granted.
+   :::caution
+
+    If any `NodeSetProperty` is referenced in `allowFromRelated`, allow is granted if the permission is granted to ANY of the related nodes.
+
+   :::
+1. Check if access is disallowed. Access is granted if an only if NO `Rule` in `disallow` evaluates to `true`.
+
+In this example, allow is granted if the `"leftAllowedBean"` Rule evaluate to `true`, OR if `"READ"` is granted to `tree`.
+Then, the permission is granted if also `"leafDisallowedBean"` evaluates to `false`
+
+### Rule
+
+A `Rule` consists of two parts: a `String` that references a Spring bean of type `AuthorizationRuleGenerator`, and a list of Strings used as configuration parameters.
+
+Example:
+```kotlin
+@Bean("startsWithRule")
+fun startsWithRuleGenerator(): AuthorizationRuleGenerator {
+    return AuthorizationRuleGenerator { node, rule, permission ->
+        val requiredPrefix = (permission.context as MyAuthorizationContext).prefix
+        node.property(rule.options[0]).startsWith(Cypher.anonParameter(requiredPrefix))
+    }
+}
+```
+This rule checks if a String property on `node` with a name provided as first configuration parameter has a prefix provided in the permission to check.
+It can be used like this:
+```kotlin
+@DomainNode
+@Authorization("READ", allow = [Rule("startsWithRule", "name")])
+class NamedNode(val name: String) : Node()
+```
+
+Note that the `AuthorizationRuleGenerator` generates a [CypherDSL](https://neo4j-contrib.github.io/cypher-dsl/current/) `Conditon`, which allows checking complex conditions directly in the database.
+
+:::tip
+
+GraphGlue proovides an `io.github.graphglue.model.ALL_RULE`, which can be used to allow any access.
+This can be usefull for testing or debugging.
+
+:::
+
+### Inheritance
+
+The algorithm first searches for all `@Authorization` annotations with the specified `name`.
+This includes annotations from superclasses.
+It is even possible to use multiple `@Authorization` annotations with the same `name` on the same class, although this is not recommended.
+
+## Checking
+
+### Permission
+
+Generally, it is checked if a `Permission` is granted to a `Node`
+
+A `Permission` consists of two parts
+- The name of the permission ot be checked
+- A `AuthorizationContext` instance. It is intended implement this interface in order to provide custom values to `AuthorizationRuleGenerator` instances, e.g. the id of the authenticated user, or a role String.
+
+### GraphQL
+
+To automatically check permissions, provide a `Permission` to the [GraphQL Context Map](https://opensource.expediagroup.com/graphql-kotlin/docs/server/spring-server/spring-graphql-context) under the key `Permission::class`.
+
+Permissions are checked at
+- the `node` query
+- queries generated using the `name` parameter of the `@DomainNode` annotation
+- [GraphGlue relationship properties](./modeling#graphglue-relationships)
+
+:::warning
+
+Any other properties returning `Node` types are NOT automatically checked!
+This is due to checking is only done directly in the database.
+This is espacially the case when returning nodes from functions which use the lazy-loading functionality of GraphGlue relationships, or when returning nodes in mutations.
+
+Consider the following example with the `Leaf` class from [above](#overview)
+```kotlin
+data class CreateLeafOutput(val leaf: Leaf)
+```
+When returing this, `leaf` is NOT checked, however, note that the permission is checked for GraphGlue relationships on `leaf`, in this example the `tree` property.
+
+:::
+
+### Manually
+
+Permissions can be manually checked by injecting a `AuthorizationChecker` bean.
+It provides a `hasAuthorization` function, which takes a `Node` and a `Permission` as input, and returns whether the permission is granted on the node.
+
+While it is up to the user to provide the required `Permission`, the recommended way is to put it into the GraphQL Context Map as described in [GraphQL](#graphql), and then obtain it using an [injected DataFetchingEnvironment](https://opensource.expediagroup.com/graphql-kotlin/docs/schema-generator/execution/data-fetching-environment/).  
+Example:
+```kotlin
+@Component
+class LeafMutations: Mutation {
+    fun createLeaf(input: CreateLeafInput, dfe: DataFetchingEnvironment): CreateLeafOutput {
+        val readPermission = dfe.requiredPermission // gives access to the permission under the key Permission::class
+        val myPermission = Perrmission("WRITE", dfe.authorizationContext) // AuthorizationContext from the Permission
+        // ...
+    }
+}
+```
+
+:::tip
+
+If automatic permission checking in GraphQL is not wanted, it is also possible to only provide the `AuthorizationContext` under the key `AuthorizationContext::class` to the GraphQL Context Map
+
+:::

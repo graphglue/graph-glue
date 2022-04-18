@@ -5,9 +5,7 @@ on:
     branches:
       - main
   schedule:
-    - cron: '42 14 * * 3'
-    # Review gh actions docs if you want to further define triggers, paths, etc
-    # https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#on
+    - cron: '42 14 * * 3' # every thursday at 2:42 pm
 
 jobs:
   test-deploy:

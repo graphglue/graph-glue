@@ -6,9 +6,8 @@ const darkCodeTheme = require('prism-react-renderer/themes/dracula');
 
 /** @type {import('@docusaurus/types').Config} */
 const config = {
-    title: 'graph-glue',
-    tagline: 'Dinosaurs are cool',
-    url: 'https://your-docusaurus-test-site.com',
+    title: 'GraphGlue',
+    url: 'graphglue.github.io/',
     baseUrl: '/graph-glue/',
     onBrokenLinks: 'throw',
     onBrokenMarkdownLinks: 'throw',

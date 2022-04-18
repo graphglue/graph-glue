@@ -70,7 +70,7 @@ tasks {
                 pom {
                     name.set("graph-glue")
                     description.set(project.description)
-                    url.set("https://github.com/graphglue/graph-glue")
+                    url.set("https://graphglue.github.io/graph-glue")
 
                     organization {
                         name.set("Software Quality and Architecture - University of Stuttgart")

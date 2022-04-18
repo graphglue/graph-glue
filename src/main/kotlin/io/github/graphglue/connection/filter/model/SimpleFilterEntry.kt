@@ -10,7 +10,7 @@ import org.neo4j.cypherdsl.core.Node
  * @param T type of the value used for the condition
  * @param simpleDefinition definition used to generate the condition
  */
-class SimpleFilterEntry<T>(private val simpleDefinition: SimpleFilterEntryDefinition<T>, val value: T) :
+class SimpleFilterEntry(private val simpleDefinition: SimpleFilterEntryDefinition, val value: Any) :
     FilterEntry(simpleDefinition) {
     override fun generateCondition(node: Node): Condition {
         return simpleDefinition.generateCondition(node, value)

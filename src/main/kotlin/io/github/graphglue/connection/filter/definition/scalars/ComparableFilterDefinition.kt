@@ -16,20 +16,20 @@ import graphql.schema.GraphQLInputType
  * @param neo4jName the name of the property of the node in the database (might be different from [name])
  * @param entries additional fields of this filter, define how the property can be filtered (e.g. startsWith, ...)
  */
-abstract class ComparableFilterDefinition<T>(
+abstract class ComparableFilterDefinition(
     name: String,
     description: String,
     typeName: String,
     scalarType: GraphQLInputType,
     neo4jName: String,
-    entries: List<ScalarFilterEntryBase<T>>
-) : ScalarFilterDefinition<T>(
+    entries: List<ScalarFilterEntryBase>
+) : ScalarFilterDefinition(
     name,
     description,
     typeName,
     scalarType,
     neo4jName,
-    entries + getDefaultFilterEntries<T>()
+    entries + getDefaultFilterEntries()
 )
 
 /**
@@ -37,7 +37,7 @@ abstract class ComparableFilterDefinition<T>(
  *
  * @return the list of generated filter entries
  */
-private fun <T> getDefaultFilterEntries(): List<ScalarFilterEntry<T>> {
+private fun getDefaultFilterEntries(): List<ScalarFilterEntry> {
     return listOf(
         ScalarFilterEntry(
             "lt",

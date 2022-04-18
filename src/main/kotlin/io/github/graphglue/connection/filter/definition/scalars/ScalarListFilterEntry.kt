@@ -17,13 +17,13 @@ import org.neo4j.cypherdsl.core.Property
  * @param description the description of the field
  * @param conditionGenerator used to generate the condition which applies the filter in the database
  */
-class ScalarListFilterEntry<T>(
+class ScalarListFilterEntry(
     name: String,
     description: String,
     conditionGenerator: (property: Property, value: Expression) -> Condition
-) : ScalarFilterEntryBase<T>(name, description, conditionGenerator) {
+) : ScalarFilterEntryBase(name, description, conditionGenerator) {
     override fun generateFilterEntry(scalarType: GraphQLInputType, neo4jName: String): FilterEntryDefinition {
-        return SimpleFilterEntryDefinition<T>(
+        return SimpleFilterEntryDefinition(
             name,
             description,
             GraphQLList(GraphQLNonNull(scalarType)),

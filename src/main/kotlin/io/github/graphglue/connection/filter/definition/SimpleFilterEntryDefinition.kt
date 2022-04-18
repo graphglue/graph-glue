@@ -18,7 +18,7 @@ import org.neo4j.cypherdsl.core.*
  * @param conditionGenerator used to generate the condition which is used in the database, takes the property
  *                           and the parameter as input
  */
-class SimpleFilterEntryDefinition<T>(
+class SimpleFilterEntryDefinition(
     name: String,
     description: String,
     private val type: GraphQLInputType,
@@ -26,9 +26,8 @@ class SimpleFilterEntryDefinition<T>(
     private val conditionGenerator: (property: Property, value: Expression) -> Condition
 ) : FilterEntryDefinition(name, description) {
 
-    @Suppress("UNCHECKED_CAST")
     override fun parseEntry(value: Any?): FilterEntry {
-        return SimpleFilterEntry(this, value as T)
+        return SimpleFilterEntry(this, value!!)
     }
 
     override fun toGraphQLType(
@@ -42,7 +41,7 @@ class SimpleFilterEntryDefinition<T>(
      * @param node the CypherDSL [Node] on which the condition is based of
      * @param value the value which is wrapped in a CypherDSL property and then provided to the condition generator
      */
-    fun generateCondition(node: Node, value: T): Condition {
+    fun generateCondition(node: Node, value: Any): Condition {
         return conditionGenerator(node.property(neo4jName), Cypher.anonParameter(value))
     }
 }

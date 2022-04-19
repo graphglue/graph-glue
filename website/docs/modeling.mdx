@@ -123,11 +123,30 @@ For more information, see [Connecting nodes: @Relationship](https://docs.spring.
 
 ### Comparison
 
-|| GraphGlue | Spring Data Neo4j |
-|--|--|--|
-|GraphQL representation|One sides are represented by their appropriate type. Many sides are represented by connection types, supporting pagination, filtering and ordering|One sides are represented by their appropriate type. Many sides are represented as GraphQL list, without pagination, filtering or ordering support|
-|Lazy loading|Only lazy loading is supported. Relations are automatically loaded when accessed. Note: when fetching data for GraphQL, the whole subtree is loaded at once using one Cypher query, preventing the n+1 problem.|No lazy loading is supported, all relationships are eagerly loaded, which can result in large subgraphs being loaded. To prevent this, you may use [Projections](https://docs.spring.io/spring-data/neo4j/docs/current/reference/html/#projections)|
-|Matching of opposite sides|Opposite sides are matched if the `label` is the same, but the `direction` the opposite.|Opposite sides are matched if the `label` is the same, but the `direction` the opposite.|
+<table>
+    <tr>
+        <th></th>
+        <th>GraphGlue</th>
+        <th>Spring Data Neo4j </th>
+    </tr>
+    <tr>
+        <th>GraphQL representation</th>
+        <th>One sides are represented by their appropriate type. Many sides are represented by connection types, supporting pagination, filtering and ordering</th>
+        <th>One sides are represented by their appropriate type. Many sides are represented as GraphQL list, without pagination, filtering or ordering support</th>
+    </tr>
+    <tr>
+        <th>Lazy loading</th>
+        <th>Only lazy loading is supported. Relations are automatically loaded when accessed. Note: when fetching data for GraphQL, the whole subtree is loaded at once using one Cypher query, preventing the n+1 problem.</th>
+        <th>
+            No lazy loading is supported, all relationships are eagerly loaded, which can result in large subgraphs being loaded. To prevent this, you may use 
+            <a href="https://docs.spring.io/spring-data/neo4j/docs/current/reference/html/#projections" rel="noopener noreferer">Projections</a>
+        </th>
+    </tr>
+    <tr>
+        <th>Matching of opposite sides</th>
+        <th colspan="2">Opposite sides are matched if the `label` is the same, but the `direction` the opposite.</th>
+    </tr>
+</table>
 
 ## Inheritance
 

@@ -76,8 +76,8 @@ Note that the `AuthorizationRuleGenerator` generates a [CypherDSL](https://neo4j
 
 :::tip
 
-GraphGlue proovides an `io.github.graphglue.model.ALL_RULE`, which can be used to allow any access.
-This can be usefull for testing or debugging.
+GraphGlue provides an `io.github.graphglue.model.ALL_RULE`, which can be used to allow any access.
+This can be useful for testing or debugging.
 
 :::
 
@@ -94,7 +94,7 @@ It is even possible to use multiple `@Authorization` annotations with the same `
 Generally, it is checked if a `Permission` is granted to a `Node`
 
 A `Permission` consists of two parts
-- The name of the permission ot be checked
+- The name of the permission to be checked
 - A `AuthorizationContext` instance. It is intended implement this interface in order to provide custom values to `AuthorizationRuleGenerator` instances, e.g. the id of the authenticated user, or a role String.
 
 ### GraphQL
@@ -139,7 +139,7 @@ Example:
 class LeafMutations: Mutation {
     fun createLeaf(input: CreateLeafInput, dfe: DataFetchingEnvironment): CreateLeafOutput {
         val readPermission = dfe.requiredPermission // gives access to the permission under the key Permission::class
-        val myPermission = Perrmission("WRITE", dfe.authorizationContext) // AuthorizationContext from the Permission
+        val myPermission = Permission("WRITE", dfe.authorizationContext) // AuthorizationContext from the Permission
         // ...
     }
 }

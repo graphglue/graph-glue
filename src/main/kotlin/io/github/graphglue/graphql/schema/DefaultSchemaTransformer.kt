@@ -1,5 +1,6 @@
 package io.github.graphglue.graphql.schema
 
+import com.expediagroup.graphql.generator.annotations.GraphQLIgnore
 import com.expediagroup.graphql.generator.execution.KotlinDataFetcherFactoryProvider
 import graphql.schema.*
 import graphql.util.TraversalControl
@@ -18,6 +19,9 @@ import io.github.graphglue.model.DomainNode
 import io.github.graphglue.model.Node
 import io.github.graphglue.util.CacheMap
 import org.springframework.data.neo4j.core.mapping.Neo4jMappingContext
+import kotlin.reflect.full.allSuperclasses
+import kotlin.reflect.full.hasAnnotation
+import kotlin.reflect.full.isSubclassOf
 import kotlin.reflect.full.memberFunctions
 
 /**
@@ -48,20 +52,6 @@ class DefaultSchemaTransformer(
      * Lookup from [NodeDefinition] graphql name to [NodeDefinition]
      */
     private val nodeDefinitionLookup = nodeDefinitionCollection.associateBy { it.name }
-
-    init {
-        schema = this.completeSchema()
-        filterDefinitionCollection = FilterDefinitionCollection(subFilterGenerator.filterDefinitionCache)
-    }
-
-    /**
-     * Adds the missing connection like queries for [Node] types declared using the [DomainNode] annotation
-     *
-     * @return a builder for the new schema with the additional queries
-     */
-    private fun completeSchema(): GraphQLSchema {
-        return graphql.schema.SchemaTransformer.transformSchema(oldSchema, schemaTransformationVisitor)
-    }
 
     /**
      * Visitor used to transform the GraphQL schema
@@ -103,6 +93,20 @@ class DefaultSchemaTransformer(
         }
     }
 
+    init {
+        schema = this.completeSchema()
+        filterDefinitionCollection = FilterDefinitionCollection(subFilterGenerator.filterDefinitionCache)
+    }
+
+    /**
+     * Adds the missing connection like queries for [Node] types declared using the [DomainNode] annotation
+     *
+     * @return a builder for the new schema with the additional queries
+     */
+    private fun completeSchema(): GraphQLSchema {
+        return graphql.schema.SchemaTransformer.transformSchema(oldSchema, schemaTransformationVisitor)
+    }
+
     /**
      * Updates an [GraphQLObjectType], by adding all fields defined by [NodeDefinition.relationshipDefinitions]
      *
@@ -120,6 +124,7 @@ class DefaultSchemaTransformer(
                 it.field(field)
                 registerRelationshipDataFetcher(relationshipDefinition, context)
             }
+            getNodeInterfaces(nodeDefinition).forEach(it::withInterface)
         }
     }
 
@@ -140,7 +145,22 @@ class DefaultSchemaTransformer(
                 it.field(field)
                 registerRelationshipDataFetcher(relationshipDefinition, context)
             }
+            getNodeInterfaces(nodeDefinition).forEach(it::withInterface)
         }
+    }
+
+    /**
+     * Gets a set of all valid [Node] supertypes for a [NodeDefinition]
+     *
+     * @param nodeDefinition used to find valid superclasses
+     * @return a set with [GraphQLTypeReference]s for all found valid superclasses
+     */
+    private fun getNodeInterfaces(nodeDefinition: NodeDefinition): Set<GraphQLTypeReference> {
+        return nodeDefinition.nodeType.allSuperclasses.filter {
+            it.isSubclassOf(Node::class) && !it.hasAnnotation<GraphQLIgnore>()
+        }.map {
+            GraphQLTypeReference(it.getSimpleName())
+        }.toSet()
     }
 
     /**

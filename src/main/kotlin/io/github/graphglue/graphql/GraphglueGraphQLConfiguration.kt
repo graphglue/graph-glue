@@ -17,10 +17,10 @@ import graphql.schema.*
 import io.github.graphglue.connection.filter.TypeFilterDefinitionEntry
 import io.github.graphglue.data.execution.NodeQueryParser
 import io.github.graphglue.definition.NodeDefinition
-import io.github.graphglue.definition.NodeDefinitionCache
 import io.github.graphglue.definition.NodeDefinitionCollection
 import io.github.graphglue.connection.filter.definition.*
 import io.github.graphglue.connection.order.OrderDirection
+import io.github.graphglue.definition.generateNodeDefinition
 import io.github.graphglue.graphql.extensions.toTopLevelObjects
 import io.github.graphglue.graphql.query.GraphglueQuery
 import io.github.graphglue.graphql.schema.DefaultSchemaTransformer
@@ -35,11 +35,7 @@ import org.springframework.data.neo4j.core.mapping.Neo4jMappingContext
 import java.util.*
 import kotlin.reflect.KClass
 import kotlin.reflect.KProperty
-import kotlin.reflect.KType
-import kotlin.reflect.full.createType
-import kotlin.reflect.full.hasAnnotation
-import kotlin.reflect.full.isSubtypeOf
-import kotlin.reflect.jvm.jvmErasure
+import kotlin.reflect.full.*
 
 /**
  * Configures beans used in combination with graphql-kotlin and graphql-java
@@ -51,16 +47,6 @@ class GraphglueGraphQLConfiguration(private val neo4jMappingContext: Neo4jMappin
      * Logger used to print the GraphQL schema
      */
     private val logger = LoggerFactory.getLogger(GraphglueGraphQLConfiguration::class.java)
-
-    /**
-     * Raw cache for [NodeDefinition]s
-     */
-    private val nodeDefinitions = CacheMap<KClass<out Node>, NodeDefinition>()
-
-    /**
-     * Cache for [NodeDefinition]s
-     */
-    private val nodeDefinitionCache = NodeDefinitionCache(nodeDefinitions, neo4jMappingContext)
 
     /**
      * Provides the [SchemaGeneratorHooks] for the [SchemaGeneratorConfig]
@@ -129,6 +115,7 @@ class GraphglueGraphQLConfiguration(private val neo4jMappingContext: Neo4jMappin
      * @param filters type based definitions for filters, necessary for [SubFilterGenerator]
      * @param dataFetcherFactoryProvider provides property and function data fetchers
      * @param additionalFilterBeans filters defined by bean name instead of type, by bean name
+     * @param nodeDefinitionCollection used to get [NodeDefinition]s
      * @return both the generated [GraphQLSchema] and [NodeDefinitionCollection]
      */
     @Bean
@@ -141,29 +128,32 @@ class GraphglueGraphQLConfiguration(private val neo4jMappingContext: Neo4jMappin
         beanFactory: BeanFactory,
         dataFetcherFactoryProvider: KotlinDataFetcherFactoryProvider,
         filters: List<TypeFilterDefinitionEntry>,
-        additionalFilterBeans: Map<String, FilterEntryDefinition>
+        additionalFilterBeans: Map<String, FilterEntryDefinition>,
+        nodeDefinitionCollection: NodeDefinitionCollection
     ): GraphglueSchema {
         val generator = SchemaGenerator(schemaConfig)
-        val nodeDefinition = nodeDefinitionCache.getOrCreate(Node::class)
+        val nodeDefinition = nodeDefinitionCollection.getNodeDefinition<Node>()
+        val additionalTypes =
+            mutableSetOf(PageInfo::class.createType()) + nodeDefinitionCollection.map { it.nodeType.starProjectedType }
         val schema = generator.use {
             it.generateSchema(
                 queries.orElse(emptyList()).toTopLevelObjects() + TopLevelObject(GraphglueQuery(nodeDefinition)),
                 mutations.orElse(emptyList()).toTopLevelObjects(),
                 subscriptions.orElse(emptyList()).toTopLevelObjects(),
-                additionalTypes = setOf(Node::class.createType(), PageInfo::class.createType()),
+                additionalTypes = additionalTypes,
                 additionalInputTypes = setOf(OrderDirection::class.createType()),
             )
         }
-        val nodeDefinitionCollection = NodeDefinitionCollection(nodeDefinitions, beanFactory)
         val schemaTransformer = DefaultSchemaTransformer(
-            schema, neo4jMappingContext, nodeDefinitionCollection, dataFetcherFactoryProvider,
+            schema,
+            neo4jMappingContext,
+            nodeDefinitionCollection,
+            dataFetcherFactoryProvider,
             SubFilterGenerator(filters, CacheMap(), nodeDefinitionCollection, additionalFilterBeans)
         )
         logger.info("\n${schemaTransformer.schema.print()}")
         return GraphglueSchema(
-            schemaTransformer.schema,
-            nodeDefinitionCollection,
-            schemaTransformer.filterDefinitionCollection
+            schemaTransformer.schema, schemaTransformer.filterDefinitionCollection
         )
     }
 
@@ -174,18 +164,23 @@ class GraphglueGraphQLConfiguration(private val neo4jMappingContext: Neo4jMappin
      * @return the [GraphQLSchema]
      */
     @Bean
-    fun schema(schema: GraphglueSchema): GraphQLSchema =
-        schema.schema
+    fun schema(schema: GraphglueSchema): GraphQLSchema = schema.schema
 
     /**
-     * [NodeDefinitionCollection] based on [GraphglueSchema]
+     * Generates the [NodeDefinitionCollection]
+     * Uses the [Neo4jMappingContext] to find the [Node]s
      *
-     * @param schema provides the [NodeDefinitionCollection]
+     * @param beanFactory necessary for the [NodeDefinitionCollection]
      * @return the [NodeDefinitionCollection]
      */
+    @Suppress("UNCHECKED_CAST")
     @Bean
-    fun nodeDefinitionCollection(schema: GraphglueSchema): NodeDefinitionCollection =
-        schema.nodeDefinitionCollection
+    fun nodeDefinitionCollection(beanFactory: BeanFactory): NodeDefinitionCollection {
+        val nodeDefinitions =
+            neo4jMappingContext.managedTypes.map { it.type.kotlin }.filter { it.isSubclassOf(Node::class) }
+                .map { it as KClass<out Node> }.associateWith { generateNodeDefinition(it, neo4jMappingContext) }
+        return NodeDefinitionCollection(nodeDefinitions, beanFactory)
+    }
 
     /**
      * [FilterDefinitionCollection] based on [GraphglueSchema]
@@ -218,19 +213,36 @@ class GraphglueGraphQLConfiguration(private val neo4jMappingContext: Neo4jMappin
         }
 
         /**
-         * Called before using reflection to generate the graphql object type for the given KType.
-         * This allows supporting objects that the caller does not want to use reflection on for special handling.
-         * Used to collect [NodeDefinition]s for [Node] types
+         * Checks if an additional type is valid
+         * Used when adding subtypes of interfaces
+         * Ignores [Node] types, as those are handled manually
          *
-         * @param type the type for which to generate a [GraphQLType]
-         * @return the generated [GraphQLType]
+         * @param kClass the  class to check
+         * @param inputType shall an input type be generated
+         * @return `true` if the class should be added to the additional types to generate
          */
-        override fun willGenerateGraphQLType(type: KType): GraphQLType? {
-            if (type.isSubtypeOf(Node::class.createType())) {
-                @Suppress("UNCHECKED_CAST") val nodeClass = type.jvmErasure as KClass<out Node>
-                nodeDefinitionCache.getOrCreate(nodeClass)
+        override fun isValidAdditionalType(kClass: KClass<*>, inputType: Boolean): Boolean {
+            return if (kClass.isSubclassOf(Node::class) && super.isValidAdditionalType(kClass, inputType)) {
+                false
+            } else {
+                super.isValidAdditionalType(kClass, inputType)
             }
-            return super.willGenerateGraphQLType(type)
+        }
+
+        /**
+         * Checks if a superclass is valid
+         * Used when adding interfaces to an object type
+         * Ignores [Node] types, as those are handled manually
+         *
+         * @param kClass the  class to check
+         * @return `true` if the class should be added as an interface
+         */
+        override fun isValidSuperclass(kClass: KClass<*>): Boolean {
+            return if (kClass.isSubclassOf(Node::class) && super.isValidSuperclass(kClass)) {
+                false
+            } else {
+                super.isValidSuperclass(kClass)
+            }
         }
     }
 }
@@ -240,11 +252,8 @@ class GraphglueGraphQLConfiguration(private val neo4jMappingContext: Neo4jMappin
  * Helper type for a bean which has to construct both at the same time
  *
  * @param schema the [GraphQLSchema]
- * @param nodeDefinitionCollection the [NodeDefinitionCollection]
  * @param filterDefinitionCollection the [FilterDefinitionCollection]
  */
 data class GraphglueSchema(
-    val schema: GraphQLSchema,
-    val nodeDefinitionCollection: NodeDefinitionCollection,
-    val filterDefinitionCollection: FilterDefinitionCollection
+    val schema: GraphQLSchema, val filterDefinitionCollection: FilterDefinitionCollection
 )

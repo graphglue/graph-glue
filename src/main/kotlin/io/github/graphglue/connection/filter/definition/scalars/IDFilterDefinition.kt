@@ -10,7 +10,7 @@ import graphql.Scalars
  * @param neo4jName the name of the property in the database
  */
 class IDFilterDefinition(name: String, neo4jName: String) :
-    ScalarFilterDefinition<ID>(
+    ScalarFilterDefinition(
         name,
         "Filter which can be used to filter for Nodes with a specific ID field",
         "IDFilterInput",

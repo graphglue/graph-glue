@@ -9,7 +9,7 @@ import graphql.Scalars
  * @param neo4jName the name of the property in the database
  */
 class IntFilterDefinition(name: String, neo4jName: String) :
-    ComparableFilterDefinition<Int>(
+    ComparableFilterDefinition(
         name,
         "Filter which can be used to filter for Nodes with a specific Int field",
         "IntFilterInput",

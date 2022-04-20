@@ -8,10 +8,10 @@ val graphqlKotlinVersion = "5.3.2"
 val springBootVersion = "2.6.6"
 
 plugins {
-	kotlin("jvm") version "1.6.10"
-	kotlin("plugin.spring") version "1.6.10"
+	kotlin("jvm") version "1.6.20"
+	kotlin("plugin.spring") version "1.6.20"
     id("maven-publish")
-    id("org.jetbrains.dokka") version "1.6.10"
+    id("org.jetbrains.dokka") version "1.6.20"
     signing
     id("io.github.gradle-nexus.publish-plugin") version "1.1.0"
 }
@@ -70,7 +70,7 @@ tasks {
                 pom {
                     name.set("graph-glue")
                     description.set(project.description)
-                    url.set("https://github.com/graphglue/graph-glue")
+                    url.set("https://graphglue.github.io/graph-glue")
 
                     organization {
                         name.set("Software Quality and Architecture - University of Stuttgart")

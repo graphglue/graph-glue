@@ -15,7 +15,7 @@ import org.neo4j.cypherdsl.core.Property
  * @param description the description of the field
  * @param conditionGenerator used to generate the condition which applies the filter in the database
  */
-abstract class ScalarFilterEntryBase<T>(
+abstract class ScalarFilterEntryBase(
     val name: String,
     val description: String,
     val conditionGenerator: (property: Property, value: Expression) -> Condition

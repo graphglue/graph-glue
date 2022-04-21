@@ -10,7 +10,6 @@ import io.github.graphglue.connection.filter.definition.FilterDefinition
 import io.github.graphglue.connection.filter.definition.FilterDefinitionCollection
 import io.github.graphglue.connection.order.IdOrder
 import io.github.graphglue.connection.order.parseOrder
-import io.github.graphglue.model.NODE_RELATIONSHIP_DIRECTIVE
 import io.github.graphglue.model.Node
 import org.neo4j.cypherdsl.core.Conditions
 import org.neo4j.cypherdsl.core.Cypher
@@ -200,7 +199,7 @@ class NodeQueryParser(
         val parts = fieldParts.mapValues {
             val (_, fields) = it
             for (field in fields) {
-                if (field.fieldDefinitions.first().hasDirective(NODE_RELATIONSHIP_DIRECTIVE)) {
+                if (field.fieldDefinitions.first().name in definition.relationshipGraphQLNames) {
                     val onlyOnTypes = nodeDefinitionCollection.getNodeDefinitionsFromGraphQLNames(field.objectTypeNames)
                     val firstPossibleType = onlyOnTypes.first()
                     val relationshipDefinition = firstPossibleType.relationshipDefinitions[field.name]!!

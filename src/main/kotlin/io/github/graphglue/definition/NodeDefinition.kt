@@ -1,6 +1,7 @@
 package io.github.graphglue.definition
 
 import io.github.graphglue.authorization.MergedAuthorization
+import io.github.graphglue.graphql.extensions.getGraphQLName
 import io.github.graphglue.graphql.extensions.getSimpleName
 import io.github.graphglue.graphql.extensions.springFindRepeatableAnnotations
 import io.github.graphglue.model.Authorization
@@ -37,9 +38,16 @@ class NodeDefinition(
 
     /**
      * map of all relationship definitions by defining property
+     * Name of property as key
      */
     private val relationshipDefinitionsByProperty =
-        (oneRelationshipDefinitions + manyRelationshipDefinitions).associateBy { it.property }
+        (oneRelationshipDefinitions + manyRelationshipDefinitions).associateBy { it.property.name }
+
+    /**
+     * Set of all relationship GraphQL names
+     * Can be used to check if a field is a relationship
+     */
+    val relationshipGraphQLNames = relationshipDefinitions.values.map(RelationshipDefinition::graphQLName).toSet()
 
     /**
      * Expression which can be used when creating a query using Cypher-DSL
@@ -61,6 +69,11 @@ class NodeDefinition(
      * The primary label of the [Node]
      */
     val primaryLabel: String get() = persistentEntity.primaryLabel
+
+    /**
+     * GraphQL type name
+     */
+    val name get() = nodeType.getSimpleName()
 
     init {
         val expressions = CypherGenerator.INSTANCE.createReturnStatementForMatch(persistentEntity)
@@ -86,7 +99,7 @@ class NodeDefinition(
                     authorizations.flatMap { it.allowFromRelated.toList() }
                         .map { propertyName ->
                             val property = nodeType.memberProperties.first { it.name == propertyName }
-                            relationshipDefinitionsByProperty[property]!!
+                            relationshipDefinitionsByProperty[property.name]!!
                         }.toSet(),
                     authorizations.flatMap { it.disallow.toList() }.toSet()
                 )
@@ -112,7 +125,7 @@ class NodeDefinition(
      * @throws Exception if property is not used as relation
      */
     fun getRelationshipDefinitionOfProperty(property: KProperty1<*, *>): RelationshipDefinition {
-        return relationshipDefinitionsByProperty[property]!!
+        return relationshipDefinitionsByProperty[property.name]!!
     }
 
     override fun toString() = nodeType.getSimpleName()

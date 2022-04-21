@@ -1,7 +1,11 @@
 package io.github.graphglue.definition
 
+import com.expediagroup.graphql.generator.annotations.GraphQLDescription
+import com.expediagroup.graphql.generator.annotations.GraphQLIgnore
+import graphql.schema.GraphQLFieldDefinition
 import io.github.graphglue.data.execution.NodeQueryResult
 import io.github.graphglue.data.repositories.RelationshipDiff
+import io.github.graphglue.graphql.schema.SchemaTransformationContext
 import io.github.graphglue.graphql.extensions.getPropertyName
 import io.github.graphglue.model.Direction
 import io.github.graphglue.model.Node
@@ -12,10 +16,9 @@ import org.neo4j.cypherdsl.core.ExposesRelationships
 import org.neo4j.cypherdsl.core.RelationshipPattern
 import kotlin.reflect.KClass
 import kotlin.reflect.KProperty1
-import kotlin.reflect.full.createType
-import kotlin.reflect.full.findAnnotation
-import kotlin.reflect.full.isSubtypeOf
-import kotlin.reflect.full.memberProperties
+import kotlin.reflect.KVisibility
+import kotlin.reflect.full.*
+
 
 /**
  * Defines a relationship between two [Node]s
@@ -39,6 +42,16 @@ abstract class RelationshipDefinition(
      * GraphQL name of the property
      */
     val graphQLName get() = property.getPropertyName(parentKClass)
+
+    /**
+     * Description of the property
+     */
+    val graphQLDescription get() = property.findAnnotation<GraphQLDescription>()?.value
+
+    /**
+     * If true, this exposes a field in the GraphQL API
+     */
+    val isGraphQLVisible get() = property.visibility == KVisibility.PUBLIC && !property.hasAnnotation<GraphQLIgnore>()
 
     /**
      * optional setter which is used to initialize the opposite property
@@ -79,8 +92,7 @@ abstract class RelationshipDefinition(
      * @return the generated relationship pattern
      */
     fun <T> generateRelationship(
-        rootNode: ExposesRelationships<T>,
-        propertyNode: org.neo4j.cypherdsl.core.Node
+        rootNode: ExposesRelationships<T>, propertyNode: org.neo4j.cypherdsl.core.Node
     ): T where T : RelationshipPattern, T : ExposesPatternLengthAccessors<*> {
         return when (direction) {
             Direction.OUTGOING -> rootNode.relationshipTo(propertyNode, type)
@@ -138,6 +150,15 @@ abstract class RelationshipDefinition(
     internal fun getRelatedNodesToSave(node: Node): Collection<Node> {
         return node.getProperty<Node>(property).getRelatedNodesToSave()
     }
+
+    /**
+     * Generates a field definition
+     * Important: the field has to be annotated with  [NODE_RELATIONSHIP_DIRECTIVE], otherwise data fetching does
+     * not work
+     *
+     * @param transformationContext used to generate GraphQL types, register data fetchers, ...
+     */
+    internal abstract fun generateFieldDefinition(transformationContext: SchemaTransformationContext): GraphQLFieldDefinition
 }
 
 /**

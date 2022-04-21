@@ -1,5 +1,10 @@
 package io.github.graphglue.definition
 
+import graphql.schema.GraphQLFieldDefinition
+import graphql.schema.GraphQLNonNull
+import graphql.schema.GraphQLTypeReference
+import io.github.graphglue.graphql.schema.SchemaTransformationContext
+import io.github.graphglue.graphql.extensions.getSimpleName
 import io.github.graphglue.model.Direction
 import io.github.graphglue.model.Node
 import kotlin.reflect.KClass
@@ -23,4 +28,17 @@ class OneRelationshipDefinition(
     type,
     direction,
     parentKClass
-)
+) {
+    override fun generateFieldDefinition(transformationContext: SchemaTransformationContext): GraphQLFieldDefinition {
+        val type = property.returnType
+        val graphQLType = GraphQLTypeReference(type.jvmErasure.getSimpleName()).let {
+            if (type.isMarkedNullable) {
+                it
+            } else {
+                GraphQLNonNull(it)
+            }
+        }
+        return GraphQLFieldDefinition.newFieldDefinition().name(graphQLName).description(graphQLDescription)
+            .type(graphQLType).build()
+    }
+}

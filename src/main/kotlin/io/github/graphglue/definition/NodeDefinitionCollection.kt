@@ -22,7 +22,7 @@ import kotlin.reflect.full.isSubclassOf
 class NodeDefinitionCollection(
     backingCollection: Map<KClass<out Node>, NodeDefinition>,
     private val beanFactory: BeanFactory
-) {
+) : Collection<NodeDefinition> by backingCollection.values {
     /**
      * Defensive copy of provided `backingCollection`, used to store [NodeDefinition]s
      */

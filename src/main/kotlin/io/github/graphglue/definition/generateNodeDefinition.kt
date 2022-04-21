@@ -7,6 +7,7 @@ import io.github.graphglue.model.NodeSetProperty
 import org.springframework.data.neo4j.core.mapping.Neo4jMappingContext
 import org.springframework.data.neo4j.core.mapping.Neo4jPersistentEntity
 import kotlin.reflect.KClass
+import kotlin.reflect.KTypeParameter
 import kotlin.reflect.KTypeProjection
 import kotlin.reflect.full.*
 import kotlin.reflect.jvm.javaField
@@ -34,7 +35,9 @@ fun generateNodeDefinition(nodeClass: KClass<out Node>, mappingContext: Neo4jMap
  * @return the list of generated relationship definitions
  */
 private fun generateOneRelationshipDefinitions(nodeClass: KClass<out Node>): List<OneRelationshipDefinition> {
-    val properties = nodeClass.memberProperties.filter { it.returnType.isSubtypeOf(Node::class.createType()) }
+    val properties = nodeClass.memberProperties.filter {
+        it.returnType.isSubtypeOf(Node::class.createType()) && it.returnType.classifier !is KTypeParameter
+    }
     return properties.map {
         val field = it.javaField
         if (field == null || !field.type.kotlin.isSubclassOf(NodeProperty::class)) {
@@ -55,7 +58,10 @@ private fun generateOneRelationshipDefinitions(nodeClass: KClass<out Node>): Lis
 private fun generateManyRelationshipDefinitions(nodeClass: KClass<out Node>): List<ManyRelationshipDefinition> {
     val nodeListType =
         NodeSetProperty.NodeSet::class.createType(listOf(KTypeProjection.covariant(Node::class.createType())))
-    val properties = nodeClass.memberProperties.filter { it.returnType.isSubtypeOf(nodeListType) }
+    val properties = nodeClass.memberProperties.filter { it.returnType.isSubtypeOf(nodeListType) }.filter {
+            val nodeType = it.returnType.arguments.first().type!!
+            nodeType.classifier !is KTypeParameter
+        }
     return properties.map {
         val annotation = it.findAnnotation<NodeRelationship>()
             ?: throw NodeSchemaException("Property of type Node is not annotated with NodeRelationship: $it")

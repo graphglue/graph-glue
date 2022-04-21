@@ -1,8 +1,8 @@
 package io.github.graphglue.connection.filter.definition
 
 import io.github.graphglue.definition.NodeDefinition
-import io.github.graphglue.definition.NodeDefinitionCache
 import io.github.graphglue.connection.filter.TypeFilterDefinitionEntry
+import io.github.graphglue.definition.NodeDefinitionCollection
 import io.github.graphglue.graphql.extensions.getPropertyName
 import io.github.graphglue.model.AdditionalFilter
 import io.github.graphglue.model.Node
@@ -12,7 +12,7 @@ import kotlin.reflect.jvm.jvmErasure
 
 /**
  * Used to generate filters for properties.
- * Also provides access to the [FilterDefinitionCache], [NodeDefinitionCache] and a lookup of additional filters.
+ * Also provides access to the [FilterDefinitionCache], [NodeDefinitionCollection] and a lookup of additional filters.
  *
  * @param filters contains all definitions how filters for specific types are generated
  * @param filterDefinitionCache cache of already generated filters for [Node] types
@@ -22,7 +22,7 @@ import kotlin.reflect.jvm.jvmErasure
 class SubFilterGenerator(
     private val filters: List<TypeFilterDefinitionEntry>,
     val filterDefinitionCache: FilterDefinitionCache,
-    val nodeDefinitionCollection: NodeDefinitionCache,
+    val nodeDefinitionCollection: NodeDefinitionCollection,
     val additionalFilterBeans: Map<String, FilterEntryDefinition>
 ) {
 

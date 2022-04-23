@@ -1,3 +1,89 @@
 .main-wrapper {
     display: flex;
 }
+
+:root {
+	--keyword-color: #07a;
+	--property-color: #905;
+	--function-color: #DD4A68;
+}
+
+[data-theme='dark'] {
+	--keyword-color: #cc7832;
+	--property-color: #9876aa;
+	--function-color: #ffc66d;
+}
+
+:root {
+  --default-gray: #f4f4f4;
+  --default-font-color: black;
+  --header-font-color: var(--default-font-color);
+  --breadcrumb-font-color: #637282;
+  --breadcrumb-margin: 24px;
+  --hover-link-color: #5B5DEF;
+  --footer-height: 64px;
+  --footer-padding-top: 48px;
+  --footer-background: var(--default-gray);
+  --footer-font-color: var(--average-color);
+  --footer-go-to-top-color: white;
+  --horizontal-spacing-for-content: 16px;
+  --mobile-horizontal-spacing-for-content: 8px;
+  --bottom-spacing: 16px;
+  --color-scrollbar: rgba(39, 40, 44, 0.40);
+  --color-scrollbar-track: var(--default-gray);
+  --default-white: #fff;
+  --dark-mode-and-search-icon-color: var(--default-white);
+  --color-dark: #27282c;
+  --default-font-family: system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Oxygen, Ubuntu, Cantarell, Droid Sans, Helvetica Neue, Arial, sans-serif;
+  --default-monospace-font-family: JetBrains Mono, SFMono-Regular, Consolas, Liberation Mono, Menlo, Courier, monospace;
+  --default-font-size: 15px;
+  --average-color: var(--color-dark);
+  --brief-color: var(--average-color);
+  --copy-icon-color: rgba(39, 40, 44, .7);
+  --copy-icon-hover-color: var(--color-dark);
+  --code-background: rgba(39, 40, 44, .05);
+  --border-color: rgba(39, 40, 44, .2);
+  --navigation-highlight-color: rgba(39, 40, 44, 0.05);
+  --top-navigation-height: 73px;
+  --max-width: 1160px;
+  --white-10: hsla(0, 0%, 100%, .1);
+  --active-tab-border-color: var(--hover-link-color);
+  --inactive-tab-border-color: #DADFE6;
+}
+
+[data-theme='dark'] {
+  --color-dark: #3d3d41;
+  --default-font-color: hsla(0, 0%, 100%, 0.8);
+  --border-color: hsla(0, 0%, 100%, 0.2);
+  --code-background: hsla(0, 0%, 100%, 0.05);
+  --breadcrumb-font-color: #8c8c8e;
+  --brief-color: hsla(0, 0%, 100%, 0.4);
+  --copy-icon-color: hsla(0, 0%, 100%, 0.6);
+  --copy-icon-hover-color: #fff;
+  --active-tab-border-color: var(--default-font-color);
+  --inactive-tab-border-color: var(--border-color);
+  --navigation-highlight-color: rgba(255, 255, 255, 0.05);
+  --footer-background: hsla(0, 0%, 100%, 0.05);
+  --footer-font-color: hsla(0, 0%, 100%, 0.6);
+  --footer-go-to-top-color: var(--footer-font-color);
+}
+
+.theme-doc-sidebar-menu a {
+  word-break: break-all;
+}
+
+.sidebar-package-title > div > a {
+  align-items:end;
+}
+
+.sidebar-package-title > div > a::after {
+  margin-left: 6px;
+  width: 18px;
+  height: 18px;
+  display: inline-block;
+  content: '';
+  mask: url("/img/package.svg") no-repeat;
+  mask-size: cover;
+  background-color: var(--ifm-menu-color);
+  transform: none !important;
+}

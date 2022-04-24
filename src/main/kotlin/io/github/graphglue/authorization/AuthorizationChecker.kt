@@ -7,7 +7,7 @@ import org.neo4j.cypherdsl.core.renderer.Renderer
 import org.springframework.data.neo4j.core.ReactiveNeo4jClient
 import reactor.core.publisher.Mono
 
-/***
+/**
  * Check if a node allows a certain permission
  * @param collection collection in which the node is defined
  * @param client client used to execute queries

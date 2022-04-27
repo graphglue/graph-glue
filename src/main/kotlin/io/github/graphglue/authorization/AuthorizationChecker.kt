@@ -26,7 +26,7 @@ class AuthorizationChecker(
     fun hasAuthorization(node: Node, permission: Permission): Mono<Boolean> {
         val nodeDefinition = collection.getNodeDefinition(node::class)
         val conditionGenerator = collection.generateAuthorizationCondition(nodeDefinition, permission)
-        val cypherNode = Cypher.node(nodeDefinition.primaryLabel).withProperties(mapOf("id" to node.rawId!!))
+        val cypherNode = nodeDefinition.node().withProperties(mapOf("id" to node.rawId!!))
         val condition = conditionGenerator.generateCondition(cypherNode)
         val statement = Cypher.match(cypherNode).returning(condition).build()
         val queryResult = client.query(Renderer.getDefaultRenderer().render(statement)).bindAll(statement.parameters)

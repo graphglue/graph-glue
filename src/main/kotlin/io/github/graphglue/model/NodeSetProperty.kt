@@ -5,6 +5,7 @@ import io.github.graphglue.data.execution.NodeQuery
 import io.github.graphglue.data.execution.NodeQueryParser
 import io.github.graphglue.data.execution.NodeQueryResult
 import io.github.graphglue.data.repositories.RelationshipDiff
+import io.github.graphglue.definition.NodeDefinition
 import kotlinx.coroutines.runBlocking
 import org.neo4j.cypherdsl.core.Cypher
 import java.util.*
@@ -75,15 +76,18 @@ class NodeSetProperty<T : Node>(
             .build()
     }
 
-    override fun getRelationshipDiff(nodeIdLookup: Map<Node, String>): RelationshipDiff {
+    override fun getRelationshipDiff(
+        nodeIdLookup: Map<Node, String>,
+        nodeDefinition: NodeDefinition
+    ): RelationshipDiff {
         return RelationshipDiff(
             addedNodes.map {
                 val idParameter = Cypher.anonParameter(nodeIdLookup[it])
-                Cypher.anyNode().withProperties(mapOf("id" to idParameter))
+                nodeDefinition.node().withProperties(mapOf("id" to idParameter))
             },
             removedNodes.filter { it.rawId != null }.map {
                 val idParameter = Cypher.anonParameter(it.rawId!!)
-                Cypher.anyNode().withProperties(mapOf("id" to idParameter))
+                nodeDefinition.node().withProperties(mapOf("id" to idParameter))
             }
         )
     }

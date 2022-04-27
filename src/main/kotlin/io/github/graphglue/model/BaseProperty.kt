@@ -7,6 +7,7 @@ import graphql.schema.DataFetchingEnvironment
 import io.github.graphglue.data.execution.*
 import io.github.graphglue.definition.NodeDefinitionCollection
 import io.github.graphglue.data.repositories.RelationshipDiff
+import io.github.graphglue.definition.NodeDefinition
 import io.github.graphglue.graphql.extensions.getParentNodeDefinition
 import org.springframework.beans.factory.annotation.Autowired
 import java.util.*
@@ -90,9 +91,13 @@ abstract class BaseProperty<T : Node?>(protected val parent: Node, protected val
      *
      * @param nodeIdLookup lookup from [Node] to its id to add relation to non-persisted nodes
      *                     (these nodes are already persisted, but not newly fetched from the database)
+     * @param nodeDefinition the definition of the nodes in this property, can be used to get the Label(s) of the node(s)
      * @return the diff which describes how to add and remove relationships
      */
-    internal abstract fun getRelationshipDiff(nodeIdLookup: Map<Node, String>): RelationshipDiff
+    internal abstract fun getRelationshipDiff(
+        nodeIdLookup: Map<Node, String>,
+        nodeDefinition: NodeDefinition
+    ): RelationshipDiff
 
     /**
      * Gets [Node]s which should be persisted when this [Node] is persisted

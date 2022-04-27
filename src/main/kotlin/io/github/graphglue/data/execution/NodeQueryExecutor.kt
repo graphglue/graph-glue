@@ -69,7 +69,7 @@ class NodeQueryExecutor(
      * @return the generated query and result column name
      */
     private fun createRootNodeQuery(): StatementWithSymbolicName {
-        val rootNode = createNodeDefinitionNode(nodeQuery.definition).named(generateUniqueName().value)
+        val rootNode = nodeQuery.definition.node().named(generateUniqueName().value)
         val builder = Cypher.match(rootNode).with(rootNode)
         return createNodeQuery(nodeQuery, builder, rootNode)
     }
@@ -370,7 +370,7 @@ class NodeQueryExecutor(
             labelCondition = labelCondition.or(node.hasLabels(nodeDefinition.primaryLabel))
         }
         val nodeQuery = subQuery.query
-        val relatedNode = createNodeDefinitionNode(nodeQuery.definition).named(generateUniqueName().value)
+        val relatedNode = nodeQuery.definition.node().named(generateUniqueName().value)
 
         val builder = Cypher.with(node)
             .with(node)
@@ -384,16 +384,6 @@ class NodeQueryExecutor(
      * Generates a new unique name
      */
     private fun generateUniqueName() = Cypher.name("a_${nameCounter++}")
-
-    /**
-     * Creates a [Node] for a [NodeDefinition].
-     *
-     * @param nodeDefinition the definition for which to create the [Node]
-     * @return the generated [Node] with the correct primaryLabel
-     */
-    private fun createNodeDefinitionNode(nodeDefinition: NodeDefinition): Node {
-        return Cypher.node(nodeDefinition.primaryLabel)
-    }
 
     /**
      * Parses the result of a query (a list of nodes, and optional a totalCount).

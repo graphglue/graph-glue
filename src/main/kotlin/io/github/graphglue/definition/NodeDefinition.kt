@@ -6,6 +6,7 @@ import io.github.graphglue.graphql.extensions.getSimpleName
 import io.github.graphglue.graphql.extensions.springFindRepeatableAnnotations
 import io.github.graphglue.model.Authorization
 import io.github.graphglue.model.Node
+import org.neo4j.cypherdsl.core.Cypher
 import org.neo4j.cypherdsl.core.Expression
 import org.neo4j.cypherdsl.core.SymbolicName
 import org.springframework.data.neo4j.core.mapping.Constants
@@ -126,6 +127,13 @@ class NodeDefinition(
      */
     fun getRelationshipDefinitionOfProperty(property: KProperty1<*, *>): RelationshipDefinition {
         return relationshipDefinitionsByProperty[property.name]!!
+    }
+
+    /**
+     * Generates a new CypherDSL node with the necessary labels
+     */
+    fun node(): org.neo4j.cypherdsl.core.Node {
+        return Cypher.node(persistentEntity.primaryLabel, persistentEntity.additionalLabels)
     }
 
     override fun toString() = nodeType.getSimpleName()

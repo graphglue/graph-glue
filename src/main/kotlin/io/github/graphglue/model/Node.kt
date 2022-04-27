@@ -131,6 +131,7 @@ abstract class Node {
             )
             val query = queryParser.generateRelationshipNodeQuery(
                 nodeDefinition,
+                parentNodeDefinition,
                 dataFetchingEnvironment,
                 relationshipDefinition,
                 this,

@@ -3,6 +3,7 @@ package io.github.graphglue.model
 import graphql.execution.DataFetcherResult
 import io.github.graphglue.data.execution.*
 import io.github.graphglue.data.repositories.RelationshipDiff
+import io.github.graphglue.definition.NodeDefinition
 import kotlinx.coroutines.runBlocking
 import org.neo4j.cypherdsl.core.Cypher
 import kotlin.reflect.KProperty
@@ -92,7 +93,10 @@ class NodeProperty<T : Node?>(
         }
     }
 
-    override fun getRelationshipDiff(nodeIdLookup: Map<Node, String>): RelationshipDiff {
+    override fun getRelationshipDiff(
+        nodeIdLookup: Map<Node, String>,
+        nodeDefinition: NodeDefinition
+    ): RelationshipDiff {
         val current = currentNode
         val nodesToRemove = if (current != persistedNode) {
             listOf(Cypher.anyNode())
@@ -101,7 +105,7 @@ class NodeProperty<T : Node?>(
         }
         val nodesToAdd = if (current != persistedNode && current != null) {
             val idParameter = Cypher.anonParameter(nodeIdLookup[current])
-            listOf(Cypher.anyNode().withProperties(mapOf("id" to idParameter)))
+            listOf(nodeDefinition.node().withProperties(mapOf("id" to idParameter)))
         } else {
             emptyList()
         }

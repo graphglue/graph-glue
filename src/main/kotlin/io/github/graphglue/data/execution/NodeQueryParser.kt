@@ -47,13 +47,14 @@ class NodeQueryParser(
      */
     fun generateRelationshipNodeQuery(
         definition: NodeDefinition,
+        parentDefinition: NodeDefinition,
         dataFetchingEnvironment: DataFetchingEnvironment?,
         relationshipDefinition: RelationshipDefinition,
         parentNode: Node,
         requiredPermission: Permission?
     ): NodeQuery {
         val idParameter = Cypher.anonParameter(parentNode.rawId)
-        val rootCypherNode = Cypher.anyNode().withProperties(mapOf("id" to idParameter))
+        val rootCypherNode = parentDefinition.node().withProperties(mapOf("id" to idParameter))
         val additionalConditions = listOf(CypherConditionGenerator { node ->
             Predicates.any(rootCypherNode.requiredSymbolicName).`in`(
                 Cypher.listBasedOn(relationshipDefinition.generateRelationship(rootCypherNode, node))

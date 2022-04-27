@@ -349,7 +349,7 @@ class NodeDefinitionCollection(
         val allowFromRelatedCondition = authorization.allowFromRelated
             .fold(Conditions.noCondition()) { condition, relationshipDefinition ->
                 val relatedNodeDefinition = getNodeDefinition(relationshipDefinition.nodeKClass)
-                val relatedNode =relatedNodeDefinition.node()
+                val relatedNode = relatedNodeDefinition.node()
                 val newPattern = relationshipDefinition.generateRelationship(node, relatedNode)
                 val newPart = generateAuthorizationConditionInternal(
                     relatedNode, newPattern, relatedNodeDefinition, permission, false

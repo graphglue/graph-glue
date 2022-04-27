@@ -58,7 +58,10 @@ For example, a non-node class can be used as type for properties with a struct-l
 
 :::
 
-The Node class also defines an id. In Kotlin, it is possible to access the id using the `rawId` String property. It is not possible to manually assign an id, as a id is automatically generated when the node is first saved. However, the generation can be customized by providing a bean with the name `io.github.graphglue.model.NODE_ID_GENERATOR_BEAN` and the type `IdGenerator<String>`. By default, a random UUID is generated. 
+The Node class also defines an id. In Kotlin, it is possible to access the id using the `rawId` String property.
+It is not possible to manually assign an id, as a id is automatically generated when the node is first saved.
+However, the generation can be customized by providing a bean with the name `io.github.graphglue.model.NODE_ID_GENERATOR_BEAN` and the type `IdGenerator<String>`.
+By default, a random UUID is generated. 
 
 ## Properties
 
@@ -66,7 +69,17 @@ Properties are both used to expose fields in the GraphQL schema, and save proper
 By default, both Spring Data Neo4j and GraphQL Kotlin use the name of the property as name, however, the name in the GraphQL schema can be changed by annotating it with `@GraphQLName("name")`, the name of the property in the database can be changed by annotating it with `@Property("name")`.
 
 :::caution
-Spring Data Neo4j and GraphQL Kotlin use different visibilities. While property backed by a field (this includes delegated properties) is saved in the database. GraphQL Kotlin only exposes `public` properties not annotated with `@GraphQLIgnore`
+
+Spring Data Neo4j and GraphQL Kotlin use different visibilities.
+While property backed by a field (this includes delegated properties) is saved in the database. GraphQL Kotlin only exposes `public` properties not annotated with `@GraphQLIgnore`.
+
+:::
+
+:::tip
+
+GraphGlue automatically adds all injected `GraphQLType`s to the generated schema.
+This allows for injecting custom scalars, and then using the name in `@GraphQLType` annotations.
+
 :::
 
 The used type must both be supported by GraphQL Kotlin and Spring Data Neo4j, however, both libaries provide extension mechanisms which allow you to support additional types.

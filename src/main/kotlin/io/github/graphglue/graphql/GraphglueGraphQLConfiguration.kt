@@ -91,7 +91,8 @@ class GraphglueGraphQLConfiguration(private val neo4jMappingContext: Neo4jMappin
         config: GraphQLConfigurationProperties,
         topLevelNames: Optional<TopLevelNames>,
         hooks: Optional<SchemaGeneratorHooks>,
-        dataFetcherFactoryProvider: KotlinDataFetcherFactoryProvider
+        dataFetcherFactoryProvider: KotlinDataFetcherFactoryProvider,
+        additionalTypes: Set<GraphQLType>
     ): SchemaGeneratorConfig {
         val generatorHooks = hooks.orElse(NoopSchemaGeneratorHooks)
         return SchemaGeneratorConfig(
@@ -99,7 +100,8 @@ class GraphglueGraphQLConfiguration(private val neo4jMappingContext: Neo4jMappin
             topLevelNames = topLevelNames.orElse(TopLevelNames()),
             hooks = generatorHooks,
             dataFetcherFactoryProvider = dataFetcherFactoryProvider,
-            introspectionEnabled = config.introspection.enabled
+            introspectionEnabled = config.introspection.enabled,
+            additionalTypes = additionalTypes
         )
     }
 

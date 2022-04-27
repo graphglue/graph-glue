@@ -5,13 +5,13 @@ version = "1.1.1-SNAPSHOT"
 group = "io.github.graphglue"
 
 val graphqlKotlinVersion = "5.3.2"
-val springBootVersion = "2.6.6"
+val springBootVersion = "2.6.7"
 
 plugins {
-	kotlin("jvm") version "1.6.20"
-	kotlin("plugin.spring") version "1.6.20"
+	kotlin("jvm") version "1.6.21"
+	kotlin("plugin.spring") version "1.6.21"
     id("maven-publish")
-    id("org.jetbrains.dokka") version "1.6.20"
+    id("org.jetbrains.dokka") version "1.6.21"
     signing
     id("io.github.gradle-nexus.publish-plugin") version "1.1.0"
 }

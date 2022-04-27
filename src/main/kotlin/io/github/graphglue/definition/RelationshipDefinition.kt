@@ -135,10 +135,15 @@ abstract class RelationshipDefinition(
      *
      * @param node the node which contains the property to get the diff from
      * @param nodeIdLookup node to id lookup, can be used to get id of unpersisted nodes
+     * @param nodeDefinition definition of the related nodes
      * @return the diff describing added and removed nodes
      */
-    internal fun getRelationshipDiff(node: Node, nodeIdLookup: Map<Node, String>): RelationshipDiff {
-        return node.getProperty<Node>(property).getRelationshipDiff(nodeIdLookup)
+    internal fun getRelationshipDiff(
+        node: Node,
+        nodeIdLookup: Map<Node, String>,
+        nodeDefinition: NodeDefinition
+    ): RelationshipDiff {
+        return node.getProperty<Node>(property).getRelationshipDiff(nodeIdLookup, nodeDefinition)
     }
 
     /**

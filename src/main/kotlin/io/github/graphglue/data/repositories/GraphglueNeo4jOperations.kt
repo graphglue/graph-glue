@@ -121,12 +121,13 @@ class GraphglueNeo4jOperations(
     private fun saveAllRelationships(
         nodeDefinition: NodeDefinition, nodeToSave: Node, nodeIdLookup: Map<Node, String>
     ) = Flux.fromIterable(nodeDefinition.relationshipDefinitions.values).flatMap { relationshipDefinition ->
-        val diffToSave = relationshipDefinition.getRelationshipDiff(nodeToSave, nodeIdLookup)
+        val relatedNodeDefinition = nodeDefinitionCollection.getNodeDefinition(relationshipDefinition.nodeKClass)
+        val diffToSave = relationshipDefinition.getRelationshipDiff(nodeToSave, nodeIdLookup, relatedNodeDefinition)
         val deleteMono = Flux.fromIterable(diffToSave.nodesToRemove).flatMap {
-            deleteRelationship(relationshipDefinition, nodeIdLookup[nodeToSave]!!, it)
+            deleteRelationship(relationshipDefinition, nodeIdLookup[nodeToSave]!!, it, nodeDefinition)
         }.then()
         val addMono = Flux.fromIterable(diffToSave.nodesToAdd).flatMap {
-            addRelationship(relationshipDefinition, nodeIdLookup[nodeToSave]!!, it)
+            addRelationship(relationshipDefinition, nodeIdLookup[nodeToSave]!!, it, nodeDefinition)
         }.then()
         deleteMono.then(addMono)
     }.then()
@@ -137,13 +138,17 @@ class GraphglueNeo4jOperations(
      * @param relationshipDefinition defines the relationship between the nodes
      * @param rootNodeId the id of the [Node] from which the relationship starts
      * @param propertyNode the related `Node`, might stand for multiple [Node]s
+     * @param rootNodeDefinition the definition of the node with [rootNodeId]
      * @return an empty [Mono] to wait for the end of the operation
      */
     private fun addRelationship(
-        relationshipDefinition: RelationshipDefinition, rootNodeId: String, propertyNode: org.neo4j.cypherdsl.core.Node
+        relationshipDefinition: RelationshipDefinition,
+        rootNodeId: String,
+        propertyNode: org.neo4j.cypherdsl.core.Node,
+        rootNodeDefinition: NodeDefinition
     ): Mono<Void> {
         val idParameter = Cypher.anonParameter(rootNodeId)
-        val rootNode = Cypher.anyNode().withProperties(mapOf("id" to idParameter)).named(Cypher.name("node1"))
+        val rootNode = rootNodeDefinition.node().withProperties(mapOf("id" to idParameter)).named(Cypher.name("node1"))
         val namedPropertyNode = propertyNode.named(Cypher.name("node2"))
         val relationship = relationshipDefinition.generateRelationship(rootNode, namedPropertyNode)
         val statement = Cypher.match(rootNode).match(namedPropertyNode).merge(relationship).build()
@@ -156,13 +161,17 @@ class GraphglueNeo4jOperations(
      * @param relationshipDefinition defines the relationship between the nodes
      * @param rootNodeId the id of the [Node] from which the relationship starts
      * @param propertyNode the related `Node`, might stand for multiple [Node]s
+     * @param rootNodeDefinition rootNodeDefinition the definition of the node with [rootNodeId]
      * @return an empty [Mono] to wait for the end of the operation
      */
     private fun deleteRelationship(
-        relationshipDefinition: RelationshipDefinition, rootNodeId: String, propertyNode: org.neo4j.cypherdsl.core.Node
+        relationshipDefinition: RelationshipDefinition,
+        rootNodeId: String,
+        propertyNode: org.neo4j.cypherdsl.core.Node,
+        rootNodeDefinition: NodeDefinition
     ): Mono<Void> {
         val idParameter = Cypher.anonParameter(rootNodeId)
-        val rootNode = Cypher.anyNode().withProperties(mapOf("id" to idParameter))
+        val rootNode = rootNodeDefinition.node().withProperties(mapOf("id" to idParameter))
         val relationship = relationshipDefinition.generateRelationship(rootNode, propertyNode).named(Cypher.name("rel"))
         val statement = Cypher.match(relationship).delete(relationship.requiredSymbolicName).build()
         return executeStatement(statement)

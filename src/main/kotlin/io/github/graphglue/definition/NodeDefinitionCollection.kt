@@ -349,7 +349,7 @@ class NodeDefinitionCollection(
         val allowFromRelatedCondition = authorization.allowFromRelated
             .fold(Conditions.noCondition()) { condition, relationshipDefinition ->
                 val relatedNodeDefinition = getNodeDefinition(relationshipDefinition.nodeKClass)
-                val relatedNode = Cypher.node(relatedNodeDefinition.primaryLabel)
+                val relatedNode =relatedNodeDefinition.node()
                 val newPattern = relationshipDefinition.generateRelationship(node, relatedNode)
                 val newPart = generateAuthorizationConditionInternal(
                     relatedNode, newPattern, relatedNodeDefinition, permission, false
@@ -384,7 +384,7 @@ class NodeDefinitionCollection(
     ): AuthorizationConditionPart {
         val relationshipDefinition = authorization.allowFromRelated.first()
         val relatedNodeDefinition = getNodeDefinition(relationshipDefinition.nodeKClass)
-        val relatedNode = Cypher.node(relatedNodeDefinition.primaryLabel)
+        val relatedNode = relatedNodeDefinition.node()
         val newPattern = relationshipDefinition.generateRelationship(pattern, relatedNode)
         val newPart = generateAuthorizationConditionInternal(
             relatedNode, newPattern, relatedNodeDefinition, permission, false

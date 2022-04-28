@@ -49,17 +49,6 @@ class GraphglueGraphQLConfiguration(private val neo4jMappingContext: Neo4jMappin
     private val logger = LoggerFactory.getLogger(GraphglueGraphQLConfiguration::class.java)
 
     /**
-     * Provides the [SchemaGeneratorHooks] for the [SchemaGeneratorConfig]
-     *
-     * @return the generated [GraphglueSchemaGeneratorHooks]
-     */
-    @Bean
-    @ConditionalOnMissingBean
-    fun schemaGeneratorHooks(): SchemaGeneratorHooks {
-        return GraphglueSchemaGeneratorHooks()
-    }
-
-    /**
      * Parser for incoming GraphQL queries
      * Allows transforming (a part of) a GraphQL query into a single Cypher query
      *
@@ -98,7 +87,7 @@ class GraphglueGraphQLConfiguration(private val neo4jMappingContext: Neo4jMappin
         return SchemaGeneratorConfig(
             supportedPackages = listOf("io.github.graphglue") + config.packages,
             topLevelNames = topLevelNames.orElse(TopLevelNames()),
-            hooks = generatorHooks,
+            hooks = GraphglueSchemaGeneratorHooks(generatorHooks),
             dataFetcherFactoryProvider = dataFetcherFactoryProvider,
             introspectionEnabled = config.introspection.enabled,
             additionalTypes = additionalTypes
@@ -199,8 +188,10 @@ class GraphglueGraphQLConfiguration(private val neo4jMappingContext: Neo4jMappin
      * collects all [Node] types and generates [NodeDefinition]s for it, and collects queries
      * for [Node] types
      *
+     * @param delegate delegate used as fallback for all functions, used to provide better extensibility
      */
-    inner class GraphglueSchemaGeneratorHooks : SchemaGeneratorHooks {
+    inner class GraphglueSchemaGeneratorHooks(private val delegate: SchemaGeneratorHooks) :
+        SchemaGeneratorHooks by delegate {
 
         /**
          * Called to check if a property should be included in the schema
@@ -211,7 +202,7 @@ class GraphglueGraphQLConfiguration(private val neo4jMappingContext: Neo4jMappin
          * @return `true` if the property should be included in the schema
          */
         override fun isValidProperty(kClass: KClass<*>, property: KProperty<*>): Boolean {
-            return super.isValidProperty(kClass, property) && !property.hasAnnotation<NodeRelationship>()
+            return delegate.isValidProperty(kClass, property) && !property.hasAnnotation<NodeRelationship>()
         }
 
         /**
@@ -224,10 +215,10 @@ class GraphglueGraphQLConfiguration(private val neo4jMappingContext: Neo4jMappin
          * @return `true` if the class should be added to the additional types to generate
          */
         override fun isValidAdditionalType(kClass: KClass<*>, inputType: Boolean): Boolean {
-            return if (kClass.isSubclassOf(Node::class) && super.isValidAdditionalType(kClass, inputType)) {
+            return if (kClass.isSubclassOf(Node::class) && delegate.isValidAdditionalType(kClass, inputType)) {
                 false
             } else {
-                super.isValidAdditionalType(kClass, inputType)
+                delegate.isValidAdditionalType(kClass, inputType)
             }
         }
 
@@ -240,10 +231,10 @@ class GraphglueGraphQLConfiguration(private val neo4jMappingContext: Neo4jMappin
          * @return `true` if the class should be added as an interface
          */
         override fun isValidSuperclass(kClass: KClass<*>): Boolean {
-            return if (kClass.isSubclassOf(Node::class) && super.isValidSuperclass(kClass)) {
+            return if (kClass.isSubclassOf(Node::class) && delegate.isValidSuperclass(kClass)) {
                 false
             } else {
-                super.isValidSuperclass(kClass)
+                delegate.isValidSuperclass(kClass)
             }
         }
     }

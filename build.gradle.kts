@@ -4,7 +4,7 @@ description = "A library to develop annotation-based code-first GraphQL servers 
 version = "1.2.1-SNAPSHOT"
 group = "io.github.graphglue"
 
-val graphqlKotlinVersion = "5.3.2"
+val graphqlKotlinVersion = "6.0.0-alpha.2"
 val springBootVersion = "2.6.7"
 
 plugins {

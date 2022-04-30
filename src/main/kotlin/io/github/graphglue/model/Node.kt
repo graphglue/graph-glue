@@ -103,7 +103,7 @@ abstract class Node {
      * @param T value type
      * @return a provider for the property delegate
      */
-    protected fun <T : Node> NodeProperty(): PropertyDelegateProvider<Node, NodeProperty<T>> {
+    protected fun <T : Node?> NodeProperty(): PropertyDelegateProvider<Node, NodeProperty<T>> {
         return NodePropertyProvider()
     }
 

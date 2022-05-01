@@ -105,7 +105,7 @@ class GraphglueConnectionConfiguration {
      */
     @Bean
     fun nodeFilter() =
-        TypeFilterDefinitionEntry(Node::class.createType(nullable = true)) { name, property, parentNodeDefinition, subFilterGenerator ->
+        TypeFilterDefinitionEntry(Node::class.createType()) { name, property, parentNodeDefinition, subFilterGenerator ->
             NodeSubFilterDefinition(
                 name,
                 "Filters for nodes where the related node match this filter",

@@ -9,7 +9,7 @@ import kotlin.reflect.KType
 import kotlin.reflect.jvm.jvmErasure
 
 /**
- * Definition for a set based filter
+ * Definition for a set based filter used to filter for NodeSetProperties
  * Can be used for filters where either all, any or none of the elements of the list have to
  * match a filter
  *
@@ -18,7 +18,7 @@ import kotlin.reflect.jvm.jvmErasure
  * @param subFilterGenerator used to generate the filter for the `nodeType`
  * @param relationshipDefinition defines the relationship the property defines
  */
-class NodeSetFilterDefinition(
+class NodeSetPropertyFilterDefinition(
     name: String,
     nodeType: KType,
     subFilterGenerator: SubFilterGenerator,
@@ -57,13 +57,13 @@ class NodeSetFilterDefinition(
             val definition = fields[name] ?: throw IllegalStateException("Unknown input")
             val filter = definition.parseEntry(entry)
             when (name) {
-                "all" -> AllNodeSetFilterEntry(definition, filter)
-                "any" -> AnyNodeSetFilterEntry(definition, filter)
-                "none" -> NoneNodeSetFilterEntry(definition, filter)
+                "all" -> AllNodeRelationshipFilterEntry(definition, filter)
+                "any" -> AnyNodeRelationshipFilterEntry(definition, filter)
+                "none" -> NoneNodeRelationshipFilterEntry(definition, filter)
                 else -> throw IllegalStateException("Unknown NodeListFilter entry")
             }
         }
-        return NodeSetFilter(this, entries)
+        return NodeSetPropertyFilter(this, entries)
     }
 }
 

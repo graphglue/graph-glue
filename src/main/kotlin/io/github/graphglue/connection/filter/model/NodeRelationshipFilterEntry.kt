@@ -1,17 +1,7 @@
 package io.github.graphglue.connection.filter.model
 
-import io.github.graphglue.connection.filter.definition.NodeSetFilterDefinition
 import io.github.graphglue.connection.filter.definition.NodeSubFilterDefinition
 import org.neo4j.cypherdsl.core.*
-
-/**
- * [SimpleObjectFilter] with a [NodeSetFilterDefinition] definition
- *
- * @param definition associated definition of the filter
- * @param entries filter entries joined by AND
- */
-class NodeSetFilter(definition: NodeSetFilterDefinition, entries: List<NodeSetFilterEntry>) :
-    SimpleObjectFilter(definition, entries)
 
 /**
  * [FilterEntry] used to filter when the entry is a set
@@ -21,7 +11,7 @@ class NodeSetFilter(definition: NodeSetFilterDefinition, entries: List<NodeSetFi
  * @param subFilterDefinition associated definition of the entry
  * @param filter filter to filter the elements of the set
  */
-abstract class NodeSetFilterEntry(
+abstract class NodeRelationshipFilterEntry(
     private val subFilterDefinition: NodeSubFilterDefinition,
     val filter: NodeSubFilter
 ) : FilterEntry(subFilterDefinition) {
@@ -46,34 +36,34 @@ abstract class NodeSetFilterEntry(
 }
 
 /**
- * [NodeSetFilterEntry] where all of the nodes have to match the filter
+ * [NodeRelationshipFilterEntry] where all of the nodes have to match the filter
  *
  * @param definition associated definition of the entry
  * @param filter filter to filter the elements of the set
  */
-class AllNodeSetFilterEntry(definition: NodeSubFilterDefinition, filter: NodeSubFilter) :
-    NodeSetFilterEntry(definition, filter) {
+class AllNodeRelationshipFilterEntry(definition: NodeSubFilterDefinition, filter: NodeSubFilter) :
+    NodeRelationshipFilterEntry(definition, filter) {
     override fun generatePredicate(variable: SymbolicName) = Predicates.all(variable)
 }
 
 /**
- * [NodeSetFilterEntry] where any of the nodes have to match the filter
+ * [NodeRelationshipFilterEntry] where any of the nodes have to match the filter
  *
  * @param definition associated definition of the entry
  * @param filter filter to filter the elements of the set
  */
-class AnyNodeSetFilterEntry(definition: NodeSubFilterDefinition, filter: NodeSubFilter) :
-    NodeSetFilterEntry(definition, filter) {
+class AnyNodeRelationshipFilterEntry(definition: NodeSubFilterDefinition, filter: NodeSubFilter) :
+    NodeRelationshipFilterEntry(definition, filter) {
     override fun generatePredicate(variable: SymbolicName) = Predicates.any(variable)
 }
 
 /**
- * [NodeSetFilterEntry] where none of the nodes have to match the filter
+ * [NodeRelationshipFilterEntry] where none of the nodes have to match the filter
  *
  * @param definition associated definition of the entry
  * @param filter filter to filter the elements of the set
  */
-class NoneNodeSetFilterEntry(definition: NodeSubFilterDefinition, filter: NodeSubFilter) :
-    NodeSetFilterEntry(definition, filter) {
+class NoneNodeRelationshipFilterEntry(definition: NodeSubFilterDefinition, filter: NodeSubFilter) :
+    NodeRelationshipFilterEntry(definition, filter) {
     override fun generatePredicate(variable: SymbolicName) = Predicates.none(variable)
 }

@@ -9,8 +9,9 @@ import io.github.graphglue.model.Node
  * @param T the type of [Node] for which the order is defined
  * @param name name of the field in the cursor JSON
  * @param neo4jPropertyName name of the property on the database node
+ * @param isNullable if true, this part can be null
  */
-abstract class OrderPart<in T : Node>(val name: String, val neo4jPropertyName: String) {
+abstract class OrderPart<in T : Node>(val name: String, val neo4jPropertyName: String, val isNullable: Boolean) {
     /**
      * Gets the value of the field of a [Node]
      *

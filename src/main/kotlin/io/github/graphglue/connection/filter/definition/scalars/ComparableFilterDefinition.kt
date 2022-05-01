@@ -14,6 +14,7 @@ import graphql.schema.GraphQLInputType
  * @param typeName name of the constructed [GraphQLInputType] which serves as input for the filter
  * @param scalarType the [GraphQLInputType] for the field inputs (e.g. for eq, startsWith, ...)
  * @param neo4jName the name of the property of the node in the database (might be different from [name])
+ * @param nullable if true, the scalar is nullable, otherwise it is non-nullable
  * @param entries additional fields of this filter, define how the property can be filtered (e.g. startsWith, ...)
  */
 abstract class ComparableFilterDefinition(
@@ -22,14 +23,10 @@ abstract class ComparableFilterDefinition(
     typeName: String,
     scalarType: GraphQLInputType,
     neo4jName: String,
+    nullable: Boolean,
     entries: List<ScalarFilterEntryBase>
 ) : ScalarFilterDefinition(
-    name,
-    description,
-    typeName,
-    scalarType,
-    neo4jName,
-    entries + getDefaultFilterEntries()
+    name, description, typeName, scalarType, neo4jName, nullable, entries + getDefaultFilterEntries()
 )
 
 /**
@@ -38,30 +35,21 @@ abstract class ComparableFilterDefinition(
  * @return the list of generated filter entries
  */
 private fun getDefaultFilterEntries(): List<ScalarFilterEntry> {
-    return listOf(
-        ScalarFilterEntry(
-            "lt",
-            "Matches values which are lesser than the provided value"
-        ) { property, value ->
-            property.lt(value)
-        },
-        ScalarFilterEntry(
-            "lte",
-            "Matches values which are lesser than or equal to the provided value"
-        ) { property, value ->
-            property.lte(value)
-        },
-        ScalarFilterEntry(
-            "gt",
-            "Matches values which are greater than the provided value"
-        ) { property, value ->
-            property.gt(value)
-        },
-        ScalarFilterEntry(
-            "gte",
-            "Matches values which are greater than or equal to the provided value"
-        ) { property, value ->
-            property.gte(value)
-        }
-    )
+    return listOf(ScalarFilterEntry(
+        "lt", "Matches values which are lesser than the provided value"
+    ) { property, value ->
+        property.lt(value)
+    }, ScalarFilterEntry(
+        "lte", "Matches values which are lesser than or equal to the provided value"
+    ) { property, value ->
+        property.lte(value)
+    }, ScalarFilterEntry(
+        "gt", "Matches values which are greater than the provided value"
+    ) { property, value ->
+        property.gt(value)
+    }, ScalarFilterEntry(
+        "gte", "Matches values which are greater than or equal to the provided value"
+    ) { property, value ->
+        property.gte(value)
+    })
 }

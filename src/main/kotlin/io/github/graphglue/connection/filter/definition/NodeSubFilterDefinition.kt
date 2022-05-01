@@ -2,6 +2,7 @@ package io.github.graphglue.connection.filter.definition
 
 import graphql.schema.GraphQLInputObjectType
 import graphql.schema.GraphQLInputType
+import io.github.graphglue.authorization.Permission
 import io.github.graphglue.connection.filter.model.NodeSubFilter
 import io.github.graphglue.definition.RelationshipDefinition
 import io.github.graphglue.model.Node
@@ -34,7 +35,8 @@ class NodeSubFilterDefinition(
     @Suppress("UNCHECKED_CAST")
     private val subFilter = generateFilterDefinition(nodeType.jvmErasure as KClass<out Node>, subFilterGenerator)
 
-    override fun parseEntry(value: Any?) = NodeSubFilter(this, subFilter.parseFilter(value))
+    override fun parseEntry(value: Any?, permission: Permission?) =
+        NodeSubFilter(this, subFilter.parseFilter(value, permission))
 
     override fun toGraphQLType(inputTypeCache: CacheMap<String, GraphQLInputType>) =
         subFilter.toGraphQLType(inputTypeCache)

@@ -1,6 +1,7 @@
 package io.github.graphglue.connection.filter.definition
 
 import graphql.schema.GraphQLInputObjectType
+import io.github.graphglue.authorization.Permission
 import io.github.graphglue.connection.filter.model.*
 import io.github.graphglue.definition.RelationshipDefinition
 import io.github.graphglue.graphql.extensions.getSimpleName
@@ -50,16 +51,16 @@ class NodeSetPropertyFilterDefinition(
     )
 ) {
 
-    override fun parseEntry(value: Any?): FilterEntry {
+    override fun parseEntry(value: Any?, permission: Permission?): FilterEntry {
         value as Map<*, *>
         val entries = value.map {
             val (name, entry) = it
             val definition = fields[name] ?: throw IllegalStateException("Unknown input")
-            val filter = definition.parseEntry(entry)
+            val filter = definition.parseEntry(entry, permission)
             when (name) {
-                "all" -> AllNodeRelationshipFilterEntry(definition, filter)
-                "any" -> AnyNodeRelationshipFilterEntry(definition, filter)
-                "none" -> NoneNodeRelationshipFilterEntry(definition, filter)
+                "all" -> AllNodeRelationshipFilterEntry(definition, filter, permission)
+                "any" -> AnyNodeRelationshipFilterEntry(definition, filter, permission)
+                "none" -> NoneNodeRelationshipFilterEntry(definition, filter, permission)
                 else -> throw IllegalStateException("Unknown NodeListFilter entry")
             }
         }

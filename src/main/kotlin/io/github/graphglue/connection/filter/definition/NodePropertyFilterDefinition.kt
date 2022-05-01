@@ -1,6 +1,7 @@
 package io.github.graphglue.connection.filter.definition
 
 import graphql.schema.GraphQLInputType
+import io.github.graphglue.authorization.Permission
 import io.github.graphglue.connection.filter.model.AnyNodeRelationshipFilterEntry
 import io.github.graphglue.connection.filter.model.FilterEntry
 import io.github.graphglue.util.CacheMap
@@ -14,8 +15,10 @@ class NodePropertyFilterDefinition(
     private val nodeSubFilterDefinition: NodeSubFilterDefinition
 ) : FilterEntryDefinition(nodeSubFilterDefinition.name, nodeSubFilterDefinition.description) {
 
-    override fun parseEntry(value: Any?): FilterEntry {
-        return AnyNodeRelationshipFilterEntry(nodeSubFilterDefinition, nodeSubFilterDefinition.parseEntry(value))
+    override fun parseEntry(value: Any?, permission: Permission?): FilterEntry {
+        return AnyNodeRelationshipFilterEntry(
+            nodeSubFilterDefinition, nodeSubFilterDefinition.parseEntry(value, permission), permission
+        )
     }
 
     override fun toGraphQLType(inputTypeCache: CacheMap<String, GraphQLInputType>): GraphQLInputType {

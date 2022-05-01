@@ -26,9 +26,18 @@ abstract class NodeRelationshipFilterEntry(
         val relationshipDefinition = subFilterDefinition.relationshipDefinition
         val relatedNode = Cypher.anyNode(node.requiredSymbolicName.value + "_")
         val relationship = relationshipDefinition.generateRelationship(node, relatedNode)
+        val condition = filter.generateCondition(relatedNode)
+        val combinedCondition = if (permission != null) {
+            combineConditions(
+                condition,
+                subFilterDefinition.generateAuthorizationCondition(permission).generateCondition(relatedNode)
+            )
+        } else {
+            condition
+        }
         return generatePredicate(relatedNode.requiredSymbolicName).`in`(
             Cypher.listBasedOn(relationship).returning(relatedNode)
-        ).where(filter.generateCondition(relatedNode))
+        ).where(combinedCondition)
     }
 
     /**
@@ -40,6 +49,16 @@ abstract class NodeRelationshipFilterEntry(
      * @return the builder for the predicate
      */
     abstract fun generatePredicate(variable: SymbolicName): Predicates.OngoingListBasedPredicateFunction
+
+    /**
+     * Called to combine the main [Condition] with the authorization [Condition]
+     * Depending on the predicate, a different logical combination is necessary
+     *
+     * @param condition: the main condition specified by the user
+     * @param authorizationCondition: a condition which matches only related nodes the the permission allows to access
+     * @return a combined condition
+     */
+    abstract fun combineConditions(condition: Condition, authorizationCondition: Condition): Condition
 }
 
 /**
@@ -53,6 +72,10 @@ class AllNodeRelationshipFilterEntry(
     definition: NodeSubFilterDefinition, filter: NodeSubFilter, permission: Permission?
 ) : NodeRelationshipFilterEntry(definition, filter, permission) {
     override fun generatePredicate(variable: SymbolicName) = Predicates.all(variable)
+
+    override fun combineConditions(condition: Condition, authorizationCondition: Condition): Condition {
+        return authorizationCondition.not().or(condition)
+    }
 }
 
 /**
@@ -66,6 +89,10 @@ class AnyNodeRelationshipFilterEntry(
     definition: NodeSubFilterDefinition, filter: NodeSubFilter, permission: Permission?
 ) : NodeRelationshipFilterEntry(definition, filter, permission) {
     override fun generatePredicate(variable: SymbolicName) = Predicates.any(variable)
+
+    override fun combineConditions(condition: Condition, authorizationCondition: Condition): Condition {
+        return authorizationCondition.and(condition)
+    }
 }
 
 /**
@@ -79,4 +106,8 @@ class NoneNodeRelationshipFilterEntry(
     definition: NodeSubFilterDefinition, filter: NodeSubFilter, permission: Permission?
 ) : NodeRelationshipFilterEntry(definition, filter, permission) {
     override fun generatePredicate(variable: SymbolicName) = Predicates.none(variable)
+
+    override fun combineConditions(condition: Condition, authorizationCondition: Condition): Condition {
+        return authorizationCondition.and(condition)
+    }
 }

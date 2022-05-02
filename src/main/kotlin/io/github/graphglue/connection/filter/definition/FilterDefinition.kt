@@ -42,51 +42,37 @@ class FilterDefinition<T : Node>(private val entryType: KClass<T>) :
      * @return the parsed [Filter]
      */
     fun parseFilter(value: Any?): Filter {
-        return Filter(parseMetaFilter(value))
-    }
-
-    /**
-     * Parses a meta filter.
-     * Requires that value contains exactly one of node, and, or, not are provided.
-     *
-     * @param value the meta filter to parse
-     * @return the parsed meta filter
-     * @throws IllegalStateException if the input type contains not one of node, and, or, not
-     */
-    private fun parseMetaFilter(value: Any?): MetaFilter {
-        value as Map<*, *>
-        if (value.size != 1) {
-            throw IllegalArgumentException("Exactly one of the fields [node, and, or, not] must be provided")
-        }
-        val (name, entry) = value.entries.first()
-        return when (name) {
-            "node" -> NodeMetaFilter(parseNodeFilter(entry!!))
-            "and" -> {
-                entry as List<*>
-                AndMetaFilter(entry.map(::parseMetaFilter))
-            }
-            "or" -> {
-                entry as List<*>
-                OrMetaFilter(entry.map(::parseMetaFilter))
-            }
-            "not" -> NotMetaFilter(parseMetaFilter(entry))
-            else -> throw IllegalStateException("Illegal input value which does not match GraphQL type")
-        }
+        return Filter(parseNodeFilter(value))
     }
 
     /**
      * Parses a node filter
-     * Requires that there is a definition present for all provided fields
+     * Requires for each field that either
+     * - a definition is present
+     * - it is an and/or/not meta filter field
      *
      * @param value the node filter to parse
      * @return the parsed filter
      */
-    private fun parseNodeFilter(value: Any): NodeFilter {
+    private fun parseNodeFilter(value: Any?): NodeFilter {
         value as Map<*, *>
         val entries = value.map {
             val (name, entry) = it
-            val definition = entries[name] ?: throw IllegalStateException("Unknown input")
-            definition.parseEntry(entry)
+            when (name) {
+                "and" -> {
+                    entry as List<*>
+                    AndMetaFilter(entry.map(::parseNodeFilter))
+                }
+                "or" -> {
+                    entry as List<*>
+                    OrMetaFilter(entry.map(::parseNodeFilter))
+                }
+                "not" -> NotMetaFilter(parseNodeFilter(entry))
+                else -> {
+                    val definition = entries[name] ?: throw IllegalStateException("Unknown input")
+                    definition.parseEntry(entry)
+                }
+            }
         }
         return NodeFilter(entries)
     }
@@ -95,60 +81,46 @@ class FilterDefinition<T : Node>(private val entryType: KClass<T>) :
         inputTypeCache: CacheMap<String, GraphQLInputType>
     ): GraphQLInputType {
         val filterName = "${entryType.getSimpleName()}FilterInput"
-        val nodeFilterName = "${entryType.getSimpleName()}NodeFilterInput"
 
-        val subFilter = GraphQLTypeReference(filterName)
-        val nonNullSubFilterList = GraphQLList(GraphQLNonNull(subFilter))
+        val nodeFilter = GraphQLTypeReference(filterName)
 
-        return inputTypeCache.computeIfAbsent(filterName, GraphQLTypeReference(filterName)) {
-            val nodeFilter = inputTypeCache.computeIfAbsent(nodeFilterName, GraphQLTypeReference(nodeFilterName)) {
-                val builder = GraphQLInputObjectType.newInputObject()
-                builder.name(nodeFilterName)
-                builder.description("Filter used to filter ${entryType.getSimpleName()}")
-                for (entry in entries.values) {
-                    builder.field {
-                        it.name(entry.name).description(entry.description).type(entry.toGraphQLType(inputTypeCache))
-                    }
+        return inputTypeCache.computeIfAbsent(filterName, nodeFilter) {
+            val builder = GraphQLInputObjectType.newInputObject()
+            builder.name(filterName)
+            builder.description("Filter used to filter ${entryType.getSimpleName()}")
+            for (entry in entries.values) {
+                builder.field {
+                    it.name(entry.name).description(entry.description).type(entry.toGraphQLType(inputTypeCache))
                 }
-                builder.build()
             }
-            createMetaFilterInputType(filterName, nodeFilterName, nonNullSubFilterList, subFilter, nodeFilter)
+            createMetaFilterFields(builder, nodeFilter)
+            builder.build()
         }
     }
 
     /**
-     * Creates the [GraphQLInputType] for a meta filter
+     * Adds the meta filter fields to a node filter
      *
-     * @param filterName the name of the meta filter
-     * @param nodeFilterName the name of the node filter
-     * @param nonNullSubFilterList [GraphQLInputType] for a list of non-null meta filters
-     * @param subFilter [GraphQLInputType] for a non-null meta filter
-     * @param nodeFilter [GraphQLInputType] for the node filter
-     * @return the generated [GraphQLInputType] of the meta filter
+     * @param builder the filter builder, used to add the new fields
+     * @param nodeFilter a reference to the filter generated by the builder
      */
-    private fun createMetaFilterInputType(
-        filterName: String,
-        nodeFilterName: String,
-        nonNullSubFilterList: GraphQLInputType,
-        subFilter: GraphQLInputType,
+    private fun createMetaFilterFields(
+        builder: GraphQLInputObjectType.Builder,
         nodeFilter: GraphQLInputType
-    ): GraphQLInputType = GraphQLInputObjectType.newInputObject().name(filterName)
-        .description("Used to build propositional formula consisting of ${nodeFilterName}. Exactly one if its fields has to be provided")
-        .field {
+    ) {
+        val nodeFilterList = GraphQLList(GraphQLNonNull(nodeFilter))
+        builder.field {
             it.name("and")
                 .description("Connects all subformulas via and")
-                .type(nonNullSubFilterList)
+                .type(nodeFilterList)
         }.field {
             it.name("or")
                 .description("Connects all subformulas via or")
-                .type(nonNullSubFilterList)
+                .type(nodeFilterList)
         }.field {
             it.name("not")
                 .description("Negates the subformula")
-                .type(subFilter)
-        }.field {
-            it.name("node")
-                .description("Wrapper around $nodeFilterName")
                 .type(nodeFilter)
-        }.build()
+        }
+    }
 }

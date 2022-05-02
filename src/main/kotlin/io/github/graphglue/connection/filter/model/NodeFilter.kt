@@ -11,7 +11,7 @@ import org.neo4j.cypherdsl.core.Node
  *
  * @param entries the entries to join
  */
-data class NodeFilter(val entries: List<FilterEntry> = emptyList()) : CypherConditionGenerator {
+data class NodeFilter(val entries: List<CypherConditionGenerator> = emptyList()) : CypherConditionGenerator {
     override fun generateCondition(node: Node): Condition {
         return if (entries.isEmpty()) {
             Conditions.isTrue()

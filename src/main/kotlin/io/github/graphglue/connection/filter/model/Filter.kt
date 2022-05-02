@@ -6,8 +6,8 @@ import org.neo4j.cypherdsl.core.Node
 /**
  * Parsed version of an overall filter
  *
- * @param metaFilter the top level parsed filter
+ * @param nodeFilter the top level parsed filter
  */
-data class Filter(val metaFilter: MetaFilter) : CypherConditionGenerator {
-    override fun generateCondition(node: Node) = metaFilter.generateCondition(node)
+data class Filter(val nodeFilter: NodeFilter) : CypherConditionGenerator {
+    override fun generateCondition(node: Node) = nodeFilter.generateCondition(node)
 }

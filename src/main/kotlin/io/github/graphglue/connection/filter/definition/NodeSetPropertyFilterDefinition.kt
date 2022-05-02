@@ -53,8 +53,7 @@ class NodeSetPropertyFilterDefinition(
 
     override fun parseEntry(value: Any?, permission: Permission?): FilterEntry {
         value as Map<*, *>
-        val entries = value.map {
-            val (name, entry) = it
+        val entries = value.map { (name, entry) ->
             val definition = fields[name] ?: throw IllegalStateException("Unknown input")
             val filter = definition.parseEntry(entry, permission)
             when (name) {

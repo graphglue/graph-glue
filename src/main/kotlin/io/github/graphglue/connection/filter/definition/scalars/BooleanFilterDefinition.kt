@@ -7,13 +7,14 @@ import graphql.Scalars
  *
  * @param name the name of the field in the filter
  * @param neo4jName the name of the property in the database
+ * @param nullable if true, the scalar is nullable, otherwise it is non-nullable
  */
-class BooleanFilterDefinition(name: String, neo4jName: String) :
-    ScalarFilterDefinition(
-        name,
-        "Filter which can be used to filter for Nodes with a specific Boolean field",
-        "BooleanFilterInput",
-        Scalars.GraphQLBoolean,
-        neo4jName,
-        emptyList()
-    )
+class BooleanFilterDefinition(name: String, neo4jName: String, nullable: Boolean) : ScalarFilterDefinition(
+    name,
+    "Filter which can be used to filter for Nodes with a specific Boolean field",
+    "Boolean",
+    Scalars.GraphQLBoolean,
+    neo4jName,
+    nullable,
+    emptyList()
+)

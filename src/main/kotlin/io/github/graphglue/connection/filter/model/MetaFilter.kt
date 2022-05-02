@@ -11,61 +11,50 @@ import org.neo4j.cypherdsl.core.Node
 abstract class MetaFilter : CypherConditionGenerator
 
 /**
- * [MetaFilter] which joins several [MetaFilter]s by AND
+ * [MetaFilter] which joins several [NodeFilter]s by AND
  *
- * @param subMetaFilters the list of filters to join
+ * @param subNodeFilters the list of filters to join
  */
-data class AndMetaFilter(val subMetaFilters: List<MetaFilter>) : MetaFilter() {
+data class AndMetaFilter(val subNodeFilters: List<NodeFilter>) : MetaFilter() {
     init {
-        if (subMetaFilters.isEmpty()) {
+        if (subNodeFilters.isEmpty()) {
             throw IllegalArgumentException("no sub-filters provided")
         }
     }
 
     override fun generateCondition(node: Node): Condition {
-        return subMetaFilters.fold(Conditions.noCondition()) { condition, subMetaFilter ->
-            condition.and(subMetaFilter.generateCondition(node))
+        return subNodeFilters.fold(Conditions.noCondition()) { condition, subNodeFilter ->
+            condition.and(subNodeFilter.generateCondition(node))
         }
     }
 }
 
 /**
- * [MetaFilter] which joins several [MetaFilter]s by OR
+ * [MetaFilter] which joins several [NodeFilter]s by OR
  *
- * @param subMetaFilters the list of filters to join
+ * @param subNodeFilters the list of filters to join
  */
-data class OrMetaFilter(val subMetaFilters: List<MetaFilter>) : MetaFilter() {
+data class OrMetaFilter(val subNodeFilters: List<NodeFilter>) : MetaFilter() {
     init {
-        if (subMetaFilters.isEmpty()) {
+        if (subNodeFilters.isEmpty()) {
             throw IllegalArgumentException("no sub-filters provided")
         }
     }
 
     override fun generateCondition(node: Node): Condition {
-        return subMetaFilters.fold(Conditions.noCondition()) { condition, subMetaFilter ->
-            condition.or(subMetaFilter.generateCondition(node))
+        return subNodeFilters.fold(Conditions.noCondition()) { condition, subNodeFilter ->
+            condition.or(subNodeFilter.generateCondition(node))
         }
     }
 }
 
 /**
- * [MetaFilter] which negates a single [MetaFilter]
+ * [MetaFilter] which negates a single [NodeFilter]
  *
- * @param subMetaFilter the filter to negate
+ * @param subNodeFilter the filter to negate
  */
-data class NotMetaFilter(val subMetaFilter: MetaFilter) : MetaFilter() {
+data class NotMetaFilter(val subNodeFilter: NodeFilter) : MetaFilter() {
     override fun generateCondition(node: Node): Condition {
-        return subMetaFilter.generateCondition(node).not()
-    }
-}
-
-/**
- * [MetaFilter] to wrap a [NodeFilter]
- *
- * @param nodeFilter the filter to wrap
- */
-data class NodeMetaFilter(val nodeFilter: NodeFilter) : MetaFilter() {
-    override fun generateCondition(node: Node): Condition {
-        return nodeFilter.generateCondition(node)
+        return subNodeFilter.generateCondition(node).not()
     }
 }

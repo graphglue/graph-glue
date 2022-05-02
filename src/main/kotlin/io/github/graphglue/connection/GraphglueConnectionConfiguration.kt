@@ -16,8 +16,8 @@ import kotlin.reflect.full.createType
 /**
  * Configuration for the connections
  * Specifies filter factories and filter definitions used in [Node] classes.
- * Defines filter factories for [String], [Int], [Float] and [ID] scalar properties and for properties backed by
- * [NodeProperty] and [NodeSetProperty]
+ * Defines filter factories for [String], [Int], [Float] and [ID] scalar properties (including nullable)
+ * and for properties backed by [NodeProperty] and [NodeSetProperty]
  */
 @Configuration
 class GraphglueConnectionConfiguration {
@@ -29,8 +29,10 @@ class GraphglueConnectionConfiguration {
      */
     @Bean
     fun stringFilter() =
-        TypeFilterDefinitionEntry(String::class.createType()) { name, property, parentNodeDefinition, _ ->
-            StringFilterDefinition(name, parentNodeDefinition.getNeo4jNameOfProperty(property))
+        TypeFilterDefinitionEntry(String::class.createType(nullable = true)) { name, property, parentNodeDefinition, _ ->
+            StringFilterDefinition(
+                name, parentNodeDefinition.getNeo4jNameOfProperty(property), property.returnType.isMarkedNullable
+            )
         }
 
     /**
@@ -39,9 +41,12 @@ class GraphglueConnectionConfiguration {
      * @return the generated filter factory
      */
     @Bean
-    fun intFilter() = TypeFilterDefinitionEntry(Int::class.createType()) { name, property, parentNodeDefinition, _ ->
-        IntFilterDefinition(name, parentNodeDefinition.getNeo4jNameOfProperty(property))
-    }
+    fun intFilter() =
+        TypeFilterDefinitionEntry(Int::class.createType(nullable = true)) { name, property, parentNodeDefinition, _ ->
+            IntFilterDefinition(
+                name, parentNodeDefinition.getNeo4jNameOfProperty(property), property.returnType.isMarkedNullable
+            )
+        }
 
     /**
      * Filter factory for [Double] properties (float in GraphQL spec)
@@ -50,8 +55,10 @@ class GraphglueConnectionConfiguration {
      */
     @Bean
     fun doubleFilter() =
-        TypeFilterDefinitionEntry(Double::class.createType()) { name, property, parentNodeDefinition, _ ->
-            FloatFilterDefinition(name, parentNodeDefinition.getNeo4jNameOfProperty(property))
+        TypeFilterDefinitionEntry(Double::class.createType(nullable = true)) { name, property, parentNodeDefinition, _ ->
+            FloatFilterDefinition(
+                name, parentNodeDefinition.getNeo4jNameOfProperty(property), property.returnType.isMarkedNullable
+            )
         }
 
     /**
@@ -61,8 +68,10 @@ class GraphglueConnectionConfiguration {
      */
     @Bean
     fun booleanFilter() =
-        TypeFilterDefinitionEntry(Boolean::class.createType()) { name, property, parentNodeDefinition, _ ->
-            BooleanFilterDefinition(name, parentNodeDefinition.getNeo4jNameOfProperty(property))
+        TypeFilterDefinitionEntry(Boolean::class.createType(nullable = true)) { name, property, parentNodeDefinition, _ ->
+            BooleanFilterDefinition(
+                name, parentNodeDefinition.getNeo4jNameOfProperty(property), property.returnType.isMarkedNullable
+            )
         }
 
     /**
@@ -71,9 +80,12 @@ class GraphglueConnectionConfiguration {
      * @return the generated filter factory
      */
     @Bean
-    fun idFilter() = TypeFilterDefinitionEntry(ID::class.createType()) { name, property, parentNodeDefinition, _ ->
-        IDFilterDefinition(name, parentNodeDefinition.getNeo4jNameOfProperty(property))
-    }
+    fun idFilter() =
+        TypeFilterDefinitionEntry(ID::class.createType(nullable = true)) { name, property, parentNodeDefinition, _ ->
+            IDFilterDefinition(
+                name, parentNodeDefinition.getNeo4jNameOfProperty(property), property.returnType.isMarkedNullable
+            )
+        }
 
     /**
      * ID filter for the id property of a [Node]
@@ -83,7 +95,7 @@ class GraphglueConnectionConfiguration {
      * @return the generated filter definition
      */
     @Bean("idIdFilter")
-    fun idIdFilter() = IDFilterDefinition("id", "id")
+    fun idIdFilter() = IDFilterDefinition("id", "id", false)
 
     /**
      * Filter factory for [Node] properties

@@ -23,7 +23,7 @@ class SimpleFilterEntryDefinition(
     description: String,
     private val type: GraphQLInputType,
     private val neo4jName: String,
-    private val conditionGenerator: (property: Property, value: Expression) -> Condition
+    private val conditionGenerator: (property: Property, value: Parameter<*>) -> Condition
 ) : FilterEntryDefinition(name, description) {
 
     override fun parseEntry(value: Any?): FilterEntry {

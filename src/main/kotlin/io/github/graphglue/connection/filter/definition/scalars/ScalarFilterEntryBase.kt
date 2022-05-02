@@ -5,6 +5,7 @@ import graphql.schema.GraphQLInputType
 import io.github.graphglue.connection.filter.definition.FilterEntryDefinition
 import org.neo4j.cypherdsl.core.Condition
 import org.neo4j.cypherdsl.core.Expression
+import org.neo4j.cypherdsl.core.Parameter
 import org.neo4j.cypherdsl.core.Property
 
 /**
@@ -18,7 +19,7 @@ import org.neo4j.cypherdsl.core.Property
 abstract class ScalarFilterEntryBase(
     val name: String,
     val description: String,
-    val conditionGenerator: (property: Property, value: Expression) -> Condition
+    val conditionGenerator: (property: Property, value: Parameter<*>) -> Condition
 ) {
     /**
      * Generates the [FilterEntryDefinition] used in the filter

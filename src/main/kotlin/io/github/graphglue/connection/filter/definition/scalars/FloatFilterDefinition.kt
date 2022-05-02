@@ -7,13 +7,14 @@ import graphql.Scalars
  *
  * @param name the name of the field in the filter
  * @param neo4jName the name of the property in the database
+ * @param nullable if true, the scalar is nullable, otherwise it is non-nullable
  */
-class FloatFilterDefinition(name: String, neo4jName: String) :
-    ComparableFilterDefinition(
-        name,
-        "Filter which can be used to filter for Nodes with a specific Float field",
-        "FloatFilterInput",
-        Scalars.GraphQLFloat,
-        neo4jName,
-        emptyList()
-    )
+class FloatFilterDefinition(name: String, neo4jName: String, nullable: Boolean) : ComparableFilterDefinition(
+    name,
+    "Filter which can be used to filter for Nodes with a specific Float field",
+    "Float",
+    Scalars.GraphQLFloat,
+    neo4jName,
+    nullable,
+    emptyList()
+)

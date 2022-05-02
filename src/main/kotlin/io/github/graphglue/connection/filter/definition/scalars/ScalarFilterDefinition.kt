@@ -18,6 +18,7 @@ import io.github.graphglue.connection.filter.model.SimpleObjectFilter
  * @param typeName name of the constructed [GraphQLInputType] which serves as input for the filter
  * @param scalarType the [GraphQLInputType] for the field inputs (e.g. for eq, startsWith, ...)
  * @param neo4jName the name of the property of the node in the database (might be different from [name])
+ * @param nullable if true, the scalar is nullable, otherwise it is non-nullable
  * @param entries additional fields of this filter, define how the property can be filtered (e.g. startsWith, ...)
  */
 abstract class ScalarFilterDefinition(
@@ -26,11 +27,12 @@ abstract class ScalarFilterDefinition(
     typeName: String,
     scalarType: GraphQLInputType,
     neo4jName: String,
-    entries: List<ScalarFilterEntryBase>
+    nullable: Boolean,
+    entries: List<ScalarFilterEntryBase>,
 ) : SimpleObjectFilterDefinitionEntry<FilterEntryDefinition>(name,
     description,
-    typeName,
-    (entries + getDefaultFilterEntries()).map {
+    if (nullable) "Nullable${typeName}FilterInput" else "${typeName}FilterInput",
+    (entries + getDefaultFilterEntries(nullable)).map {
         it.generateFilterEntry(scalarType, neo4jName)
     }) {
     override fun parseEntry(value: Any?): FilterEntry {
@@ -47,10 +49,11 @@ abstract class ScalarFilterDefinition(
 /**
  * Provides a default filter entries: eq and in
  *
+ * @param nullable if true, the field to filter for is nullable and therefore a isNull field should be generated
  * @return the list of generated filter entries
  */
-private fun getDefaultFilterEntries(): List<ScalarFilterEntryBase> {
-    return listOf(ScalarFilterEntry(
+private fun getDefaultFilterEntries(nullable: Boolean): List<ScalarFilterEntryBase> {
+    val fields = mutableListOf(ScalarFilterEntry(
         "eq", "Matches values which are equal to the provided value"
     ) { property, value ->
         property.isEqualTo(value)
@@ -59,4 +62,8 @@ private fun getDefaultFilterEntries(): List<ScalarFilterEntryBase> {
     ) { property, value ->
         property.`in`(value)
     })
+    if (nullable) {
+        fields.add(IsNullFilterEntry())
+    }
+    return fields
 }

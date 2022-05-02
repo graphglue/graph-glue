@@ -56,8 +56,7 @@ class FilterDefinition<T : Node>(private val entryType: KClass<T>) :
      */
     private fun parseNodeFilter(value: Any?): NodeFilter {
         value as Map<*, *>
-        val entries = value.map {
-            val (name, entry) = it
+        val entries = value.map { (name, entry) ->
             when (name) {
                 "and" -> {
                     entry as List<*>

@@ -197,8 +197,7 @@ class NodeQueryParser(
         requiredPermission: Permission?
     ): NodeQuery {
         val subQueries = ArrayList<NodeSubQuery>()
-        val parts = fieldParts.mapValues {
-            val (_, fields) = it
+        val parts = fieldParts.mapValues { (_, fields) ->
             for (field in fields) {
                 if (field.fieldDefinitions.first().name in definition.relationshipGraphQLNames) {
                     val onlyOnTypes = nodeDefinitionCollection.getNodeDefinitionsFromGraphQLNames(field.objectTypeNames)

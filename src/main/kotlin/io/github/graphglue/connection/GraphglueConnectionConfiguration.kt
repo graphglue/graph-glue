@@ -2,7 +2,8 @@ package io.github.graphglue.connection
 
 import com.expediagroup.graphql.generator.scalars.ID
 import io.github.graphglue.connection.filter.TypeFilterDefinitionEntry
-import io.github.graphglue.connection.filter.definition.NodeSetFilterDefinition
+import io.github.graphglue.connection.filter.definition.NodePropertyFilterDefinition
+import io.github.graphglue.connection.filter.definition.NodeSetPropertyFilterDefinition
 import io.github.graphglue.connection.filter.definition.NodeSubFilterDefinition
 import io.github.graphglue.connection.filter.definition.scalars.*
 import io.github.graphglue.model.Node
@@ -105,14 +106,15 @@ class GraphglueConnectionConfiguration {
      */
     @Bean
     fun nodeFilter() =
-        TypeFilterDefinitionEntry(Node::class.createType()) { name, property, parentNodeDefinition, subFilterGenerator ->
-            NodeSubFilterDefinition(
+        TypeFilterDefinitionEntry(Node::class.createType(nullable = true)) { name, property, parentNodeDefinition, subFilterGenerator ->
+            val nodeSubFilterDefinition = NodeSubFilterDefinition(
                 name,
                 "Filters for nodes where the related node match this filter",
                 property.returnType,
                 subFilterGenerator,
                 parentNodeDefinition.getRelationshipDefinitionOfProperty(property)
             )
+            NodePropertyFilterDefinition(nodeSubFilterDefinition)
         }
 
     /**
@@ -124,7 +126,7 @@ class GraphglueConnectionConfiguration {
     @Bean
     fun nodeSetFilter() =
         TypeFilterDefinitionEntry(Set::class.createType(listOf(KTypeProjection.covariant(Node::class.createType())))) { name, property, parentNodeDefinition, subFilterGenerator ->
-            NodeSetFilterDefinition(
+            NodeSetPropertyFilterDefinition(
                 name,
                 property.returnType.arguments.first().type!!,
                 subFilterGenerator,

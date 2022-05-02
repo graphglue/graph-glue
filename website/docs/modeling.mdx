@@ -235,6 +235,16 @@ fun floatFilter() =
     }
 ```
 
+:::info
+
+Filter on `NodeProperty<*>` and `NodeSetProperty<*>` take the authorization system into account.
+Conceptually, first the related nodes are filtered by the `Permission` to only include nodes the Permission grants access to, then,
+the filter is evaluated. 
+This prevents an information leak by filtering, however, at the cost of higher complexity. 
+Therefore, use `@FilterProperty` on properties which may include non-visible nodes with caution.
+
+:::
+
 #### Additional filters
 
 With the `AdditionalFilter("beanName")` annotation, property independent filters can be defined.

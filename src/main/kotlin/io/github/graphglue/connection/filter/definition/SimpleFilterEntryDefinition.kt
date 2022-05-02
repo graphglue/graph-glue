@@ -2,6 +2,7 @@ package io.github.graphglue.connection.filter.definition
 
 import graphql.schema.GraphQLInputObjectType
 import graphql.schema.GraphQLInputType
+import io.github.graphglue.authorization.Permission
 import io.github.graphglue.connection.filter.model.FilterEntry
 import io.github.graphglue.connection.filter.model.SimpleFilterEntry
 import io.github.graphglue.util.CacheMap
@@ -26,7 +27,7 @@ class SimpleFilterEntryDefinition(
     private val conditionGenerator: (property: Property, value: Parameter<*>) -> Condition
 ) : FilterEntryDefinition(name, description) {
 
-    override fun parseEntry(value: Any?): FilterEntry {
+    override fun parseEntry(value: Any?, permission: Permission?): FilterEntry {
         return SimpleFilterEntry(this, value!!)
     }
 

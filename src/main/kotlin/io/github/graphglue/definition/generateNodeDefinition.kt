@@ -36,7 +36,7 @@ fun generateNodeDefinition(nodeClass: KClass<out Node>, mappingContext: Neo4jMap
  */
 private fun generateOneRelationshipDefinitions(nodeClass: KClass<out Node>): List<OneRelationshipDefinition> {
     val properties = nodeClass.memberProperties.filter {
-        it.returnType.isSubtypeOf(Node::class.createType()) && it.returnType.classifier !is KTypeParameter
+        it.returnType.isSubtypeOf(Node::class.createType(nullable = true)) && it.returnType.classifier !is KTypeParameter
     }
     return properties.map {
         val field = it.javaField

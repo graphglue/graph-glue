@@ -1,6 +1,7 @@
 package io.github.graphglue.connection.filter.definition
 
 import graphql.schema.GraphQLInputObjectType
+import io.github.graphglue.authorization.Permission
 import io.github.graphglue.connection.filter.model.*
 import io.github.graphglue.definition.RelationshipDefinition
 import io.github.graphglue.graphql.extensions.getSimpleName
@@ -9,7 +10,7 @@ import kotlin.reflect.KType
 import kotlin.reflect.jvm.jvmErasure
 
 /**
- * Definition for a set based filter
+ * Definition for a set based filter used to filter for NodeSetProperties
  * Can be used for filters where either all, any or none of the elements of the list have to
  * match a filter
  *
@@ -18,7 +19,7 @@ import kotlin.reflect.jvm.jvmErasure
  * @param subFilterGenerator used to generate the filter for the `nodeType`
  * @param relationshipDefinition defines the relationship the property defines
  */
-class NodeSetFilterDefinition(
+class NodeSetPropertyFilterDefinition(
     name: String,
     nodeType: KType,
     subFilterGenerator: SubFilterGenerator,
@@ -50,20 +51,20 @@ class NodeSetFilterDefinition(
     )
 ) {
 
-    override fun parseEntry(value: Any?): FilterEntry {
+    override fun parseEntry(value: Any?, permission: Permission?): FilterEntry {
         value as Map<*, *>
         val entries = value.map {
             val (name, entry) = it
             val definition = fields[name] ?: throw IllegalStateException("Unknown input")
-            val filter = definition.parseEntry(entry)
+            val filter = definition.parseEntry(entry, permission)
             when (name) {
-                "all" -> AllNodeSetFilterEntry(definition, filter)
-                "any" -> AnyNodeSetFilterEntry(definition, filter)
-                "none" -> NoneNodeSetFilterEntry(definition, filter)
+                "all" -> AllNodeRelationshipFilterEntry(definition, filter, permission)
+                "any" -> AnyNodeRelationshipFilterEntry(definition, filter, permission)
+                "none" -> NoneNodeRelationshipFilterEntry(definition, filter, permission)
                 else -> throw IllegalStateException("Unknown NodeListFilter entry")
             }
         }
-        return NodeSetFilter(this, entries)
+        return NodeSetPropertyFilter(this, entries)
     }
 }
 

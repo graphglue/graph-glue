@@ -2,6 +2,7 @@ package io.github.graphglue.connection.filter.definition.scalars
 
 import graphql.schema.GraphQLInputObjectType
 import graphql.schema.GraphQLInputType
+import io.github.graphglue.authorization.Permission
 import io.github.graphglue.connection.filter.definition.FilterEntryDefinition
 import io.github.graphglue.connection.filter.definition.SimpleObjectFilterDefinitionEntry
 import io.github.graphglue.connection.filter.model.FilterEntry
@@ -35,12 +36,12 @@ abstract class ScalarFilterDefinition(
     (entries + getDefaultFilterEntries(nullable)).map {
         it.generateFilterEntry(scalarType, neo4jName)
     }) {
-    override fun parseEntry(value: Any?): FilterEntry {
+    override fun parseEntry(value: Any?, permission: Permission?): FilterEntry {
         value as Map<*, *>
         val entries = value.map {
             val (name, entry) = it
             val definition = fields[name] ?: throw IllegalStateException("Unknown input")
-            definition.parseEntry(entry)
+            definition.parseEntry(entry, permission)
         }
         return SimpleObjectFilter(this, entries)
     }

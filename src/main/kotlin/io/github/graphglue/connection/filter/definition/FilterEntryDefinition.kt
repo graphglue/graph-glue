@@ -1,6 +1,7 @@
 package io.github.graphglue.connection.filter.definition
 
 import graphql.schema.GraphQLInputObjectType
+import io.github.graphglue.authorization.Permission
 import io.github.graphglue.connection.filter.model.FilterEntry
 
 /**
@@ -18,5 +19,5 @@ abstract class FilterEntryDefinition(val name: String, val description: String) 
      * @param value the value to parse
      * @return the parsed filter entry
      */
-    abstract fun parseEntry(value: Any?): FilterEntry
+    abstract fun parseEntry(value: Any?, permission: Permission?): FilterEntry
 }

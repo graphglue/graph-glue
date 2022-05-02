@@ -1,6 +1,7 @@
 package io.github.graphglue.connection.filter.definition
 
 import graphql.schema.*
+import io.github.graphglue.authorization.Permission
 import io.github.graphglue.connection.filter.model.*
 import io.github.graphglue.graphql.extensions.getSimpleName
 import io.github.graphglue.model.Node
@@ -39,10 +40,11 @@ class FilterDefinition<T : Node>(private val entryType: KClass<T>) :
      * Parses the GraphQL input into a filter
      *
      * @param value the input
+     * @param permission the current read permission, used to only consider nodes in filters which match the permission
      * @return the parsed [Filter]
      */
-    fun parseFilter(value: Any?): Filter {
-        return Filter(parseNodeFilter(value))
+    fun parseFilter(value: Any?, permission: Permission?): Filter {
+        return Filter(parseNodeFilter(value, permission))
     }
 
     /**
@@ -52,24 +54,25 @@ class FilterDefinition<T : Node>(private val entryType: KClass<T>) :
      * - it is an and/or/not meta filter field
      *
      * @param value the node filter to parse
+     * @param permission the current read permission, used to only consider nodes in filters which match the permission
      * @return the parsed filter
      */
-    private fun parseNodeFilter(value: Any?): NodeFilter {
+    private fun parseNodeFilter(value: Any?, permission: Permission?): NodeFilter {
         value as Map<*, *>
         val entries = value.map { (name, entry) ->
             when (name) {
                 "and" -> {
                     entry as List<*>
-                    AndMetaFilter(entry.map(::parseNodeFilter))
+                    AndMetaFilter(entry.map { parseNodeFilter(it, permission) })
                 }
                 "or" -> {
                     entry as List<*>
-                    OrMetaFilter(entry.map(::parseNodeFilter))
+                    OrMetaFilter(entry.map { parseNodeFilter(it, permission) })
                 }
-                "not" -> NotMetaFilter(parseNodeFilter(entry))
+                "not" -> NotMetaFilter(parseNodeFilter(entry, permission))
                 else -> {
                     val definition = entries[name] ?: throw IllegalStateException("Unknown input")
-                    definition.parseEntry(entry)
+                    definition.parseEntry(entry, permission)
                 }
             }
         }

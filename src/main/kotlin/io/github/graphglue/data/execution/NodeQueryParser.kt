@@ -318,7 +318,7 @@ class NodeQueryParser(
         val filterDefinition = filterDefinitionCollection.getFilterDefinition<Node>(nodeDefinition.nodeType)
         val filters = ArrayList(additionalConditions)
         arguments["filter"]?.also {
-            filters.add(filterDefinition.parseFilter(it))
+            filters.add(filterDefinition.parseFilter(it, requiredPermission))
         }
         val orderBy = arguments["orderBy"]?.let { parseOrder(it) } ?: IdOrder
         val subNodeQueryOptions = NodeQueryOptions(

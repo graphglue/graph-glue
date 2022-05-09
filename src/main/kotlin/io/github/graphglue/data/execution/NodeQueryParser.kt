@@ -5,15 +5,16 @@ import graphql.schema.DataFetchingEnvironment
 import graphql.schema.DataFetchingFieldSelectionSet
 import graphql.schema.SelectedField
 import io.github.graphglue.authorization.Permission
-import io.github.graphglue.definition.*
 import io.github.graphglue.connection.filter.definition.FilterDefinition
 import io.github.graphglue.connection.filter.definition.FilterDefinitionCollection
 import io.github.graphglue.connection.order.IdOrder
 import io.github.graphglue.connection.order.parseOrder
+import io.github.graphglue.definition.*
 import io.github.graphglue.model.Node
 import org.neo4j.cypherdsl.core.Conditions
 import org.neo4j.cypherdsl.core.Cypher
 import org.neo4j.cypherdsl.core.Predicates
+import kotlin.reflect.full.isSubclassOf
 
 /**
  * the id of the default part
@@ -33,6 +34,15 @@ class NodeQueryParser(
     val filterDefinitionCollection: FilterDefinitionCollection,
     val objectMapper: ObjectMapper
 ) {
+
+    /**
+     * RelationshipGraphQLNames for [NodeDefinition]s, but including names only defined in
+     * subtypes
+     */
+    private val relationshipGraphQLNamesIncludingSubtypes = nodeDefinitionCollection.associateWith { definition ->
+        nodeDefinitionCollection.filter { it.nodeType.isSubclassOf(definition.nodeType) }
+            .flatMap { it.relationshipGraphQLNames }.toSet()
+    }
 
     /**
      * Generates a [NodeQuery] for a specific relationship
@@ -197,29 +207,46 @@ class NodeQueryParser(
         requiredPermission: Permission?
     ): NodeQuery {
         val subQueries = ArrayList<NodeSubQuery>()
+        val relationshipGraphQLNames = relationshipGraphQLNamesIncludingSubtypes[definition]!!
         val parts = fieldParts.mapValues { (_, fields) ->
             for (field in fields) {
-                if (field.fieldDefinitions.first().name in definition.relationshipGraphQLNames) {
-                    val onlyOnTypes = nodeDefinitionCollection.getNodeDefinitionsFromGraphQLNames(field.objectTypeNames)
-                    val firstPossibleType = onlyOnTypes.first()
-                    val relationshipDefinition = firstPossibleType.relationshipDefinitions[field.name]!!
-                    val authorizationCondition = getAuthorizationConditionWithRelationshipDefinition(
-                        requiredPermission,
-                        relationshipDefinition
-                    )
-                    val subQuery = generateSubQuery(
-                        relationshipDefinition,
-                        field,
-                        authorizationCondition,
-                        requiredPermission,
-                        onlyOnTypes
-                    )
-                    subQueries.add(subQuery)
+                if (field.fieldDefinitions.first().name in relationshipGraphQLNames) {
+                    generateSubQueryForField(field, requiredPermission)?.let { subQueries.add(it) }
                 }
             }
             NodeQueryPart(subQueries)
         }
         return NodeQuery(definition, nodeQueryOptions, parts)
+    }
+
+    /**
+     * Generates a [NodeSubQuery] for a [SelectedField] if possible.
+     * If the provided field is no relationship field, no [NodeSubQuery] is generated
+     *
+     * @param field the [SelectedField] to generate the [NodeSubQuery] for, may not be a relationship field
+     * @param requiredPermission authorization context for subqueries
+     * @return the subquery if generated
+     */
+    private fun generateSubQueryForField(
+        field: SelectedField,
+        requiredPermission: Permission?
+    ): NodeSubQuery? {
+        val onlyOnTypes = nodeDefinitionCollection.getNodeDefinitionsFromGraphQLNames(field.objectTypeNames)
+        val firstPossibleType = onlyOnTypes.first()
+        return firstPossibleType.relationshipDefinitions[field.name]?.let { relationshipDefinition ->
+            val authorizationCondition = getAuthorizationConditionWithRelationshipDefinition(
+                requiredPermission,
+                relationshipDefinition
+            )
+            val subQuery = generateSubQuery(
+                relationshipDefinition,
+                field,
+                authorizationCondition,
+                requiredPermission,
+                onlyOnTypes
+            )
+            subQuery
+        }
     }
 
     /**

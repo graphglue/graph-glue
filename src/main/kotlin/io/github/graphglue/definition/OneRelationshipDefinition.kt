@@ -6,9 +6,11 @@ import graphql.schema.GraphQLTypeReference
 import io.github.graphglue.graphql.schema.SchemaTransformationContext
 import io.github.graphglue.graphql.extensions.getSimpleName
 import io.github.graphglue.model.Direction
+import io.github.graphglue.model.GraphQLNullable
 import io.github.graphglue.model.Node
 import kotlin.reflect.KClass
 import kotlin.reflect.KProperty1
+import kotlin.reflect.full.hasAnnotation
 import kotlin.reflect.jvm.jvmErasure
 
 /**
@@ -32,7 +34,7 @@ class OneRelationshipDefinition(
     override fun generateFieldDefinition(transformationContext: SchemaTransformationContext): GraphQLFieldDefinition {
         val type = property.returnType
         val graphQLType = GraphQLTypeReference(type.jvmErasure.getSimpleName()).let {
-            if (type.isMarkedNullable) {
+            if (type.isMarkedNullable || property.hasAnnotation<GraphQLNullable>()) {
                 it
             } else {
                 GraphQLNonNull(it)

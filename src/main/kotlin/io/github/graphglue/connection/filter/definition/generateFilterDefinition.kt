@@ -29,6 +29,9 @@ fun generateFilterDefinition(
         val additionalFilters = additionalFilterAnnotations.map {
             subFilterGenerator.additionalFilterBeans[it.beanName]!!
         }
-        it.init(filterFields + additionalFilters)
+        val generatedFilters = subFilterGenerator.nodeFilterGenerators.flatMap { generator ->
+            generator.generateFilterEntries(nodeDefinition, subFilterGenerator)
+        }
+        it.init(filterFields + additionalFilters + generatedFilters)
     }
 }

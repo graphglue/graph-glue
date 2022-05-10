@@ -1,5 +1,6 @@
 package io.github.graphglue.connection.filter.definition
 
+import io.github.graphglue.connection.filter.NodeFilterGenerator
 import io.github.graphglue.definition.NodeDefinition
 import io.github.graphglue.connection.filter.TypeFilterDefinitionEntry
 import io.github.graphglue.definition.NodeDefinitionCollection
@@ -18,12 +19,14 @@ import kotlin.reflect.jvm.jvmErasure
  * @param filterDefinitionCache cache of already generated filters for [Node] types
  * @param nodeDefinitionCollection cache of already generated [NodeDefinition]s
  * @param additionalFilterBeans lookup for filters defined using the [AdditionalFilter] annotation
+ * @param nodeFilterGenerators generators for additional filter entries
  */
 class SubFilterGenerator(
     private val filters: List<TypeFilterDefinitionEntry>,
     val filterDefinitionCache: FilterDefinitionCache,
     val nodeDefinitionCollection: NodeDefinitionCollection,
-    val additionalFilterBeans: Map<String, FilterEntryDefinition>
+    val additionalFilterBeans: Map<String, FilterEntryDefinition>,
+    val nodeFilterGenerators: List<NodeFilterGenerator>
 ) {
 
     /**

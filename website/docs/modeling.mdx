@@ -137,28 +137,32 @@ For more information, see [Connecting nodes: @Relationship](https://docs.spring.
 ### Comparison
 
 <table>
-    <tr>
-        <th></th>
-        <th>GraphGlue</th>
-        <th>Spring Data Neo4j </th>
-    </tr>
-    <tr>
-        <th>GraphQL representation</th>
-        <th>One sides are represented by their appropriate type. Many sides are represented by connection types, supporting pagination, filtering and ordering</th>
-        <th>One sides are represented by their appropriate type. Many sides are represented as GraphQL list, without pagination, filtering or ordering support</th>
-    </tr>
-    <tr>
-        <th>Lazy loading</th>
-        <th>Only lazy loading is supported. Relations are automatically loaded when accessed. Note: when fetching data for GraphQL, the whole subtree is loaded at once using one Cypher query, preventing the n+1 problem.</th>
-        <th>
-            No lazy loading is supported, all relationships are eagerly loaded, which can result in large subgraphs being loaded. To prevent this, you may use 
-            <a href="https://docs.spring.io/spring-data/neo4j/docs/current/reference/html/#projections" rel="noopener noreferer">Projections</a>
-        </th>
-    </tr>
-    <tr>
-        <th>Matching of opposite sides</th>
-        <th colspan="2">Opposite sides are matched if the `label` is the same, but the `direction` the opposite.</th>
-    </tr>
+    <thead>
+        <tr>
+            <th></th>
+            <th>GraphGlue</th>
+            <th>Spring Data Neo4j </th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <th>GraphQL representation</th>
+            <th>One sides are represented by their appropriate type. Many sides are represented by connection types, supporting pagination, filtering and ordering</th>
+            <th>One sides are represented by their appropriate type. Many sides are represented as GraphQL list, without pagination, filtering or ordering support</th>
+        </tr>
+        <tr>
+            <th>Lazy loading</th>
+            <th>Only lazy loading is supported. Relations are automatically loaded when accessed. Note: when fetching data for GraphQL, the whole subtree is loaded at once using one Cypher query, preventing the n+1 problem.</th>
+            <th>
+                No lazy loading is supported, all relationships are eagerly loaded, which can result in large subgraphs being loaded. To prevent this, you may use 
+                <a href="https://docs.spring.io/spring-data/neo4j/docs/current/reference/html/#projections" rel="noopener noreferer">Projections</a>
+            </th>
+        </tr>
+        <tr>
+            <th>Matching of opposite sides</th>
+            <th colSpan="2">Opposite sides are matched if the `label` is the same, but the `direction` the opposite.</th>
+        </tr>
+    </tbody>
 </table>
 
 ## Inheritance
@@ -250,3 +254,9 @@ Therefore, use `@FilterProperty` on properties which may include non-visible nod
 With the `AdditionalFilter("beanName")` annotation, property independent filters can be defined.
 This can for instance be used to filter by Node type, or a complex condition.
 A Spring bean with the specified name and type `FilterEntryDefinition` has to be provided.
+
+#### Node filter generators
+
+Bean of type `NodeFilterGenerator` can be used to generate additional filter entries for any Node filters.
+In contrast to [Additional filters](#additional-filters), node filter generators allow for dynamically generating the entries
+based on the provided `NodeDefinition`, which allows e.g. implementing custom meta-filters (like xor).

@@ -13,18 +13,26 @@ import com.expediagroup.graphql.server.operations.Query
 import com.expediagroup.graphql.server.operations.Subscription
 import com.expediagroup.graphql.server.spring.GraphQLConfigurationProperties
 import com.fasterxml.jackson.databind.ObjectMapper
-import graphql.schema.*
+import graphql.schema.GraphQLSchema
+import graphql.schema.GraphQLType
+import io.github.graphglue.connection.filter.NodeFilterGenerator
 import io.github.graphglue.connection.filter.TypeFilterDefinitionEntry
+import io.github.graphglue.connection.filter.definition.FilterDefinition
+import io.github.graphglue.connection.filter.definition.FilterDefinitionCollection
+import io.github.graphglue.connection.filter.definition.FilterEntryDefinition
+import io.github.graphglue.connection.filter.definition.SubFilterGenerator
+import io.github.graphglue.connection.order.OrderDirection
 import io.github.graphglue.data.execution.NodeQueryParser
 import io.github.graphglue.definition.NodeDefinition
 import io.github.graphglue.definition.NodeDefinitionCollection
-import io.github.graphglue.connection.filter.definition.*
-import io.github.graphglue.connection.order.OrderDirection
 import io.github.graphglue.definition.generateNodeDefinition
 import io.github.graphglue.graphql.extensions.toTopLevelObjects
 import io.github.graphglue.graphql.query.GraphglueQuery
 import io.github.graphglue.graphql.schema.DefaultSchemaTransformer
-import io.github.graphglue.model.*
+import io.github.graphglue.model.BaseProperty
+import io.github.graphglue.model.Node
+import io.github.graphglue.model.NodeRelationship
+import io.github.graphglue.model.PageInfo
 import io.github.graphglue.util.CacheMap
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.BeanFactory
@@ -35,7 +43,10 @@ import org.springframework.data.neo4j.core.mapping.Neo4jMappingContext
 import java.util.*
 import kotlin.reflect.KClass
 import kotlin.reflect.KProperty
-import kotlin.reflect.full.*
+import kotlin.reflect.full.createType
+import kotlin.reflect.full.hasAnnotation
+import kotlin.reflect.full.isSubclassOf
+import kotlin.reflect.full.starProjectedType
 
 /**
  * Configures beans used in combination with graphql-kotlin and graphql-java
@@ -107,6 +118,7 @@ class GraphglueGraphQLConfiguration(private val neo4jMappingContext: Neo4jMappin
      * @param dataFetcherFactoryProvider provides property and function data fetchers
      * @param additionalFilterBeans filters defined by bean name instead of type, by bean name
      * @param nodeDefinitionCollection used to get [NodeDefinition]s
+     * @param nodeFilterGenerators used to create
      * @return both the generated [GraphQLSchema] and [NodeDefinitionCollection]
      */
     @Bean
@@ -120,7 +132,8 @@ class GraphglueGraphQLConfiguration(private val neo4jMappingContext: Neo4jMappin
         dataFetcherFactoryProvider: KotlinDataFetcherFactoryProvider,
         filters: List<TypeFilterDefinitionEntry>,
         additionalFilterBeans: Map<String, FilterEntryDefinition>,
-        nodeDefinitionCollection: NodeDefinitionCollection
+        nodeDefinitionCollection: NodeDefinitionCollection,
+        nodeFilterGenerators: List<NodeFilterGenerator>
     ): GraphglueSchema {
         val generator = SchemaGenerator(schemaConfig)
         val nodeDefinition = nodeDefinitionCollection.getNodeDefinition<Node>()
@@ -136,16 +149,12 @@ class GraphglueGraphQLConfiguration(private val neo4jMappingContext: Neo4jMappin
             )
         }
         val schemaTransformer = DefaultSchemaTransformer(
-            schema,
-            neo4jMappingContext,
-            nodeDefinitionCollection,
-            dataFetcherFactoryProvider,
-            SubFilterGenerator(filters, CacheMap(), nodeDefinitionCollection, additionalFilterBeans)
+            schema, neo4jMappingContext, nodeDefinitionCollection, dataFetcherFactoryProvider, SubFilterGenerator(
+                filters, CacheMap(), nodeDefinitionCollection, additionalFilterBeans, nodeFilterGenerators
+            )
         )
         logger.info("\n${schemaTransformer.schema.print()}")
-        return GraphglueSchema(
-            schemaTransformer.schema, schemaTransformer.filterDefinitionCollection
-        )
+        return GraphglueSchema(schemaTransformer.schema, schemaTransformer.filterDefinitionCollection)
     }
 
     /**

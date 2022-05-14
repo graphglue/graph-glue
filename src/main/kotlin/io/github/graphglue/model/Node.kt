@@ -65,19 +65,10 @@ abstract class Node {
         get() = ID(id!!)
 
     /**
-     * Workaround property to ensure that the [lazyLoadingContext] is injected
-     * Uses a converter to inject the context
-     * If the context is not present, the node was not loaded from the database, meaning the node is
-     * not persisted yet and therefore lazy loading is not supported
+     * Context necessary for lazy-loading
      */
-    @Property("_")
-    @ConvertWith(converterRef = "lazyLoadingContextConverter")
-    internal var lazyLoadingContextOptional: Optional<LazyLoadingContext> = Optional.empty()
-
-    /**
-     * Unwrapped [lazyLoadingContextOptional]
-     */
-    private val lazyLoadingContext: LazyLoadingContext? get() = lazyLoadingContextOptional.orElse(null)
+    @Transient
+    internal var lazyLoadingContext: LazyLoadingContext? = null
 
     /**
      * Lookup for all node properties

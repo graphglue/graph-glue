@@ -67,21 +67,6 @@ class GraphglueDataConfiguration {
         return LazyLoadingContext(neo4jClient, neo4jMappingContext, nodeQueryParser)
     }
 
-    /**
-     * Creates a [ReactiveNeo4jTransactionManager] to provide transaction functionality
-     *
-     * @param driver the driver for the Neo4j database
-     * @param databaseNameProvider provides the name of the database
-     */
-    @Bean
-    @ConditionalOnMissingBean
-    fun reactiveTransactionManager(
-        driver: Driver,
-        databaseNameProvider: ReactiveDatabaseSelectionProvider
-    ): ReactiveNeo4jTransactionManager {
-        return ReactiveNeo4jTransactionManager(driver, databaseNameProvider)
-    }
-
     /***
      * Bean to provide [Neo4jOperations] which support save over lazy loaded relations
      *

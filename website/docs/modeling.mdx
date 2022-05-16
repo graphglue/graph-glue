@@ -114,6 +114,14 @@ Kotlin `Transient` does not work and will result in strange errors, as Spring Da
 
 :::
 
+:::caution
+
+To actually get the content of a property, you have to call `get()` on the property.
+This is necessary, as lazy loading is done asynchronous, and properties cannot be marked currently with `suspend`.
+For `NodeProperty` backed properties, `set(value: T)` works accordingly.
+
+:::
+
 On save, all relationships are saved. Save cascades down added entities, but removed ones.
 Example: If the one side has initially the value `node1`, which then is replaced with `node2`, when saving, `node2` is saved (as it was "added"), while `node1` is not.
 
@@ -152,7 +160,11 @@ For more information, see [Connecting nodes: @Relationship](https://docs.spring.
         </tr>
         <tr>
             <th>Lazy loading</th>
-            <th>Only lazy loading is supported. Relations are automatically loaded when accessed. Note: when fetching data for GraphQL, the whole subtree is loaded at once using one Cypher query, preventing the n+1 problem.</th>
+            <th>
+                Only lazy loading is supported. Relations are automatically loaded when accessed. 
+                Note: when fetching data for GraphQL, the whole subtree is loaded at once using one Cypher query, preventing the n+1 problem.
+                Lazy loading is done asynchronous.
+            </th>
             <th>
                 No lazy loading is supported, all relationships are eagerly loaded, which can result in large subgraphs being loaded. To prevent this, you may use 
                 <a href="https://docs.spring.io/spring-data/neo4j/docs/current/reference/html/#projections" rel="noopener noreferer">Projections</a>

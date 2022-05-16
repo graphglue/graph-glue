@@ -3,6 +3,7 @@ package io.github.graphglue.definition
 import graphql.schema.GraphQLFieldDefinition
 import graphql.schema.GraphQLNonNull
 import graphql.schema.GraphQLTypeReference
+import io.github.graphglue.definition.extensions.firstTypeArgument
 import io.github.graphglue.graphql.schema.SchemaTransformationContext
 import io.github.graphglue.graphql.extensions.getSimpleName
 import io.github.graphglue.model.Direction
@@ -26,13 +27,13 @@ class OneRelationshipDefinition(
     property: KProperty1<*, *>, type: String, direction: Direction, parentKClass: KClass<out Node>
 ) : RelationshipDefinition(
     property,
-    @Suppress("UNCHECKED_CAST") (property.returnType.jvmErasure as KClass<out Node>),
+    @Suppress("UNCHECKED_CAST") (property.returnType.firstTypeArgument.jvmErasure as KClass<out Node>),
     type,
     direction,
     parentKClass
 ) {
     override fun generateFieldDefinition(transformationContext: SchemaTransformationContext): GraphQLFieldDefinition {
-        val type = property.returnType
+        val type = property.returnType.firstTypeArgument
         val graphQLType = GraphQLTypeReference(type.jvmErasure.getSimpleName()).let {
             if (type.isMarkedNullable || property.hasAnnotation<GraphQLNullable>()) {
                 it

@@ -2,6 +2,7 @@ package io.github.graphglue.definition
 
 import graphql.schema.GraphQLFieldDefinition
 import io.github.graphglue.connection.generateConnectionFieldDefinition
+import io.github.graphglue.definition.extensions.firstTypeArgument
 import io.github.graphglue.graphql.schema.SchemaTransformationContext
 import io.github.graphglue.model.Direction
 import io.github.graphglue.model.Node
@@ -19,20 +20,17 @@ import kotlin.reflect.jvm.jvmErasure
  *                        must be a subclass of the property defining class
  */
 class ManyRelationshipDefinition(
-    property: KProperty1<*, *>,
-    type: String,
-    direction: Direction,
-    parentKClass: KClass<out Node>
+    property: KProperty1<*, *>, type: String, direction: Direction, parentKClass: KClass<out Node>
 ) : RelationshipDefinition(
     property,
-    @Suppress("UNCHECKED_CAST") (property.returnType.arguments.first().type!!.jvmErasure as KClass<out Node>),
+    @Suppress("UNCHECKED_CAST") (property.returnType.firstTypeArgument.firstTypeArgument.jvmErasure as KClass<out Node>),
     type,
     direction,
     parentKClass
 ) {
     override fun generateFieldDefinition(transformationContext: SchemaTransformationContext): GraphQLFieldDefinition {
         @Suppress("UNCHECKED_CAST") val returnNodeType =
-            property.returnType.arguments[0].type!!.jvmErasure as KClass<out Node>
+            property.returnType.firstTypeArgument.firstTypeArgument.jvmErasure as KClass<out Node>
         return generateConnectionFieldDefinition(returnNodeType, graphQLName, graphQLDescription, transformationContext)
     }
 }

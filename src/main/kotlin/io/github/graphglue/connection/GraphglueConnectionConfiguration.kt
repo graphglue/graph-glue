@@ -6,12 +6,10 @@ import io.github.graphglue.connection.filter.definition.NodePropertyFilterDefini
 import io.github.graphglue.connection.filter.definition.NodeSetPropertyFilterDefinition
 import io.github.graphglue.connection.filter.definition.NodeSubFilterDefinition
 import io.github.graphglue.connection.filter.definition.scalars.*
-import io.github.graphglue.model.Node
-import io.github.graphglue.model.NodeProperty
-import io.github.graphglue.model.NodeSetProperty
+import io.github.graphglue.definition.extensions.firstTypeArgument
+import io.github.graphglue.model.*
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
-import kotlin.reflect.KTypeProjection
 import kotlin.reflect.full.createType
 
 /**
@@ -106,11 +104,13 @@ class GraphglueConnectionConfiguration {
      */
     @Bean
     fun nodeFilter() =
-        TypeFilterDefinitionEntry(Node::class.createType(nullable = true)) { name, property, parentNodeDefinition, subFilterGenerator ->
+        TypeFilterDefinitionEntry(NODE_PROPERTY_TYPE) { name, property, parentNodeDefinition, subFilterGenerator ->
+            println("here????")
+            println(property.returnType.firstTypeArgument)
             val nodeSubFilterDefinition = NodeSubFilterDefinition(
                 name,
                 "Filters for nodes where the related node match this filter",
-                property.returnType,
+                property.returnType.firstTypeArgument,
                 subFilterGenerator,
                 parentNodeDefinition.getRelationshipDefinitionOfProperty(property)
             )
@@ -125,10 +125,12 @@ class GraphglueConnectionConfiguration {
      */
     @Bean
     fun nodeSetFilter() =
-        TypeFilterDefinitionEntry(Set::class.createType(listOf(KTypeProjection.covariant(Node::class.createType())))) { name, property, parentNodeDefinition, subFilterGenerator ->
+        TypeFilterDefinitionEntry(NODE_SET_PROPERTY_TYPE) { name, property, parentNodeDefinition, subFilterGenerator ->
+            println(property.returnType.firstTypeArgument)
+            println(property.returnType.firstTypeArgument.firstTypeArgument)
             NodeSetPropertyFilterDefinition(
                 name,
-                property.returnType.arguments.first().type!!,
+                property.returnType.firstTypeArgument.firstTypeArgument,
                 subFilterGenerator,
                 parentNodeDefinition.getRelationshipDefinitionOfProperty(property)
             )

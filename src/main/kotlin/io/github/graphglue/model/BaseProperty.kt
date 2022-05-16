@@ -103,4 +103,11 @@ abstract class BaseProperty<T : Node?>(protected val parent: Node, protected val
      * Gets [Node]s which should be persisted when this [Node] is persisted
      */
     internal abstract fun getRelatedNodesToSave(): Collection<Node>
+
+    /**
+     * Marker for lazy loading delegates, necessary for property type based filter & order generation
+     *
+     * @param R the type of the property
+     */
+    interface LazyLoadingDelegate<R>
 }

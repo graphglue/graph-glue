@@ -1,13 +1,17 @@
 package io.github.graphglue.model
 
 import graphql.execution.DataFetcherResult
-import io.github.graphglue.data.execution.*
+import io.github.graphglue.data.execution.DEFAULT_PART_ID
+import io.github.graphglue.data.execution.NodeQuery
+import io.github.graphglue.data.execution.NodeQueryParser
+import io.github.graphglue.data.execution.NodeQueryResult
 import io.github.graphglue.data.repositories.RelationshipDiff
 import io.github.graphglue.definition.NodeDefinition
-import kotlinx.coroutines.runBlocking
 import org.neo4j.cypherdsl.core.Cypher
 import kotlin.reflect.KProperty
 import kotlin.reflect.KProperty1
+import kotlin.reflect.KTypeProjection
+import kotlin.reflect.full.createType
 
 /**
  * Property for the one side of a relation
@@ -17,8 +21,7 @@ import kotlin.reflect.KProperty1
  * @param property see [BaseProperty.property]
  */
 class NodeProperty<T : Node?>(
-    parent: Node,
-    property: KProperty1<*, *>
+    parent: Node, property: KProperty1<*, *>
 ) : BaseProperty<T>(parent, property) {
 
     /**
@@ -43,43 +46,17 @@ class NodeProperty<T : Node?>(
     private val supportsNull get() = property.returnType.isMarkedNullable
 
     /**
-     * Gets the value of the property
-     * loads if from the database if necessary
-     *
-     * @param thisRef the node which has this property
-     * @param property the represented property
-     * @return the current value
+     * Can be used to get / set the value of this property, returned in getter
      */
-    @Suppress("UNCHECKED_CAST")
-    operator fun getValue(thisRef: Node, property: KProperty<*>): T {
-        return runBlocking {
-            val value = getCurrentNode()
-            if (supportsNull) {
-                value as T
-            } else {
-                if (value == null) {
-                    throw IllegalStateException("The non-nullable property $property has a null value")
-                }
-                value
-            }
-        }
-    }
+    private val lazyLoadingDelegate = LazyLoadingDelegate<T>()
 
     /**
-     * Sets the current value
-     * Loads the one from the database first
+     * Gets a delegate which can be used to get / set this property
      *
      * @param thisRef the node which has this property
      * @param property the represented property
      */
-    operator fun setValue(thisRef: Node, property: KProperty<*>, value: T) {
-        runBlocking {
-            val current = getCurrentNode()
-            if (value != current) {
-                currentNode = value
-            }
-        }
-    }
+    operator fun getValue(thisRef: Node, property: KProperty<*>) = lazyLoadingDelegate
 
     override fun registerQueryResult(nodeQueryResult: NodeQueryResult<T>) {
         super.registerQueryResult(nodeQueryResult)
@@ -94,8 +71,7 @@ class NodeProperty<T : Node?>(
     }
 
     override fun getRelationshipDiff(
-        nodeIdLookup: Map<Node, String>,
-        nodeDefinition: NodeDefinition
+        nodeIdLookup: Map<Node, String>, nodeDefinition: NodeDefinition
     ): RelationshipDiff {
         val current = currentNode
         val nodesToRemove = if (current != persistedNode) {
@@ -123,29 +99,19 @@ class NodeProperty<T : Node?>(
     }
 
     override fun constructGraphQLResult(
-        result: NodeQueryResult<T>,
-        localContext: NodeQuery?,
-        nodeQueryParser: NodeQueryParser
+        result: NodeQueryResult<T>, localContext: NodeQuery?, nodeQueryParser: NodeQueryParser
     ): DataFetcherResult<*> {
-        return DataFetcherResult.newResult<T>()
-            .data(result.nodes.firstOrNull())
-            .localContext(localContext?.parts?.get(DEFAULT_PART_ID))
-            .build()
+        return DataFetcherResult.newResult<T>().data(result.nodes.firstOrNull())
+            .localContext(localContext?.parts?.get(DEFAULT_PART_ID)).build()
     }
 
     /**
-     * Gets the current node
-     * If not loaded, loads it from the database
-     *
-     * @return the current node
+     * Ensures that this property is loaded
      */
-    private suspend fun getCurrentNode(): T? {
-        return if (!isLoaded) {
+    private suspend fun ensureLoaded() {
+        if (!isLoaded) {
             val (result, _) = parent.loadNodesOfRelationship<T>(property)
             currentNode = result.nodes.firstOrNull()
-            currentNode
-        } else {
-            currentNode
         }
     }
 
@@ -177,4 +143,50 @@ class NodeProperty<T : Node?>(
             }
         }
     }
+
+    /**
+     * Delegates which provides a getter and setter which ensure that the property is loaded
+     *
+     * @param R explicit type necessary for reflection
+     */
+    inner class LazyLoadingDelegate<R : T> : BaseProperty.LazyLoadingDelegate<R> {
+
+        /**
+         * Gets the value of the property
+         * loads it from the database if necessary
+         *
+         * @return the current value
+         */
+        @Suppress("UNCHECKED_CAST")
+        suspend fun get(): R {
+            ensureLoaded()
+            if (!supportsNull && currentNode == null) {
+                throw IllegalStateException("The non-nullable property $property has a null value")
+            }
+            return currentNode as R
+        }
+
+        /**
+         * Sets the current value
+         * Loads the one from the database first
+         *
+         * @param value the new value of the property
+         */
+        suspend fun set(value: T) {
+            ensureLoaded()
+            if (value != currentNode) {
+                currentNode = value
+            }
+        }
+
+    }
 }
+
+/**
+ * Type which can be used to check the return type of node properties
+ */
+val NODE_PROPERTY_TYPE = BaseProperty.LazyLoadingDelegate::class.createType(
+    listOf(
+        KTypeProjection.covariant(Node::class.createType())
+    )
+)

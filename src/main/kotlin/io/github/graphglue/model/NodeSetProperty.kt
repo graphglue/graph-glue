@@ -6,11 +6,12 @@ import io.github.graphglue.data.execution.NodeQueryParser
 import io.github.graphglue.data.execution.NodeQueryResult
 import io.github.graphglue.data.repositories.RelationshipDiff
 import io.github.graphglue.definition.NodeDefinition
-import kotlinx.coroutines.runBlocking
 import org.neo4j.cypherdsl.core.Cypher
 import java.util.*
 import kotlin.reflect.KProperty
 import kotlin.reflect.KProperty1
+import kotlin.reflect.KTypeProjection
+import kotlin.reflect.full.createType
 
 /**
  * Property for the many side of a relation
@@ -20,13 +21,17 @@ import kotlin.reflect.KProperty1
  * @param property see [BaseProperty.property]
  */
 class NodeSetProperty<T : Node>(
-    parent: Node,
-    property: KProperty1<*, *>
+    parent: Node, property: KProperty1<*, *>
 ) : BaseProperty<T>(parent, property) {
     /**
      * The [Set] stub returned to the user
      */
-    private var nodeSet: NodeSet = NodeSet()
+    private val nodeSet = NodeSet()
+
+    /**
+     * Can be used to get the loaded [nodeSet], returned in getter
+     */
+    private val lazyLoadingDelegate = LazyLoadingDelegate<MutableSet<T>>()
 
     /**
      * Newly added nodes, relations must be added to the database
@@ -49,13 +54,13 @@ class NodeSetProperty<T : Node>(
     private val isLoaded get() = currentNodes != null
 
     /**
-     * Gets the value of the property
+     * Gets the property itself
      *
      * @param thisRef the node which has this property
      * @param property the represented property
-     * @return the stub which handles set functionality
+     * @return a delegate which can be used to get the value of the property
      */
-    operator fun getValue(thisRef: Node, property: KProperty<*>): NodeSet = nodeSet
+    operator fun getValue(thisRef: Node, property: KProperty<*>) = lazyLoadingDelegate
 
     override fun registerQueryResult(nodeQueryResult: NodeQueryResult<T>) {
         super.registerQueryResult(nodeQueryResult)
@@ -65,31 +70,22 @@ class NodeSetProperty<T : Node>(
     }
 
     override fun constructGraphQLResult(
-        result: NodeQueryResult<T>,
-        localContext: NodeQuery?,
-        nodeQueryParser: NodeQueryParser
+        result: NodeQueryResult<T>, localContext: NodeQuery?, nodeQueryParser: NodeQueryParser
     ): DataFetcherResult<*> {
         val connection = Connection.fromQueryResult(result, nodeQueryParser.objectMapper)
-        return DataFetcherResult.newResult<Connection<T>>()
-            .data(connection)
-            .localContext(localContext)
-            .build()
+        return DataFetcherResult.newResult<Connection<T>>().data(connection).localContext(localContext).build()
     }
 
     override fun getRelationshipDiff(
-        nodeIdLookup: Map<Node, String>,
-        nodeDefinition: NodeDefinition
+        nodeIdLookup: Map<Node, String>, nodeDefinition: NodeDefinition
     ): RelationshipDiff {
-        return RelationshipDiff(
-            addedNodes.map {
-                val idParameter = Cypher.anonParameter(nodeIdLookup[it])
-                nodeDefinition.node().withProperties(mapOf("id" to idParameter))
-            },
-            removedNodes.filter { it.rawId != null }.map {
-                val idParameter = Cypher.anonParameter(it.rawId!!)
-                nodeDefinition.node().withProperties(mapOf("id" to idParameter))
-            }
-        )
+        return RelationshipDiff(addedNodes.map {
+            val idParameter = Cypher.anonParameter(nodeIdLookup[it])
+            nodeDefinition.node().withProperties(mapOf("id" to idParameter))
+        }, removedNodes.filter { it.rawId != null }.map {
+            val idParameter = Cypher.anonParameter(it.rawId!!)
+            nodeDefinition.node().withProperties(mapOf("id" to idParameter))
+        })
     }
 
     override fun getRelatedNodesToSave(): Collection<Node> {
@@ -97,15 +93,32 @@ class NodeSetProperty<T : Node>(
     }
 
     /**
-     * Gets the current set of nodes
-     * Lazy loads if from the database if necessary
+     * Ensures that this [NodeSet] is loaded
      */
-    private suspend fun getCurrentNodes(): MutableSet<T> {
+    private suspend fun ensureLoaded() {
         if (!isLoaded) {
             val (result, _) = parent.loadNodesOfRelationship<T>(property)
             currentNodes = result.nodes.toMutableSet()
         }
-        return currentNodes!!
+    }
+
+    /**
+     * Delegates which ensures that the [nodeSet] is loaded
+     *
+     * @param R explicit type necessary for reflection
+     */
+    inner class LazyLoadingDelegate<R : MutableSet<T>> : BaseProperty.LazyLoadingDelegate<R> {
+
+        /**
+         * Gets the loaded value of this property
+         *
+         * @return the loaded [NodeSet]
+         */
+        suspend fun get(): MutableSet<T> {
+            ensureLoaded()
+            return nodeSet
+        }
+
     }
 
     /**
@@ -115,38 +128,42 @@ class NodeSetProperty<T : Node>(
      */
     inner class NodeSet : AbstractSet<T>(), MutableSet<T> {
 
-        override val size get() = runBlocking { getCurrentNodes().size }
+        override val size: Int
+            get() {
+                assert(isLoaded)
+                return currentNodes!!.size
+            }
 
-        override fun contains(element: T) = runBlocking { getCurrentNodes().contains(element) }
+        override fun contains(element: T): Boolean {
+            assert(isLoaded)
+            return currentNodes!!.contains(element)
+        }
 
         override fun add(element: T): Boolean {
-            return runBlocking {
-                val currentNodes = getCurrentNodes()
-                val result = currentNodes.add(element)
-                if (result) {
-                    if (!removedNodes.remove(element)) {
-                        addedNodes.add(element)
-                    }
+            assert(isLoaded)
+            val result = currentNodes!!.add(element)
+            if (result) {
+                if (!removedNodes.remove(element)) {
+                    addedNodes.add(element)
                 }
-                result
             }
+            return result
         }
 
         override fun remove(element: T): Boolean {
-            return runBlocking {
-                val currentNodes = getCurrentNodes()
-                val result = currentNodes.remove(element)
-                if (result) {
-                    if (!addedNodes.remove(element)) {
-                        removedNodes.add(element)
-                    }
+            assert(isLoaded)
+            val result = currentNodes!!.remove(element)
+            if (result) {
+                if (!addedNodes.remove(element)) {
+                    removedNodes.add(element)
                 }
-                result
             }
+            return result
         }
 
         override fun iterator(): MutableIterator<T> {
-            return runBlocking { NodeSetIterator(getCurrentNodes().iterator()) }
+            assert(isLoaded)
+            return NodeSetIterator(currentNodes!!.iterator())
         }
 
         /**
@@ -178,3 +195,12 @@ class NodeSetProperty<T : Node>(
 
     }
 }
+
+/**
+ * Type which can be used to check the return type of node set properties
+ */
+val NODE_SET_PROPERTY_TYPE = BaseProperty.LazyLoadingDelegate::class.createType(
+    listOf(
+        KTypeProjection.covariant(Set::class.createType(listOf(KTypeProjection.covariant(Node::class.createType()))))
+    )
+)

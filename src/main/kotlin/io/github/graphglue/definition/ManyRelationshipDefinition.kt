@@ -23,14 +23,14 @@ class ManyRelationshipDefinition(
     property: KProperty1<*, *>, type: String, direction: Direction, parentKClass: KClass<out Node>
 ) : RelationshipDefinition(
     property,
-    @Suppress("UNCHECKED_CAST") (property.returnType.firstTypeArgument.firstTypeArgument.jvmErasure as KClass<out Node>),
+    @Suppress("UNCHECKED_CAST") (property.returnType.firstTypeArgument.jvmErasure as KClass<out Node>),
     type,
     direction,
     parentKClass
 ) {
     override fun generateFieldDefinition(transformationContext: SchemaTransformationContext): GraphQLFieldDefinition {
         @Suppress("UNCHECKED_CAST") val returnNodeType =
-            property.returnType.firstTypeArgument.firstTypeArgument.jvmErasure as KClass<out Node>
+            property.returnType.firstTypeArgument.jvmErasure as KClass<out Node>
         return generateConnectionFieldDefinition(returnNodeType, graphQLName, graphQLDescription, transformationContext)
     }
 }

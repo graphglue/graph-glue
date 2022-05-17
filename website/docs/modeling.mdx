@@ -116,10 +116,9 @@ Kotlin `Transient` does not work and will result in strange errors, as Spring Da
 
 :::caution
 
-To actually get the content of a property, you have to call `get()` on the property.
+To actually get the content of a property, you have to use the call operator on the property (e.g. `node.manyProperty().add(addedNode)`).
 This is necessary, as lazy loading is done asynchronous, and properties cannot be marked currently with `suspend`.
-For `NodeProperty` backed properties, `set(value: T)` works accordingly.
-
+Therefore, on invoking, the property is - if necessary - loaded from the database.
 :::
 
 On save, all relationships are saved. Save cascades down added entities, but removed ones.

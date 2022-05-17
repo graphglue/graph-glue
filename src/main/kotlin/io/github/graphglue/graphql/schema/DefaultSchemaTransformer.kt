@@ -14,9 +14,9 @@ import io.github.graphglue.definition.RelationshipDefinition
 import io.github.graphglue.graphql.extensions.getSimpleName
 import io.github.graphglue.graphql.extensions.springFindAnnotation
 import io.github.graphglue.graphql.query.TopLevelQueryProvider
-import io.github.graphglue.model.BaseProperty
 import io.github.graphglue.model.DomainNode
 import io.github.graphglue.model.Node
+import io.github.graphglue.model.property.BasePropertyDelegate
 import io.github.graphglue.util.CacheMap
 import org.springframework.data.neo4j.core.mapping.Neo4jMappingContext
 import kotlin.reflect.full.allSuperclasses
@@ -176,7 +176,7 @@ class DefaultSchemaTransformer(
     ) {
         val kProperty = relationshipDefinition.property
         val functionDataFetcherFactory =
-            dataFetcherFactoryProvider.functionDataFetcherFactory(null, BaseProperty<*>::getFromGraphQL)
+            dataFetcherFactoryProvider.functionDataFetcherFactory(null, BasePropertyDelegate<*, *>::getFromGraphQL)
         val dataFetcherFactory = DataFetcherFactory { dataFetcherFactoryEnvironment ->
             val functionDataFetcher = functionDataFetcherFactory.get(dataFetcherFactoryEnvironment)
             DataFetcher {

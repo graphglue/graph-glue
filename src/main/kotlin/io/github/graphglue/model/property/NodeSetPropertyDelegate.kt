@@ -1,14 +1,15 @@
-package io.github.graphglue.model
+package io.github.graphglue.model.property
 
 import graphql.execution.DataFetcherResult
+import io.github.graphglue.connection.model.Connection
 import io.github.graphglue.data.execution.NodeQuery
 import io.github.graphglue.data.execution.NodeQueryParser
 import io.github.graphglue.data.execution.NodeQueryResult
 import io.github.graphglue.data.repositories.RelationshipDiff
 import io.github.graphglue.definition.NodeDefinition
+import io.github.graphglue.model.Node
 import org.neo4j.cypherdsl.core.Cypher
 import java.util.*
-import kotlin.reflect.KProperty
 import kotlin.reflect.KProperty1
 import kotlin.reflect.KTypeProjection
 import kotlin.reflect.full.createType
@@ -17,21 +18,17 @@ import kotlin.reflect.full.createType
  * Property for the many side of a relation
  * Is mapped to a [Connection] in GraphQL
  *
- * @param parent see [BaseProperty.parent]
- * @param property see [BaseProperty.property]
+ * @param parent see [BasePropertyDelegate.parent]
+ * @param property see [BasePropertyDelegate.property]
  */
-class NodeSetProperty<T : Node>(
+class NodeSetPropertyDelegate<T : Node>(
     parent: Node, property: KProperty1<*, *>
-) : BaseProperty<T>(parent, property) {
-    /**
-     * The [Set] stub returned to the user
-     */
-    private val nodeSet = NodeSet()
+) : BasePropertyDelegate<T, NodeSetPropertyDelegate<T>.NodeSetProperty>(parent, property) {
 
     /**
-     * Can be used to get the loaded [nodeSet], returned in getter
+     * The [NodeSetProperty] returned to the user
      */
-    private val lazyLoadingDelegate = LazyLoadingDelegate<MutableSet<T>>()
+    private val nodeSetProperty = NodeSetProperty()
 
     /**
      * Newly added nodes, relations must be added to the database
@@ -52,15 +49,6 @@ class NodeSetProperty<T : Node>(
      * `true` iff the current values are loaded from the database or set via constructor
      */
     private val isLoaded get() = currentNodes != null
-
-    /**
-     * Gets the property itself
-     *
-     * @param thisRef the node which has this property
-     * @param property the represented property
-     * @return a delegate which can be used to get the value of the property
-     */
-    operator fun getValue(thisRef: Node, property: KProperty<*>) = lazyLoadingDelegate
 
     override fun registerQueryResult(nodeQueryResult: NodeQueryResult<T>) {
         super.registerQueryResult(nodeQueryResult)
@@ -93,7 +81,7 @@ class NodeSetProperty<T : Node>(
     }
 
     /**
-     * Ensures that this [NodeSet] is loaded
+     * Ensures that this [NodeSetProperty] is loaded
      */
     private suspend fun ensureLoaded() {
         if (!isLoaded) {
@@ -102,31 +90,17 @@ class NodeSetProperty<T : Node>(
         }
     }
 
-    /**
-     * Delegates which ensures that the [nodeSet] is loaded
-     *
-     * @param R explicit type necessary for reflection
-     */
-    inner class LazyLoadingDelegate<R : MutableSet<T>> : BaseProperty.LazyLoadingDelegate<R> {
-
-        /**
-         * Gets the loaded value of this property
-         *
-         * @return the loaded [NodeSet]
-         */
-        suspend fun get(): MutableSet<T> {
-            ensureLoaded()
-            return nodeSet
-        }
-
+    override suspend fun getLoadedProperty(): NodeSetProperty {
+        ensureLoaded()
+        return nodeSetProperty
     }
 
     /**
-     * Stub which handles set functionality
-     * Lazy loads both on read, but also on any write (add, remove)
-     * The iterator supports remove
+     * Node property representing the many side of a node relation.
+     * Provides set functionality.
+     * The iterator supports remove.
      */
-    inner class NodeSet : AbstractSet<T>(), MutableSet<T> {
+    inner class NodeSetProperty : AbstractSet<T>(), MutableSet<T> {
 
         override val size: Int
             get() {
@@ -199,8 +173,16 @@ class NodeSetProperty<T : Node>(
 /**
  * Type which can be used to check the return type of node set properties
  */
-val NODE_SET_PROPERTY_TYPE = BaseProperty.LazyLoadingDelegate::class.createType(
+val NODE_SET_PROPERTY_TYPE = LazyLoadingDelegate::class.createType(
     listOf(
-        KTypeProjection.covariant(Set::class.createType(listOf(KTypeProjection.covariant(Node::class.createType()))))
+        KTypeProjection.covariant(Node::class.createType()), KTypeProjection.covariant(
+            NodeSetPropertyDelegate.NodeSetProperty::class.createType(
+                listOf(
+                    KTypeProjection.covariant(
+                        Node::class.createType()
+                    )
+                )
+            )
+        )
     )
 )

@@ -2,6 +2,9 @@ package io.github.graphglue.definition
 
 import io.github.graphglue.definition.extensions.firstTypeArgument
 import io.github.graphglue.model.*
+import io.github.graphglue.model.property.NODE_PROPERTY_TYPE
+import io.github.graphglue.model.property.NODE_SET_PROPERTY_TYPE
+import io.github.graphglue.model.property.NodePropertyDelegate
 import org.springframework.data.neo4j.core.mapping.Neo4jMappingContext
 import org.springframework.data.neo4j.core.mapping.Neo4jPersistentEntity
 import kotlin.reflect.KClass
@@ -40,7 +43,7 @@ private fun generateOneRelationshipDefinitions(nodeClass: KClass<out Node>): Lis
 
     return properties.map {
         val field = it.javaField
-        if (field == null || !field.type.kotlin.isSubclassOf(NodeProperty::class)) {
+        if (field == null || !field.type.kotlin.isSubclassOf(NodePropertyDelegate::class)) {
             throw NodeSchemaException("Property of type Node is not backed by a NodeProperty: $it")
         }
         val annotation = it.findAnnotation<NodeRelationship>()
@@ -57,7 +60,7 @@ private fun generateOneRelationshipDefinitions(nodeClass: KClass<out Node>): Lis
  */
 private fun generateManyRelationshipDefinitions(nodeClass: KClass<out Node>): List<ManyRelationshipDefinition> {
     val properties = nodeClass.memberProperties.filter { it.returnType.isSubtypeOf(NODE_SET_PROPERTY_TYPE) }.filter {
-        it.returnType.firstTypeArgument.firstTypeArgument.classifier !is KTypeParameter
+        it.returnType.firstTypeArgument.classifier !is KTypeParameter
     }
     return properties.map {
         val annotation = it.findAnnotation<NodeRelationship>()

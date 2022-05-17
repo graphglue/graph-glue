@@ -29,10 +29,9 @@ import io.github.graphglue.definition.generateNodeDefinition
 import io.github.graphglue.graphql.extensions.toTopLevelObjects
 import io.github.graphglue.graphql.query.GraphglueQuery
 import io.github.graphglue.graphql.schema.DefaultSchemaTransformer
-import io.github.graphglue.model.BaseProperty
 import io.github.graphglue.model.Node
 import io.github.graphglue.model.NodeRelationship
-import io.github.graphglue.model.PageInfo
+import io.github.graphglue.connection.model.PageInfo
 import io.github.graphglue.util.CacheMap
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.BeanFactory
@@ -193,7 +192,7 @@ class GraphglueGraphQLConfiguration(private val neo4jMappingContext: Neo4jMappin
         schema.filterDefinitionCollection
 
     /**
-     * [SchemaGeneratorHooks] which handles rewiring of [BaseProperty] backed files,
+     * [SchemaGeneratorHooks] which handles rewiring of [BasePropertyDelegate] backed files,
      * collects all [Node] types and generates [NodeDefinition]s for it, and collects queries
      * for [Node] types
      *

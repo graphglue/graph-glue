@@ -1,4 +1,4 @@
-package io.github.graphglue.model
+package io.github.graphglue.model.property
 
 import graphql.execution.DataFetcherResult
 import io.github.graphglue.data.execution.DEFAULT_PART_ID
@@ -7,8 +7,9 @@ import io.github.graphglue.data.execution.NodeQueryParser
 import io.github.graphglue.data.execution.NodeQueryResult
 import io.github.graphglue.data.repositories.RelationshipDiff
 import io.github.graphglue.definition.NodeDefinition
+import io.github.graphglue.model.Node
+import io.github.graphglue.model.property.NodeSetPropertyDelegate.NodeSetProperty
 import org.neo4j.cypherdsl.core.Cypher
-import kotlin.reflect.KProperty
 import kotlin.reflect.KProperty1
 import kotlin.reflect.KTypeProjection
 import kotlin.reflect.full.createType
@@ -17,12 +18,17 @@ import kotlin.reflect.full.createType
  * Property for the one side of a relation
  * Depending on the type of `property` may be an optional property
  *
- * @param parent see [BaseProperty.parent]
- * @param property see [BaseProperty.property]
+ * @param parent see [BasePropertyDelegate.parent]
+ * @param property see [BasePropertyDelegate.property]
  */
-class NodeProperty<T : Node?>(
+class NodePropertyDelegate<T : Node?>(
     parent: Node, property: KProperty1<*, *>
-) : BaseProperty<T>(parent, property) {
+) : BasePropertyDelegate<T, NodePropertyDelegate<T>.NodeProperty>(parent, property) {
+
+    /**
+     * The [NodeSetProperty] returned to the user
+     */
+    private val nodeProperty = NodeProperty()
 
     /**
      * If `true`, the value of this property is already loaded (either from the database or from another value)
@@ -44,19 +50,6 @@ class NodeProperty<T : Node?>(
      * True if the [T] is marked nullable
      */
     private val supportsNull get() = property.returnType.isMarkedNullable
-
-    /**
-     * Can be used to get / set the value of this property, returned in getter
-     */
-    private val lazyLoadingDelegate = LazyLoadingDelegate<T>()
-
-    /**
-     * Gets a delegate which can be used to get / set this property
-     *
-     * @param thisRef the node which has this property
-     * @param property the represented property
-     */
-    operator fun getValue(thisRef: Node, property: KProperty<*>) = lazyLoadingDelegate
 
     override fun registerQueryResult(nodeQueryResult: NodeQueryResult<T>) {
         super.registerQueryResult(nodeQueryResult)
@@ -144,49 +137,51 @@ class NodeProperty<T : Node?>(
         }
     }
 
+    override suspend fun getLoadedProperty(): NodeProperty {
+        ensureLoaded()
+        return nodeProperty
+    }
+
     /**
-     * Delegates which provides a getter and setter which ensure that the property is loaded
-     *
-     * @param R explicit type necessary for reflection
+     * Node property representing the one side of a [Node] relation
+     * [value] can be used to get/set the node
      */
-    inner class LazyLoadingDelegate<R : T> : BaseProperty.LazyLoadingDelegate<R> {
+    inner class NodeProperty {
 
         /**
-         * Gets the value of the property
-         * loads it from the database if necessary
-         *
-         * @return the current value
+         * The current value of the property
          */
         @Suppress("UNCHECKED_CAST")
-        suspend fun get(): R {
-            ensureLoaded()
-            if (!supportsNull && currentNode == null) {
-                throw IllegalStateException("The non-nullable property $property has a null value")
+        var value: T
+            get() {
+                assert(isLoaded)
+                if (!supportsNull && currentNode == null) {
+                    throw IllegalStateException("The non-nullable property $property has a null value")
+                }
+                return currentNode as T
             }
-            return currentNode as R
-        }
-
-        /**
-         * Sets the current value
-         * Loads the one from the database first
-         *
-         * @param value the new value of the property
-         */
-        suspend fun set(value: T) {
-            ensureLoaded()
-            if (value != currentNode) {
-                currentNode = value
+            set(value) {
+                assert(isLoaded)
+                if (value != currentNode) {
+                    currentNode = value
+                }
             }
-        }
-
     }
 }
 
 /**
  * Type which can be used to check the return type of node properties
  */
-val NODE_PROPERTY_TYPE = BaseProperty.LazyLoadingDelegate::class.createType(
+val NODE_PROPERTY_TYPE = LazyLoadingDelegate::class.createType(
     listOf(
-        KTypeProjection.covariant(Node::class.createType())
+        KTypeProjection.covariant(Node::class.createType()), KTypeProjection.covariant(
+            NodePropertyDelegate.NodeProperty::class.createType(
+                listOf(
+                    KTypeProjection.covariant(
+                        Node::class.createType()
+                    )
+                )
+            )
+        )
     )
 )

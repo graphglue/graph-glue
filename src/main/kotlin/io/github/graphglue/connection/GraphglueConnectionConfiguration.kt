@@ -6,19 +6,21 @@ import io.github.graphglue.connection.filter.definition.NodePropertyFilterDefini
 import io.github.graphglue.connection.filter.definition.NodeSetPropertyFilterDefinition
 import io.github.graphglue.connection.filter.definition.NodeSubFilterDefinition
 import io.github.graphglue.connection.filter.definition.scalars.*
-import io.github.graphglue.model.Node
-import io.github.graphglue.model.NodeProperty
-import io.github.graphglue.model.NodeSetProperty
+import io.github.graphglue.definition.extensions.firstTypeArgument
+import io.github.graphglue.model.*
+import io.github.graphglue.model.property.NodePropertyDelegate
+import io.github.graphglue.model.property.NodeSetPropertyDelegate
+import io.github.graphglue.model.property.NODE_PROPERTY_TYPE
+import io.github.graphglue.model.property.NODE_SET_PROPERTY_TYPE
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
-import kotlin.reflect.KTypeProjection
 import kotlin.reflect.full.createType
 
 /**
  * Configuration for the connections
  * Specifies filter factories and filter definitions used in [Node] classes.
  * Defines filter factories for [String], [Int], [Float] and [ID] scalar properties (including nullable)
- * and for properties backed by [NodeProperty] and [NodeSetProperty]
+ * and for properties backed by [NodePropertyDelegate] and [NodeSetPropertyDelegate]
  */
 @Configuration
 class GraphglueConnectionConfiguration {
@@ -100,17 +102,19 @@ class GraphglueConnectionConfiguration {
 
     /**
      * Filter factory for [Node] properties
-     * These properties should always be backed by a [NodeProperty]
+     * These properties should always be backed by a [NodePropertyDelegate]
      *
      * @return the generated filter factory
      */
     @Bean
     fun nodeFilter() =
-        TypeFilterDefinitionEntry(Node::class.createType(nullable = true)) { name, property, parentNodeDefinition, subFilterGenerator ->
+        TypeFilterDefinitionEntry(NODE_PROPERTY_TYPE) { name, property, parentNodeDefinition, subFilterGenerator ->
+            println("here????")
+            println(property.returnType.firstTypeArgument)
             val nodeSubFilterDefinition = NodeSubFilterDefinition(
                 name,
                 "Filters for nodes where the related node match this filter",
-                property.returnType,
+                property.returnType.firstTypeArgument,
                 subFilterGenerator,
                 parentNodeDefinition.getRelationshipDefinitionOfProperty(property)
             )
@@ -119,16 +123,18 @@ class GraphglueConnectionConfiguration {
 
     /**
      * Filter factory for `Set<Node>` properties
-     * These properties should always be backed by a [NodeSetProperty]
+     * These properties should always be backed by a [NodeSetPropertyDelegate]
      *
      * @return the generated filter factory
      */
     @Bean
     fun nodeSetFilter() =
-        TypeFilterDefinitionEntry(Set::class.createType(listOf(KTypeProjection.covariant(Node::class.createType())))) { name, property, parentNodeDefinition, subFilterGenerator ->
+        TypeFilterDefinitionEntry(NODE_SET_PROPERTY_TYPE) { name, property, parentNodeDefinition, subFilterGenerator ->
+            println(property.returnType.firstTypeArgument)
+            println(property.returnType.firstTypeArgument)
             NodeSetPropertyFilterDefinition(
                 name,
-                property.returnType.arguments.first().type!!,
+                property.returnType.firstTypeArgument,
                 subFilterGenerator,
                 parentNodeDefinition.getRelationshipDefinitionOfProperty(property)
             )

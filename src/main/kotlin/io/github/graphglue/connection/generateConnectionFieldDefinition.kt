@@ -8,8 +8,8 @@ import io.github.graphglue.connection.order.OrderField
 import io.github.graphglue.connection.order.generateOrders
 import io.github.graphglue.graphql.schema.SchemaTransformationContext
 import io.github.graphglue.graphql.extensions.getSimpleName
-import io.github.graphglue.model.Connection
-import io.github.graphglue.model.Edge
+import io.github.graphglue.connection.model.Connection
+import io.github.graphglue.connection.model.Edge
 import io.github.graphglue.model.Node
 import kotlin.reflect.KClass
 

@@ -9,8 +9,8 @@ import io.github.graphglue.graphql.schema.SchemaTransformationContext
 import io.github.graphglue.graphql.extensions.getPropertyName
 import io.github.graphglue.model.Direction
 import io.github.graphglue.model.Node
-import io.github.graphglue.model.NodeProperty
 import io.github.graphglue.model.NodeRelationship
+import io.github.graphglue.model.property.NodePropertyDelegate
 import org.neo4j.cypherdsl.core.ExposesPatternLengthAccessors
 import org.neo4j.cypherdsl.core.ExposesRelationships
 import org.neo4j.cypherdsl.core.RelationshipPattern
@@ -74,7 +74,7 @@ abstract class RelationshipDefinition(
             if (annotation?.type == type && annotation.direction != direction) {
                 if (remoteProperty.returnType.isSubtypeOf(Node::class.createType())) {
                     return { remoteNode, value ->
-                        val nodeProperty = remoteNode.getProperty<Node?>(remoteProperty) as NodeProperty<Node?>
+                        val nodeProperty = remoteNode.getProperty<Node?>(remoteProperty) as NodePropertyDelegate<Node?>
                         nodeProperty.setFromRemote(value)
                     }
                 }

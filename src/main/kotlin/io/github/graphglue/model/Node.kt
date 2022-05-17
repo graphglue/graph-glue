@@ -11,6 +11,9 @@ import io.github.graphglue.data.execution.NodeQueryExecutor
 import io.github.graphglue.data.execution.NodeQueryOptions
 import io.github.graphglue.data.execution.NodeQueryResult
 import io.github.graphglue.graphql.extensions.requiredPermission
+import io.github.graphglue.model.property.BasePropertyDelegate
+import io.github.graphglue.model.property.NodePropertyDelegate
+import io.github.graphglue.model.property.NodeSetPropertyDelegate
 import org.springframework.data.annotation.Transient
 import org.springframework.data.neo4j.core.convert.ConvertWith
 import org.springframework.data.neo4j.core.schema.GeneratedValue
@@ -83,7 +86,7 @@ abstract class Node {
      * Name of property as key
      */
     @Transient
-    internal val propertyLookup: MutableMap<String, BaseProperty<*>> = mutableMapOf()
+    internal val propertyLookup: MutableMap<String, BasePropertyDelegate<*, *>> = mutableMapOf()
 
     /**
      * Creates a new node property used for many sides
@@ -92,7 +95,7 @@ abstract class Node {
      * @param T value type
      * @return a provider for the property delegate
      */
-    protected fun <T : Node> NodeSetProperty(): PropertyDelegateProvider<Node, NodeSetProperty<T>> {
+    protected fun <T : Node> NodeSetProperty(): PropertyDelegateProvider<Node, NodeSetPropertyDelegate<T>> {
         return NodeSetPropertyProvider()
     }
 
@@ -103,7 +106,7 @@ abstract class Node {
      * @param T value type
      * @return a provider for the property delegate
      */
-    protected fun <T : Node?> NodeProperty(): PropertyDelegateProvider<Node, NodeProperty<T>> {
+    protected fun <T : Node?> NodeProperty(): PropertyDelegateProvider<Node, NodePropertyDelegate<T>> {
         return NodePropertyProvider()
     }
 
@@ -153,25 +156,25 @@ abstract class Node {
      * @return the found property
      */
     @Suppress("UNCHECKED_CAST")
-    internal fun <T : Node?> getProperty(property: KProperty<*>): BaseProperty<T> {
-        return propertyLookup[property.name]!! as BaseProperty<T>
+    internal fun <T : Node?> getProperty(property: KProperty<*>): BasePropertyDelegate<T, *> {
+        return propertyLookup[property.name]!! as BasePropertyDelegate<T, *>
     }
 }
 
 /**
- * Provider for [NodeProperty]s
+ * Provider for [NodePropertyDelegate]s
  */
-private class NodePropertyProvider<T : Node?> : PropertyDelegateProvider<Node, NodeProperty<T>> {
+private class NodePropertyProvider<T : Node?> : PropertyDelegateProvider<Node, NodePropertyDelegate<T>> {
 
     /**
-     * Creates a new [NodeProperty] and registers it to the [Node.propertyLookup]
+     * Creates a new [NodePropertyDelegate] and registers it to the [Node.propertyLookup]
      *
      * @param thisRef the parent node
      * @param property the property to delegate
      * @return the generated property delegate
      */
-    override operator fun provideDelegate(thisRef: Node, property: KProperty<*>): NodeProperty<T> {
-        val nodeProperty = NodeProperty<T>(
+    override operator fun provideDelegate(thisRef: Node, property: KProperty<*>): NodePropertyDelegate<T> {
+        val nodeProperty = NodePropertyDelegate<T>(
             thisRef,
             property as KProperty1<*, *>
         )
@@ -181,23 +184,23 @@ private class NodePropertyProvider<T : Node?> : PropertyDelegateProvider<Node, N
 }
 
 /**
- * Provider for [NodeSetProperty]s
+ * Provider for [NodeSetPropertyDelegate]s
  */
-private class NodeSetPropertyProvider<T : Node> : PropertyDelegateProvider<Node, NodeSetProperty<T>> {
+private class NodeSetPropertyProvider<T : Node> : PropertyDelegateProvider<Node, NodeSetPropertyDelegate<T>> {
 
     /**
-     * Creates a new [NodeSetProperty] and registers it to the [Node.propertyLookup]
+     * Creates a new [NodeSetPropertyDelegate] and registers it to the [Node.propertyLookup]
      *
      * @param thisRef the parent node
      * @param property the property to delegate
      * @return the generated property delegate
      */
-    override operator fun provideDelegate(thisRef: Node, property: KProperty<*>): NodeSetProperty<T> {
-        val nodeSetProperty = NodeSetProperty<T>(
+    override operator fun provideDelegate(thisRef: Node, property: KProperty<*>): NodeSetPropertyDelegate<T> {
+        val nodeSetPropertyDelegate = NodeSetPropertyDelegate<T>(
             thisRef,
             property as KProperty1<*, *>
         )
-        thisRef.propertyLookup[property.name] = nodeSetProperty
-        return nodeSetProperty
+        thisRef.propertyLookup[property.name] = nodeSetPropertyDelegate
+        return nodeSetPropertyDelegate
     }
 }

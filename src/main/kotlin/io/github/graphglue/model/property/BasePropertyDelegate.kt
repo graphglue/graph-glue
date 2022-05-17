@@ -1,4 +1,4 @@
-package io.github.graphglue.model
+package io.github.graphglue.model.property
 
 import com.expediagroup.graphql.generator.annotations.GraphQLIgnore
 import com.fasterxml.jackson.databind.ObjectMapper
@@ -9,24 +9,31 @@ import io.github.graphglue.definition.NodeDefinitionCollection
 import io.github.graphglue.data.repositories.RelationshipDiff
 import io.github.graphglue.definition.NodeDefinition
 import io.github.graphglue.graphql.extensions.getParentNodeDefinition
+import io.github.graphglue.model.Node
 import org.springframework.beans.factory.annotation.Autowired
 import java.util.*
+import kotlin.reflect.KProperty
 import kotlin.reflect.KProperty1
 
 /**
- * Base class for many and one node properties
- * Provides cache based graphql functionality, and abstract methods with allow persistence
+ * Base class for many and one node property delegates
+ * Provides cache based GraphQL functionality, and abstract methods with allow persistence
  *
  * @param parent the node which hosts this property
  * @param property the property on the class
  * @param T the type of the value [Node] (s)
+ * @param R the type of property
  */
-abstract class BaseProperty<T : Node?>(protected val parent: Node, protected val property: KProperty1<*, *>) {
+abstract class BasePropertyDelegate<T : Node?, R>(protected val parent: Node, protected val property: KProperty1<*, *>) {
 
     /**
      * Cache for database results for specific query parts
      */
     private val cache = IdentityHashMap<NodeQueryOptions, NodeQueryResult<T>>()
+
+    private val lazyLoadingDelegate = object: LazyLoadingDelegate<T, R> {
+        override suspend fun invoke() = getLoadedProperty()
+    }
 
     /**
      * Gets the result of a GraphQL query
@@ -103,4 +110,22 @@ abstract class BaseProperty<T : Node?>(protected val parent: Node, protected val
      * Gets [Node]s which should be persisted when this [Node] is persisted
      */
     internal abstract fun getRelatedNodesToSave(): Collection<Node>
+
+    /**
+     * Gets the loaded property which is returned by the lazy loading delegate
+     *
+     * @return the loaded property
+     */
+    internal abstract suspend fun getLoadedProperty(): R
+
+    /**
+     * Gets the lazy loading delegate which is used to get the value of the property
+     *
+     * @param thisRef the [Node] containing the delegated property
+     * @param property the delegated property
+     * @return the lazy loading delegate which can be used to get the property
+     */
+    operator fun getValue(thisRef: Node, property: KProperty<*>): LazyLoadingDelegate<T, R> {
+        return lazyLoadingDelegate
+    }
 }

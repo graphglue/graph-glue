@@ -10,7 +10,7 @@ import io.github.graphglue.data.execution.NodeQueryParser
 import io.github.graphglue.data.execution.NodeQueryResult
 import io.github.graphglue.definition.NodeDefinition
 import io.github.graphglue.graphql.extensions.requiredPermission
-import io.github.graphglue.model.Connection
+import io.github.graphglue.connection.model.Connection
 import io.github.graphglue.model.Node
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.data.neo4j.core.ReactiveNeo4jClient

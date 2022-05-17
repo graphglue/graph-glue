@@ -1,15 +1,18 @@
 package io.github.graphglue.definition
 
-import io.github.graphglue.model.Node
-import io.github.graphglue.model.NodeProperty
-import io.github.graphglue.model.NodeRelationship
-import io.github.graphglue.model.NodeSetProperty
+import io.github.graphglue.definition.extensions.firstTypeArgument
+import io.github.graphglue.model.*
+import io.github.graphglue.model.property.NODE_PROPERTY_TYPE
+import io.github.graphglue.model.property.NODE_SET_PROPERTY_TYPE
+import io.github.graphglue.model.property.NodePropertyDelegate
 import org.springframework.data.neo4j.core.mapping.Neo4jMappingContext
 import org.springframework.data.neo4j.core.mapping.Neo4jPersistentEntity
 import kotlin.reflect.KClass
 import kotlin.reflect.KTypeParameter
-import kotlin.reflect.KTypeProjection
-import kotlin.reflect.full.*
+import kotlin.reflect.full.findAnnotation
+import kotlin.reflect.full.isSubclassOf
+import kotlin.reflect.full.isSubtypeOf
+import kotlin.reflect.full.memberProperties
 import kotlin.reflect.jvm.javaField
 
 /**
@@ -35,12 +38,12 @@ fun generateNodeDefinition(nodeClass: KClass<out Node>, mappingContext: Neo4jMap
  * @return the list of generated relationship definitions
  */
 private fun generateOneRelationshipDefinitions(nodeClass: KClass<out Node>): List<OneRelationshipDefinition> {
-    val properties = nodeClass.memberProperties.filter {
-        it.returnType.isSubtypeOf(Node::class.createType(nullable = true)) && it.returnType.classifier !is KTypeParameter
-    }
+    val properties = nodeClass.memberProperties.filter { it.returnType.isSubtypeOf(NODE_PROPERTY_TYPE) }
+        .filter { it.returnType.firstTypeArgument.classifier !is KTypeParameter }
+
     return properties.map {
         val field = it.javaField
-        if (field == null || !field.type.kotlin.isSubclassOf(NodeProperty::class)) {
+        if (field == null || !field.type.kotlin.isSubclassOf(NodePropertyDelegate::class)) {
             throw NodeSchemaException("Property of type Node is not backed by a NodeProperty: $it")
         }
         val annotation = it.findAnnotation<NodeRelationship>()
@@ -56,12 +59,9 @@ private fun generateOneRelationshipDefinitions(nodeClass: KClass<out Node>): Lis
  * @return the list of generated relationship definitions
  */
 private fun generateManyRelationshipDefinitions(nodeClass: KClass<out Node>): List<ManyRelationshipDefinition> {
-    val nodeListType =
-        NodeSetProperty.NodeSet::class.createType(listOf(KTypeProjection.covariant(Node::class.createType())))
-    val properties = nodeClass.memberProperties.filter { it.returnType.isSubtypeOf(nodeListType) }.filter {
-            val nodeType = it.returnType.arguments.first().type!!
-            nodeType.classifier !is KTypeParameter
-        }
+    val properties = nodeClass.memberProperties.filter { it.returnType.isSubtypeOf(NODE_SET_PROPERTY_TYPE) }.filter {
+        it.returnType.firstTypeArgument.classifier !is KTypeParameter
+    }
     return properties.map {
         val annotation = it.findAnnotation<NodeRelationship>()
             ?: throw NodeSchemaException("Property of type Node is not annotated with NodeRelationship: $it")

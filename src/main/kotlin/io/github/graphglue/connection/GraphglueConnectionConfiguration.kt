@@ -109,8 +109,6 @@ class GraphglueConnectionConfiguration {
     @Bean
     fun nodeFilter() =
         TypeFilterDefinitionEntry(NODE_PROPERTY_TYPE) { name, property, parentNodeDefinition, subFilterGenerator ->
-            println("here????")
-            println(property.returnType.firstTypeArgument)
             val nodeSubFilterDefinition = NodeSubFilterDefinition(
                 name,
                 "Filters for nodes where the related node match this filter",
@@ -130,8 +128,6 @@ class GraphglueConnectionConfiguration {
     @Bean
     fun nodeSetFilter() =
         TypeFilterDefinitionEntry(NODE_SET_PROPERTY_TYPE) { name, property, parentNodeDefinition, subFilterGenerator ->
-            println(property.returnType.firstTypeArgument)
-            println(property.returnType.firstTypeArgument)
             NodeSetPropertyFilterDefinition(
                 name,
                 property.returnType.firstTypeArgument,

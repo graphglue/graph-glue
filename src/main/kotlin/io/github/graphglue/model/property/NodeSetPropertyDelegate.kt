@@ -175,11 +175,11 @@ class NodeSetPropertyDelegate<T : Node>(
  */
 val NODE_SET_PROPERTY_TYPE = LazyLoadingDelegate::class.createType(
     listOf(
-        KTypeProjection.covariant(Node::class.createType()), KTypeProjection.covariant(
+        KTypeProjection.covariant(Node::class.createType(nullable = true)), KTypeProjection.covariant(
             NodeSetPropertyDelegate.NodeSetProperty::class.createType(
                 listOf(
                     KTypeProjection.covariant(
-                        Node::class.createType()
+                        Node::class.createType(nullable = true)
                     )
                 )
             )

@@ -7,6 +7,7 @@ import io.github.graphglue.data.execution.NodeQueryParser
 import io.github.graphglue.data.execution.NodeQueryResult
 import io.github.graphglue.data.repositories.RelationshipDiff
 import io.github.graphglue.definition.NodeDefinition
+import io.github.graphglue.definition.extensions.firstTypeArgument
 import io.github.graphglue.model.Node
 import io.github.graphglue.model.property.NodeSetPropertyDelegate.NodeSetProperty
 import org.neo4j.cypherdsl.core.Cypher
@@ -49,7 +50,7 @@ class NodePropertyDelegate<T : Node?>(
     /**
      * True if the [T] is marked nullable
      */
-    private val supportsNull get() = property.returnType.isMarkedNullable
+    private val supportsNull get() = property.returnType.firstTypeArgument.isMarkedNullable
 
     override fun registerQueryResult(nodeQueryResult: NodeQueryResult<T>) {
         super.registerQueryResult(nodeQueryResult)
@@ -174,11 +175,11 @@ class NodePropertyDelegate<T : Node?>(
  */
 val NODE_PROPERTY_TYPE = LazyLoadingDelegate::class.createType(
     listOf(
-        KTypeProjection.covariant(Node::class.createType()), KTypeProjection.covariant(
+        KTypeProjection.covariant(Node::class.createType(nullable = true)), KTypeProjection.covariant(
             NodePropertyDelegate.NodeProperty::class.createType(
                 listOf(
                     KTypeProjection.covariant(
-                        Node::class.createType()
+                        Node::class.createType(nullable = true)
                     )
                 )
             )

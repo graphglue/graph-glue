@@ -5,7 +5,7 @@ version = "2.0.1-SNAPSHOT"
 group = "io.github.graphglue"
 
 val graphqlKotlinVersion = "6.0.0-alpha.4"
-val springBootVersion = "2.7.0-RC1"
+val springBootVersion = "2.7.0"
 
 plugins {
 	kotlin("jvm") version "1.6.21"
@@ -18,7 +18,6 @@ plugins {
 
 repositories {
     mavenCentral()
-    maven("https://repo.spring.io/milestone/")
 }
 
 dependencies {

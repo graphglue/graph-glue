@@ -34,6 +34,7 @@ const val NODE_ID_GENERATOR_BEAN = "nodeIdGenerator"
  * This is always added to the schema
  * All domain entities which can be retrieved via the api
  * and should be persisted in the database should inherit from this class
+ * Two nodes are equal iff they have the same id, or, if no id is present yet on both, if they are the same object.
  */
 @DomainNode
 @AdditionalFilter("idIdFilter")
@@ -149,6 +150,24 @@ abstract class Node {
     @Suppress("UNCHECKED_CAST")
     internal fun <T : Node?> getProperty(property: KProperty<*>): BasePropertyDelegate<T, *> {
         return propertyLookup[property.name]!! as BasePropertyDelegate<T, *>
+    }
+
+    override fun equals(other: Any?): Boolean {
+        return if (other !is Node) {
+            false
+        } else if (this === other) {
+            true
+        } else {
+            this.rawId != null && this.rawId == other.rawId
+        }
+    }
+
+    override fun hashCode(): Int {
+        return if (rawId != null) {
+            rawId.hashCode()
+        } else {
+            super.hashCode()
+        }
     }
 }
 

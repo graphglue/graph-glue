@@ -249,6 +249,8 @@ fun floatFilter() =
         FloatFilterDefinition(name, parentNodeDefinition.getNeo4jNameOfProperty(property))
     }
 ```
+Note that `TypeFilterDefinitionEntry` are free to not create a filter definition by returning `null` in the callback.
+This is e.g. be used for filters for `Node(Set)Property<*>` if the property has a generic type.
 
 :::info
 

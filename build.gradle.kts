@@ -1,7 +1,7 @@
 import org.jetbrains.dokka.gradle.DokkaTask
 
 description = "A library to develop annotation-based code-first GraphQL servers using GraphQL Kotlin, Spring Boot and Neo4j"
-version = "3.0.0"
+version = "3.0.1-SNAPSHOT"
 group = "io.github.graphglue"
 
 val graphqlKotlinVersion = "6.0.0-alpha.4"

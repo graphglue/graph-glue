@@ -13,10 +13,10 @@ import kotlin.reflect.KType
  * [FilterProperty]
  *
  * @param associatedType the supported type of the property
- * @param filterDefinitionFactory function to convert the property into a filter
+ * @param filterDefinitionFactory function to convert the property into a filter, if null is returned, no filter is added
  */
 data class TypeFilterDefinitionEntry(
     val associatedType: KType, val filterDefinitionFactory: (
         name: String, property: KProperty1<*, *>, parentNodeDefinition: NodeDefinition, subFilterGenerator: SubFilterGenerator
-    ) -> FilterEntryDefinition
+    ) -> FilterEntryDefinition?
 )

@@ -7,11 +7,11 @@ import io.github.graphglue.connection.filter.definition.NodeSetPropertyFilterDef
 import io.github.graphglue.connection.filter.definition.NodeSubFilterDefinition
 import io.github.graphglue.connection.filter.definition.scalars.*
 import io.github.graphglue.definition.extensions.firstTypeArgument
-import io.github.graphglue.model.*
-import io.github.graphglue.model.property.NodePropertyDelegate
-import io.github.graphglue.model.property.NodeSetPropertyDelegate
+import io.github.graphglue.model.Node
 import io.github.graphglue.model.property.NODE_PROPERTY_TYPE
 import io.github.graphglue.model.property.NODE_SET_PROPERTY_TYPE
+import io.github.graphglue.model.property.NodePropertyDelegate
+import io.github.graphglue.model.property.NodeSetPropertyDelegate
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import kotlin.reflect.full.createType
@@ -109,14 +109,16 @@ class GraphglueConnectionConfiguration {
     @Bean
     fun nodeFilter() =
         TypeFilterDefinitionEntry(NODE_PROPERTY_TYPE) { name, property, parentNodeDefinition, subFilterGenerator ->
-            val nodeSubFilterDefinition = NodeSubFilterDefinition(
-                name,
-                "Filters for nodes where the related node match this filter",
-                property.returnType.firstTypeArgument,
-                subFilterGenerator,
-                parentNodeDefinition.getRelationshipDefinitionOfProperty(property)
-            )
-            NodePropertyFilterDefinition(nodeSubFilterDefinition)
+            parentNodeDefinition.getRelationshipDefinitionOfPropertyOrNull(property)?.let { relationshipDefinition ->
+                val nodeSubFilterDefinition = NodeSubFilterDefinition(
+                    name,
+                    "Filters for nodes where the related node match this filter",
+                    property.returnType.firstTypeArgument,
+                    subFilterGenerator,
+                    relationshipDefinition
+                )
+                NodePropertyFilterDefinition(nodeSubFilterDefinition)
+            }
         }
 
     /**
@@ -128,12 +130,14 @@ class GraphglueConnectionConfiguration {
     @Bean
     fun nodeSetFilter() =
         TypeFilterDefinitionEntry(NODE_SET_PROPERTY_TYPE) { name, property, parentNodeDefinition, subFilterGenerator ->
-            NodeSetPropertyFilterDefinition(
-                name,
-                property.returnType.firstTypeArgument,
-                subFilterGenerator,
-                parentNodeDefinition.getRelationshipDefinitionOfProperty(property)
-            )
+            parentNodeDefinition.getRelationshipDefinitionOfPropertyOrNull(property)?.let { relationshipDefinition ->
+                NodeSetPropertyFilterDefinition(
+                    name,
+                    property.returnType.firstTypeArgument,
+                    subFilterGenerator,
+                    relationshipDefinition
+                )
+            }
         }
 
 }

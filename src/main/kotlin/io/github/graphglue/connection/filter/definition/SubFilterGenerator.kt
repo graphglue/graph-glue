@@ -35,10 +35,10 @@ class SubFilterGenerator(
      *
      * @param property the property to generate the filter for
      * @param parentNodeDefinition the definition of the [Node] type which contains the `property´
-     * @return the generated [FilterEntryDefinition]
-     * @throws IllegalStateException if no filter for the property type can be generated
+     * @return the generated [FilterEntryDefinition] if one was generated
+     * @throws IllegalStateException if no filter generator was found
      */
-    fun filterForProperty(property: KProperty1<*, *>, parentNodeDefinition: NodeDefinition): FilterEntryDefinition {
+    fun filterForProperty(property: KProperty1<*, *>, parentNodeDefinition: NodeDefinition): FilterEntryDefinition? {
         val type = property.returnType
         for (filter in filters) {
             if (type.isSubtypeOf(filter.associatedType)) {

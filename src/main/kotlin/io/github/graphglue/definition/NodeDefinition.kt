@@ -130,6 +130,16 @@ class NodeDefinition(
     }
 
     /**
+     * Gets the [RelationshipDefinition] by property
+     *
+     * @param property the property to get the relation of
+     * @return the found [RelationshipDefinition] or null if none was found
+     */
+    fun getRelationshipDefinitionOfPropertyOrNull(property: KProperty1<*, *>): RelationshipDefinition? {
+        return relationshipDefinitionsByProperty[property.name]
+    }
+
+    /**
      * Generates a new CypherDSL node with the necessary labels
      */
     fun node(): org.neo4j.cypherdsl.core.Node {

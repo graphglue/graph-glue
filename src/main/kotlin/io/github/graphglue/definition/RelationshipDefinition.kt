@@ -29,14 +29,17 @@ import kotlin.reflect.full.*
  * @param type the type of the relation (label associated with Neo4j relationship)
  * @param direction direction of the relation (direction associated with Neo4j relationship)
  * @param parentKClass the class associated with the [NodeDefinition] this is used as part of,
- *                        must be a subclass of the property defining class
+ *                     must be a subclass of the property defining class
+ * @param allowedAuthorizations the names of authorizations which allow via this relation.
+ *                              These names result in properties with value `true` on the relation
  */
 abstract class RelationshipDefinition(
     val property: KProperty1<*, *>,
     val nodeKClass: KClass<out Node>,
     val type: String,
     val direction: Direction,
-    val parentKClass: KClass<out Node>
+    val parentKClass: KClass<out Node>,
+    val allowedAuthorizations: Set<String>
 ) {
     /**
      * GraphQL name of the property
@@ -134,16 +137,14 @@ abstract class RelationshipDefinition(
      * Gets the diff describing updates of the property
      *
      * @param node the node which contains the property to get the diff from
-     * @param nodeIdLookup node to id lookup, can be used to get id of unpersisted nodes
      * @param nodeDefinition definition of the related nodes
      * @return the diff describing added and removed nodes
      */
     internal fun getRelationshipDiff(
         node: Node,
-        nodeIdLookup: Map<Node, String>,
         nodeDefinition: NodeDefinition
     ): RelationshipDiff {
-        return node.getProperty<Node>(property).getRelationshipDiff(nodeIdLookup, nodeDefinition)
+        return node.getProperty<Node>(property).getRelationshipDiff(nodeDefinition)
     }
 
     /**

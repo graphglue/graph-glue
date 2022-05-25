@@ -1,11 +1,16 @@
 package io.github.graphglue.definition
 
 import io.github.graphglue.authorization.MergedAuthorization
-import io.github.graphglue.graphql.extensions.getGraphQLName
+import io.github.graphglue.definition.extensions.firstTypeArgument
 import io.github.graphglue.graphql.extensions.getSimpleName
 import io.github.graphglue.graphql.extensions.springFindRepeatableAnnotations
+import io.github.graphglue.graphql.extensions.springGetRepeatableAnnotations
 import io.github.graphglue.model.Authorization
 import io.github.graphglue.model.Node
+import io.github.graphglue.model.NodeRelationship
+import io.github.graphglue.model.property.NODE_PROPERTY_TYPE
+import io.github.graphglue.model.property.NODE_SET_PROPERTY_TYPE
+import io.github.graphglue.model.property.NodePropertyDelegate
 import org.neo4j.cypherdsl.core.Cypher
 import org.neo4j.cypherdsl.core.Expression
 import org.neo4j.cypherdsl.core.SymbolicName
@@ -14,7 +19,9 @@ import org.springframework.data.neo4j.core.mapping.CypherGenerator
 import org.springframework.data.neo4j.core.mapping.Neo4jPersistentEntity
 import kotlin.reflect.KClass
 import kotlin.reflect.KProperty1
-import kotlin.reflect.full.memberProperties
+import kotlin.reflect.KTypeParameter
+import kotlin.reflect.full.*
+import kotlin.reflect.jvm.javaField
 
 /**
  * Definition of a [Node]
@@ -22,15 +29,31 @@ import kotlin.reflect.full.memberProperties
  *
  * @param nodeType the class associated with the definition
  * @param persistentEntity defines Neo4j's view on the node
- * @param oneRelationshipDefinitions list of all one relationship definitions
- * @param manyRelationshipDefinitions list of all many relationship definitions
  */
 class NodeDefinition(
     val nodeType: KClass<out Node>,
-    oneRelationshipDefinitions: List<OneRelationshipDefinition>,
-    manyRelationshipDefinitions: List<ManyRelationshipDefinition>,
     val persistentEntity: Neo4jPersistentEntity<*>
 ) {
+    /**
+     * map of all found authorizations defined on this type from authorization name to [Authorization]
+     */
+    val authorizations: Map<String, MergedAuthorization> = generateAuthorizations()
+
+    /**
+     * map of all found authorizations defined on this type and all supertypes from authorization name to [Authorization]
+     */
+    val mergedAuthorizations: Map<String, MergedAuthorization> = generateMergedAuthorizations()
+
+    /**
+     * All one [RelationshipDefinition]s
+     */
+    private val oneRelationshipDefinitions: List<OneRelationshipDefinition> = generateOneRelationshipDefinitions()
+
+    /**
+     * All many [RelationshipDefinition]s
+     */
+    private val manyRelationshipDefinitions: List<ManyRelationshipDefinition> = generateManyRelationshipDefinitions()
+
     /**
      * Map of all relationship definitions by GraphQL name
      */
@@ -41,8 +64,13 @@ class NodeDefinition(
      * map of all relationship definitions by defining property
      * Name of property as key
      */
-    private val relationshipDefinitionsByProperty =
+    internal val relationshipDefinitionsByProperty =
         (oneRelationshipDefinitions + manyRelationshipDefinitions).associateBy { it.property.name }
+
+    /**
+     * Lookup for [RelationshipDefinition]s by its inverse
+     */
+    private val relationshipDefinitionByInverse: MutableMap<RelationshipDefinition, RelationshipDefinition?> = mutableMapOf()
 
     /**
      * Set of all relationship GraphQL names
@@ -60,11 +88,6 @@ class NodeDefinition(
      * Name of the return value in the [returnExpression]
      */
     val returnNodeName: SymbolicName
-
-    /**
-     * map of all found authorizations from authorization name to [MergedAuthorization]
-     */
-    val authorizations: Map<String, MergedAuthorization> = generateAuthorizations()
 
     /**
      * The primary label of the [Node]
@@ -90,22 +113,99 @@ class NodeDefinition(
      *
      * @return the map of found merged authorizations by authorization name
      */
-    private fun generateAuthorizations(): Map<String, MergedAuthorization> {
+    private fun generateMergedAuthorizations(): Map<String, MergedAuthorization> {
         val allAuthorizations = nodeType.springFindRepeatableAnnotations<Authorization>()
-        return allAuthorizations.groupBy { it.name }
+        return mergeAuthorizations(allAuthorizations)
+    }
+
+    /**
+     * Creates all authorizations by search for [Authorization] annotations on [nodeType]
+     *
+     * @return the map of found merged authorizations by authorization name
+     */
+    private fun generateAuthorizations(): Map<String, MergedAuthorization> {
+        val allAuthorizations = nodeType.springGetRepeatableAnnotations<Authorization>()
+        return mergeAuthorizations(allAuthorizations)
+    }
+
+    /**
+     * Merges a list of [Authorization]s
+     *
+     * @return the merged [Authorization]
+     */
+    private fun mergeAuthorizations(authorizations: Collection<Authorization>) =
+        authorizations.groupBy { it.name }
             .mapValues { (name, authorizations) ->
                 val authorization = MergedAuthorization(
                     name,
                     authorizations.flatMap { it.allow.toList() }.toSet(),
-                    authorizations.flatMap { it.allowFromRelated.toList() }
-                        .map { propertyName ->
-                            val property = nodeType.memberProperties.first { it.name == propertyName }
-                            relationshipDefinitionsByProperty[property.name]!!
-                        }.toSet(),
-                    authorizations.flatMap { it.disallow.toList() }.toSet()
+                    authorizations.flatMap { it.allowFromRelated.toList() }.toSet(),
+                    authorizations.flatMap { it.disallow.toList() }.toSet(),
+                    authorizations.any { it.allowAll }
                 )
                 authorization
             }
+
+    /**
+     * Generates the [OneRelationshipDefinition]s for this [NodeDefinition]
+     *
+     * @return the list of generated relationship definitions
+     */
+    private fun generateOneRelationshipDefinitions(): List<OneRelationshipDefinition> {
+        val properties = nodeType.memberProperties.filter { it.returnType.isSubtypeOf(NODE_PROPERTY_TYPE) }
+            .filter { it.returnType.firstTypeArgument.classifier !is KTypeParameter }
+
+        return properties.map {
+            val field = it.javaField
+            if (field == null || !field.type.kotlin.isSubclassOf(NodePropertyDelegate::class)) {
+                throw NodeSchemaException("Property of type Node is not backed by a NodeProperty: $it")
+            }
+            val annotation = it.findAnnotation<NodeRelationship>()
+                ?: throw NodeSchemaException("Property of type Node is not annotated with NodeRelationship: $it")
+            OneRelationshipDefinition(
+                it,
+                annotation.type,
+                annotation.direction,
+                nodeType,
+                generateRelationshipAuthorizationNames(it)
+            )
+        }
+    }
+
+    /**
+     * Generates the [ManyRelationshipDefinition]s for this [NodeDefinition]
+     *
+     * @return the list of generated relationship definitions
+     */
+    private fun generateManyRelationshipDefinitions(): List<ManyRelationshipDefinition> {
+        val properties = nodeType.memberProperties.filter { it.returnType.isSubtypeOf(NODE_SET_PROPERTY_TYPE) }.filter {
+            it.returnType.firstTypeArgument.classifier !is KTypeParameter
+        }
+        return properties.map {
+            val annotation = it.findAnnotation<NodeRelationship>()
+                ?: throw NodeSchemaException("Property of type Node is not annotated with NodeRelationship: $it")
+            ManyRelationshipDefinition(
+                it,
+                annotation.type,
+                annotation.direction,
+                nodeType,
+                generateRelationshipAuthorizationNames(it)
+            )
+        }
+    }
+
+    /**
+     * Gets the set of authorization names which allow via a Relation defined by a property
+     *
+     * @param property the property defining the relation
+     * @return a set with all authorization names allowing via the relation
+     */
+    private fun generateRelationshipAuthorizationNames(
+        property: KProperty1<*, *>
+    ): Set<String> {
+        return mergedAuthorizations.filterValues {
+            it.allowFromRelated.contains(property.name)
+        }.keys
     }
 
     /**
@@ -144,6 +244,17 @@ class NodeDefinition(
      */
     fun node(): org.neo4j.cypherdsl.core.Node {
         return Cypher.node(persistentEntity.primaryLabel, persistentEntity.additionalLabels)
+    }
+
+    /**
+     * Gets a [RelationshipDefinition] by the [inverse]
+     */
+    fun getRelationshipDefinitionByInverse(inverse: RelationshipDefinition): RelationshipDefinition? {
+        return relationshipDefinitionByInverse.computeIfAbsent(inverse) {
+            relationshipDefinitions.values.firstOrNull {
+                it.type == inverse.type && it.direction != inverse.direction && it.nodeKClass.isSuperclassOf(inverse.parentKClass)
+            }
+        }
     }
 
     override fun toString() = nodeType.getSimpleName()

@@ -65,17 +65,16 @@ class NodePropertyDelegate<T : Node?>(
     }
 
     override fun getRelationshipDiff(
-        nodeIdLookup: Map<Node, String>, nodeDefinition: NodeDefinition
+        nodeDefinition: NodeDefinition
     ): RelationshipDiff {
         val current = currentNode
-        val nodesToRemove = if (current != persistedNode) {
-            listOf(Cypher.anyNode())
+        val nodesToRemove = if (current != persistedNode && persistedNode != null) {
+            listOf(persistedNode!!)
         } else {
             emptyList()
         }
         val nodesToAdd = if (current != persistedNode && current != null) {
-            val idParameter = Cypher.anonParameter(nodeIdLookup[current])
-            listOf(nodeDefinition.node().withProperties(mapOf("id" to idParameter)))
+            listOf(current)
         } else {
             emptyList()
         }

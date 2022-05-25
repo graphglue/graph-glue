@@ -65,15 +65,9 @@ class NodeSetPropertyDelegate<T : Node>(
     }
 
     override fun getRelationshipDiff(
-        nodeIdLookup: Map<Node, String>, nodeDefinition: NodeDefinition
+        nodeDefinition: NodeDefinition
     ): RelationshipDiff {
-        return RelationshipDiff(addedNodes.map {
-            val idParameter = Cypher.anonParameter(nodeIdLookup[it])
-            nodeDefinition.node().withProperties(mapOf("id" to idParameter))
-        }, removedNodes.filter { it.rawId != null }.map {
-            val idParameter = Cypher.anonParameter(it.rawId!!)
-            nodeDefinition.node().withProperties(mapOf("id" to idParameter))
-        })
+        return RelationshipDiff(addedNodes, removedNodes.filter { it.rawId != null })
     }
 
     override fun getRelatedNodesToSave(): Collection<Node> {

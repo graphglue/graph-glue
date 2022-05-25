@@ -5,9 +5,9 @@ import org.neo4j.cypherdsl.core.Condition
 import org.neo4j.cypherdsl.core.Node
 
 /**
- * Interface for beans which can create authorization conditions for rules
+ * Interface for beans which can create disallow authorization conditions for rules
  */
-fun interface AuthorizationRuleGenerator {
+fun interface DisallowRuleGenerator {
 
     /**
      * Generates a condition for a specific rule
@@ -17,5 +17,5 @@ fun interface AuthorizationRuleGenerator {
      * @param permission context for condition generation
      * @return the generated condition
      */
-    fun generateCondition(node: Node, rule: Rule, permission: Permission): Condition
+    fun generateRule(node: Node, rule: Rule, permission: Permission): Condition
 }

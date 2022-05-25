@@ -3,6 +3,7 @@ package io.github.graphglue.data.repositories
 import io.github.graphglue.definition.NodeDefinition
 import io.github.graphglue.definition.NodeDefinitionCollection
 import io.github.graphglue.definition.RelationshipDefinition
+import io.github.graphglue.model.Direction
 import io.github.graphglue.model.Node
 import org.neo4j.cypherdsl.core.Cypher
 import org.neo4j.cypherdsl.core.Statement
@@ -122,58 +123,136 @@ class GraphglueNeo4jOperations(
         nodeDefinition: NodeDefinition, nodeToSave: Node, nodeIdLookup: Map<Node, String>
     ) = Flux.fromIterable(nodeDefinition.relationshipDefinitions.values).flatMap { relationshipDefinition ->
         val relatedNodeDefinition = nodeDefinitionCollection.getNodeDefinition(relationshipDefinition.nodeKClass)
-        val diffToSave = relationshipDefinition.getRelationshipDiff(nodeToSave, nodeIdLookup, relatedNodeDefinition)
+        val diffToSave = relationshipDefinition.getRelationshipDiff(nodeToSave, relatedNodeDefinition)
         val deleteMono = Flux.fromIterable(diffToSave.nodesToRemove).flatMap {
-            deleteRelationship(relationshipDefinition, nodeIdLookup[nodeToSave]!!, it, nodeDefinition)
+            val nodeId = nodeIdLookup[nodeToSave]!!
+            val relatedNodeId = nodeIdLookup[it]!!
+            val type = relationshipDefinition.type
+            if (relationshipDefinition.direction == Direction.OUTGOING) {
+                deleteRelationship(type, nodeId, relatedNodeId, nodeDefinition, relatedNodeDefinition)
+            } else {
+                deleteRelationship(type, relatedNodeId, relatedNodeId, relatedNodeDefinition, nodeDefinition)
+            }
         }.then()
         val addMono = Flux.fromIterable(diffToSave.nodesToAdd).flatMap {
-            addRelationship(relationshipDefinition, nodeIdLookup[nodeToSave]!!, it, nodeDefinition)
+            addRelationship(relationshipDefinition, nodeDefinition, nodeToSave, it, nodeIdLookup)
         }.then()
         deleteMono.then(addMono)
     }.then()
 
     /**
-     * Adds a relationship
+     * Adds a relationship, where the relationship can have any direction.
      *
-     * @param relationshipDefinition defines the relationship between the nodes
-     * @param rootNodeId the id of the [Node] from which the relationship starts
-     * @param propertyNode the related `Node`, might stand for multiple [Node]s
-     * @param rootNodeDefinition the definition of the node with [rootNodeId]
-     * @return an empty [Mono] to wait for the end of the operation
+     * @param relationshipDefinition definition for the relationship to create
+     * @param nodeDefinition definition of the start node
+     * @param node the start node, relative to [relationshipDefinition]
+     * @param relatedNode the end node, relative to [relationshipDefinition]
+     * @param nodeIdLookup assigns an id to each [Node], used so that newly created nodes have an id
      */
     private fun addRelationship(
         relationshipDefinition: RelationshipDefinition,
-        rootNodeId: String,
-        propertyNode: org.neo4j.cypherdsl.core.Node,
-        rootNodeDefinition: NodeDefinition
+        nodeDefinition: NodeDefinition,
+        node: Node,
+        relatedNode: Node,
+        nodeIdLookup: Map<Node, String>
     ): Mono<Void> {
-        val idParameter = Cypher.anonParameter(rootNodeId)
-        val rootNode = rootNodeDefinition.node().withProperties(mapOf("id" to idParameter)).named(Cypher.name("node1"))
-        val namedPropertyNode = propertyNode.named(Cypher.name("node2"))
-        val relationship = relationshipDefinition.generateRelationship(rootNode, namedPropertyNode)
-        val statement = Cypher.match(rootNode).match(namedPropertyNode).merge(relationship).build()
+        val relatedNodeDefinition = nodeDefinitionCollection.getNodeDefinition(relatedNode::class)
+        val inverseRelationshipDefinition =
+            relatedNodeDefinition.getRelationshipDefinitionByInverse(relationshipDefinition)
+        val nodeId = nodeIdLookup[node] ?: throw IllegalStateException()
+        val relatedNodeId = nodeIdLookup[relatedNode] ?: throw IllegalStateException()
+        return if (relationshipDefinition.direction == Direction.OUTGOING) {
+            addRelationship(
+                relationshipDefinition.type,
+                relationshipDefinition,
+                inverseRelationshipDefinition,
+                nodeId,
+                relatedNodeId,
+                nodeDefinition,
+                relatedNodeDefinition
+            )
+        } else {
+            addRelationship(
+                relationshipDefinition.type,
+                inverseRelationshipDefinition,
+                relationshipDefinition,
+                relatedNodeId,
+                nodeId,
+                relatedNodeDefinition,
+                nodeDefinition
+            )
+        }
+    }
+
+    /**
+     * Adds a relationship, where the [relationshipDefinition] has (if present) direction OUTGOING
+     * and [inverseRelationshipDefinition] has direction INCOMING
+     * If necessary, also adds a reverse relationship with _type for authorization purposes
+     *
+     * @param type the type for the generated relationship
+     * @param relationshipDefinition if existing, the definition in the direction of the relationship
+     * @param inverseRelationshipDefinition if existing, the definition in the inverse direction of the relationship
+     * @param rootNodeId the id of the start node of the relationship
+     * @param relatedNodeId the id of the end node of the relationship
+     * @param rootNodeDefinition the definition of the root node
+     * @param relatedNodeDefinition the definition of the related node
+     * @return an empty [Mono] to wait for the end of the operation
+     */
+    private fun addRelationship(
+        type: String,
+        relationshipDefinition: RelationshipDefinition?,
+        inverseRelationshipDefinition: RelationshipDefinition?,
+        rootNodeId: String,
+        relatedNodeId: String,
+        rootNodeDefinition: NodeDefinition,
+        relatedNodeDefinition: NodeDefinition
+    ): Mono<Void> {
+        val rootIdParameter = Cypher.anonParameter(rootNodeId)
+        val relatedIdParameter = Cypher.anonParameter(relatedNodeId)
+        val rootNode =
+            rootNodeDefinition.node().withProperties(mapOf("id" to rootIdParameter)).named(Cypher.name("node1"))
+        val relatedNode =
+            relatedNodeDefinition.node().withProperties(mapOf("id" to relatedIdParameter)).named(Cypher.name("node2"))
+        val relationship = rootNode.relationshipTo(relatedNode, type)
+            .withProperties(relationshipDefinition?.allowedAuthorizations?.associateWith { Cypher.literalTrue() }
+                ?: emptyMap())
+        val builder = Cypher.match(rootNode).match(relatedNode).merge(relationship)
+        val statement =
+            if (inverseRelationshipDefinition != null && inverseRelationshipDefinition.allowedAuthorizations.isNotEmpty()) {
+                val inverseRelationship = rootNode.relationshipFrom(relatedNode, "_$type")
+                    .withProperties(inverseRelationshipDefinition.allowedAuthorizations.associateWith { Cypher.literalTrue() })
+                builder.merge(inverseRelationship)
+            } else {
+                builder
+            }.build()
         return executeStatement(statement)
     }
 
     /**
      * Removes a relationship
      *
-     * @param relationshipDefinition defines the relationship between the nodes
+     * @param type the type of the relationship
      * @param rootNodeId the id of the [Node] from which the relationship starts
-     * @param propertyNode the related `Node`, might stand for multiple [Node]s
-     * @param rootNodeDefinition rootNodeDefinition the definition of the node with [rootNodeId]
+     * @param relatedNodeId the id of the [Node] where the relationship ends
+     * @param rootNodeDefinition the definition of the node with [rootNodeId]
+     * @param relatedNodeDefinition the definition of the node with [relatedNodeId]
      * @return an empty [Mono] to wait for the end of the operation
      */
     private fun deleteRelationship(
-        relationshipDefinition: RelationshipDefinition,
+        type: String,
         rootNodeId: String,
-        propertyNode: org.neo4j.cypherdsl.core.Node,
-        rootNodeDefinition: NodeDefinition
+        relatedNodeId: String,
+        rootNodeDefinition: NodeDefinition,
+        relatedNodeDefinition: NodeDefinition
     ): Mono<Void> {
         val idParameter = Cypher.anonParameter(rootNodeId)
+        val relatedIdParameter = Cypher.anonParameter(relatedNodeId)
         val rootNode = rootNodeDefinition.node().withProperties(mapOf("id" to idParameter))
-        val relationship = relationshipDefinition.generateRelationship(rootNode, propertyNode).named(Cypher.name("rel"))
-        val statement = Cypher.match(relationship).delete(relationship.requiredSymbolicName).build()
+        val relatedNode = relatedNodeDefinition.node().withProperties(mapOf("id" to relatedIdParameter))
+        val relationship = rootNode.relationshipTo(relatedNode, type)
+        val inverseRelationship = rootNode.relationshipFrom(relatedNode, "_$type")
+        val statement = Cypher.optionalMatch(relationship, inverseRelationship)
+            .delete(relationship.requiredSymbolicName, inverseRelationship.requiredSymbolicName).build()
         return executeStatement(statement)
     }
 

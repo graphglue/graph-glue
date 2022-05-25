@@ -1,16 +1,16 @@
 package io.github.graphglue.definition
 
-import io.github.graphglue.authorization.AuthorizationRuleGenerator
-import io.github.graphglue.authorization.MergedAuthorization
-import io.github.graphglue.authorization.Permission
+import io.github.graphglue.authorization.*
 import io.github.graphglue.data.execution.CypherConditionGenerator
 import io.github.graphglue.graphql.extensions.getSimpleName
+import io.github.graphglue.model.Authorization
 import io.github.graphglue.model.Node
 import io.github.graphglue.model.Rule
 import org.neo4j.cypherdsl.core.*
 import org.springframework.beans.factory.BeanFactory
 import kotlin.reflect.KClass
 import kotlin.reflect.full.isSubclassOf
+import kotlin.reflect.full.isSuperclassOf
 
 /**
  * Stores a collection of [NodeDefinition]s
@@ -20,8 +20,7 @@ import kotlin.reflect.full.isSubclassOf
  * @param beanFactory used to get condition defining beans for authorization
  */
 class NodeDefinitionCollection(
-    backingCollection: Map<KClass<out Node>, NodeDefinition>,
-    private val beanFactory: BeanFactory
+    backingCollection: Map<KClass<out Node>, NodeDefinition>, private val beanFactory: BeanFactory
 ) : Collection<NodeDefinition> by backingCollection.values {
     /**
      * Defensive copy of provided `backingCollection`, used to store [NodeDefinition]s
@@ -39,14 +38,7 @@ class NodeDefinitionCollection(
      * multiple different labels, but only for a common label
      * Keys contain only GraphQL names of [NodeDefinition]s which are object types in the schema (no interfaces)
      */
-    private val supertypeNodeDefinitionLookup: Map<Set<String>, NodeDefinition>
-
-    /**
-     * lookup for all subtype [NodeDefinition]s for a specific [NodeDefinition]
-     * Contains only subtypes with declare (new) authorizations
-     * Used to generate authorization
-     */
-    private val authorizationSubtypeNodeDefinitionLookup: Map<NodeDefinition, Set<NodeDefinition>>
+    private val supertypeNodeDefinitionLookup = generateSupertypeNodeDefinitionLookup()
 
     /**
      * Set of all known authorization names
@@ -54,10 +46,25 @@ class NodeDefinitionCollection(
      */
     private val allAuthorizationNames = backingCollection.values.flatMap { it.authorizations.keys }.toSet()
 
-    init {
-        this.supertypeNodeDefinitionLookup = generateSupertypeNodeDefinitionLookup()
-        this.authorizationSubtypeNodeDefinitionLookup = generateAuthorizationSubtypeNodeDefinitionLookup()
-    }
+    /**
+     * Lookup for disallow rules by authorization name
+     */
+    private val authorizationDisallowRules = generateAuthorizationDisallowRules()
+
+    /**
+     * Associates each [NodeDefinition] with all sub-NodeDefinitions and super-NodeDefinitions
+     */
+    private val nodeDefinitionHierarchyLookup = generateNodeDefinitionHierarchyLookup()
+
+    /**
+     * For each authorization name and [NodeDefinition], the list of allow rules to check
+     */
+    private val authorizationAllowRules = generateAuthorizationAllowRules()
+
+    /**
+     * For each authorization name, all [NodeDefinition]s that are always allowed
+     */
+    private val authorizationAllAllowedNodeDefinitions = generateAuthorizationAllAllowedNodeDefinitions()
 
     /**
      * Generates the supertype node definition lookup
@@ -67,27 +74,81 @@ class NodeDefinitionCollection(
     private fun generateSupertypeNodeDefinitionLookup(): Map<Set<String>, NodeDefinition> {
         val supertypeNodeDefinitionLookup = mutableMapOf<Set<String>, NodeDefinition>()
         for ((nodeClass, nodeDefinition) in backingCollection) {
-            val subTypes = backingCollection.keys.filter { it.isSubclassOf(nodeClass) }
-                .filter { !it.isAbstract }
-                .map { it.getSimpleName() }
-                .toSet()
+            val subTypes = backingCollection.keys.filter { it.isSubclassOf(nodeClass) }.filter { !it.isAbstract }
+                .map { it.getSimpleName() }.toSet()
             supertypeNodeDefinitionLookup[subTypes] = nodeDefinition
         }
         return supertypeNodeDefinitionLookup
     }
 
     /**
-     * generates the authorization subtype node definition lookup
-     *
-     * @return the generated authorization supertype node definition lookup
+     * Associates each authorization name with a set of all disallow rules (by [NodeDefinition]
      */
-    private fun generateAuthorizationSubtypeNodeDefinitionLookup(): Map<NodeDefinition, Set<NodeDefinition>> {
-        return backingCollection.values.associateWith { nodeDefinition ->
-            backingCollection.values.filter {
-                it != nodeDefinition
-                        && it.nodeType.isSubclassOf(nodeDefinition.nodeType)
-                        && it.authorizations != nodeDefinition.authorizations
+    private fun generateAuthorizationDisallowRules(): Map<String, Map<NodeDefinition, Set<Rule>>> {
+        return allAuthorizationNames.associateWith { name ->
+            associateWith {
+                it.authorizations[name]?.disallow?.toSet() ?: emptySet()
+            }.filterValues { it.isNotEmpty() }
+        }
+    }
+
+    /**
+     * Associates each [NodeDefinition] with all sub-NodeDefinitions and super-NodeDefinitions
+     */
+    private fun generateNodeDefinitionHierarchyLookup(): Map<NodeDefinition, Set<NodeDefinition>> {
+        return associateWith { nodeDefinition ->
+            filter {
+                it.nodeType.isSubclassOf(nodeDefinition.nodeType) || it.nodeType.isSuperclassOf(nodeDefinition.nodeType)
             }.toSet()
+        }
+    }
+
+    private fun generateAuthorizationAllowRules(): Map<String, Map<NodeDefinition, Set<NodeAllowRule>>> {
+        return allAuthorizationNames.associateWith { name ->
+            associateWith { nodeDefinition ->
+                val tempAllowRules = mutableSetOf<NodeAllowRule>()
+                val definitionsToCheck = ArrayDeque(nodeDefinitionHierarchyLookup[nodeDefinition]!!)
+                val checkedNodeDefinitions = nodeDefinitionHierarchyLookup[nodeDefinition]!!.toMutableSet()
+                val allowAllNodeDefinitions = mutableSetOf<NodeDefinition>()
+                while (definitionsToCheck.isNotEmpty()) {
+                    val toCheck = definitionsToCheck.removeFirst()
+                    val authorization = toCheck.authorizations[name]
+                    if (authorization?.allowAll == true) {
+                        allowAllNodeDefinitions += toCheck
+                    }
+                    authorization?.allowFromRelated?.forEach {
+                        val relationshipDefinition = toCheck.relationshipDefinitionsByProperty[it]!!
+                        val relatedNodeDefinition = getNodeDefinition(relationshipDefinition.nodeKClass)
+                        nodeDefinitionHierarchyLookup[relatedNodeDefinition]!!.filter {
+                            !checkedNodeDefinitions.contains(it)
+                        }.forEach {
+                            definitionsToCheck += it
+                            checkedNodeDefinitions += it
+                        }
+                    }
+                    authorization?.allow?.forEach {
+                        tempAllowRules += NodeAllowRule(
+                            setOf(toCheck),
+                            it
+                        )
+                    }
+                }
+                val allowRules = tempAllowRules.groupBy { it.allowRule }.values.map { rules ->
+                    rules.first().copy(nodeDefinitions = rules.flatMap { it.nodeDefinitions }.toSet())
+                }.toMutableSet()
+                if (allowAllNodeDefinitions.isNotEmpty()) {
+                    allowRules += NodeAllowRule(
+                        allowAllNodeDefinitions
+                    )
+                }
+                allowRules
+            }
+        }
+    }
+
+    private fun generateAuthorizationAllAllowedNodeDefinitions(): Map<String, Set<NodeDefinition>> {
+        return allAuthorizationNames.associateWith { name ->
+            filter { it.mergedAuthorizations[name]?.allowAll ?: false }.toSet()
         }
     }
 
@@ -135,8 +196,7 @@ class NodeDefinitionCollection(
      * @return a condition generator which generates the authorization condition
      */
     fun generateAuthorizationCondition(
-        nodeDefinition: NodeDefinition,
-        permission: Permission
+        nodeDefinition: NodeDefinition, permission: Permission
     ): CypherConditionGenerator {
         return generateAuthorizationCondition(
             nodeDefinition, permission, false
@@ -152,14 +212,11 @@ class NodeDefinitionCollection(
      * @return a condition generator which generates the authorization condition when provided the remote side node
      */
     fun generateRelationshipAuthorizationCondition(
-        relationshipDefinition: RelationshipDefinition,
-        permission: Permission
+        relationshipDefinition: RelationshipDefinition, permission: Permission
     ): CypherConditionGenerator {
         val nodeDefinition = getNodeDefinition(relationshipDefinition.nodeKClass)
         return generateAuthorizationCondition(
-            nodeDefinition,
-            permission,
-            checkIfRelationIsAllowed(relationshipDefinition, permission.name)
+            nodeDefinition, permission, checkIfRelationIsAllowed(relationshipDefinition, permission.name)
         )
     }
 
@@ -172,15 +229,40 @@ class NodeDefinitionCollection(
      * @return a condition generator which generates the authorization condition
      */
     private fun generateAuthorizationCondition(
-        nodeDefinition: NodeDefinition,
-        permission: Permission,
-        isAllowed: Boolean
+        nodeDefinition: NodeDefinition, permission: Permission, isAllowed: Boolean
     ): CypherConditionGenerator {
-        return CypherConditionGenerator {
-            val authorizationPart = generateAuthorizationConditionInternal(
-                it, it, nodeDefinition, permission, isAllowed
-            )
-            authorizationPart.toCondition()
+        return if (isAllowed || nodeDefinition in authorizationAllAllowedNodeDefinitions[permission.name]!!) {
+            CypherConditionGenerator {
+                generateDisallowRule(permission, nodeDefinition, it)
+            }
+        } else {
+            val allowRules = authorizationAllowRules[permission.name]!![nodeDefinition]!!
+            if (allowRules.isEmpty()) {
+                CypherConditionGenerator { Conditions.isFalse() }
+            } else {
+                CypherConditionGenerator { node ->
+                    allowRules.fold(Conditions.noCondition()) { oldCondition, rule ->
+                        val allowEndNode = Cypher.anyNode("a__0")
+                        val relationshipStart = node.relationshipTo(allowEndNode).unbounded()
+                            .withProperties(mapOf(permission.name to Cypher.literalTrue()))
+                        val nodeDefinitionsCondition = rule.nodeDefinitions.fold(Conditions.noCondition()) { oldNodeCondition, definition ->
+                            oldNodeCondition.or(allowEndNode.hasLabels(definition.primaryLabel))
+                        }
+                        val (relationship, condition) = if (rule.allowRule != null) {
+                            val ruleGenerator = beanFactory.getBean(rule.allowRule.beanRef, AllowRuleGenerator::class.java)
+                            ruleGenerator.generateRule(allowEndNode, relationshipStart, rule.allowRule, permission)
+                        } else {
+                            relationshipStart to Conditions.noCondition()
+                        }
+                        val relationshipName = Cypher.name("a__1")
+                        val namedRelationship = Cypher.path(relationshipName).definedBy(relationship)
+                        val nodeInPath = Cypher.name("a__2")
+                        val nodeDisallowRule = generateDisallowRule(permission, getNodeDefinition<Node>(), Cypher.anyNode(nodeInPath))
+                        val disallowRule = Predicates.all(nodeInPath).`in`(Functions.nodes(namedRelationship)).where(nodeDisallowRule)
+                        oldCondition.or(Cypher.match(namedRelationship).where(nodeDefinitionsCondition.and(condition).and(disallowRule)).asCondition())
+                    }
+                }
+            }
         }
     }
 
@@ -198,278 +280,69 @@ class NodeDefinitionCollection(
      * @return `true` iff allow for the remote nodes is implied
      */
     private fun checkIfRelationIsAllowed(
-        relationshipDefinition: RelationshipDefinition,
-        authorizationName: String
+        relationshipDefinition: RelationshipDefinition, authorizationName: String
     ): Boolean {
         val nodeDefinition = getNodeDefinition(relationshipDefinition.nodeKClass)
-        val nodeAuthorization = getAuthorization(authorizationName, nodeDefinition)
-        val inverseRelationshipDefinition = getInverseRelationshipDefinition(relationshipDefinition)
-        return if (inverseRelationshipDefinition in nodeAuthorization.allowFromRelated) {
+        val nodeAuthorization = getMergedAuthorization(authorizationName, nodeDefinition)
+        val inverseRelationshipDefinition = nodeDefinition.getRelationshipDefinitionByInverse(relationshipDefinition)
+        return if (inverseRelationshipDefinition?.property?.name in nodeAuthorization.allowFromRelated) {
             true
-        } else if (relationshipDefinition is OneRelationshipDefinition) {
+        } else if (relationshipDefinition is OneRelationshipDefinition && relationshipDefinition.parentKClass.isFinal) {
             val parentNodeDefinition = getNodeDefinition(relationshipDefinition.parentKClass)
-            val parentAuthorization = getAuthorization(authorizationName, parentNodeDefinition)
-            parentAuthorization.allow.isEmpty()
+            val parentAuthorization = getMergedAuthorization(authorizationName, parentNodeDefinition)
+            parentAuthorization.allow.isEmpty() && !parentAuthorization.allowAll
                     && parentAuthorization.allowFromRelated.size == 1
-                    && relationshipDefinition in parentAuthorization.allowFromRelated
+                    && relationshipDefinition.property.name in parentAuthorization.allowFromRelated
         } else {
             false
         }
     }
 
     /**
-     * Gets the inverse of the relationship if possible
-     * @param relationshipDefinition the relationship to get the inverse of
-     * @return the reverse relationship or `null` if none was found
-     */
-    private fun getInverseRelationshipDefinition(relationshipDefinition: RelationshipDefinition): RelationshipDefinition? {
-        val nodeDefinition = getNodeDefinition(relationshipDefinition.nodeKClass)
-        return nodeDefinition.relationshipDefinitions.values.firstOrNull {
-            it.type == relationshipDefinition.type && it.direction != relationshipDefinition.direction
-        }
-    }
-
-    /**
-     * Generates the full authorization condition for an authorization type.
-     * Supports non-final authorization types (a final authorization type is a Node subclass where all subclasses
-     * do not define additional authorizations).
+     * Creates a [Condition] to check for disallowed nodes that must be `true`
      *
-     * @param node the Cypher-DSL node on which the condition should be applied
-     * @param permission context for condition creation
-     * @param pattern the already existing pattern part which might be extended
-     * @param nodeDefinition used to obtain the [MergedAuthorization]
-     * @param isAllowed if `true`, allow is assumed to be present and only disallow conditions are checked
-     * @return the generated  authorization condition part, the optionalPattern is defined iff the pattern is extended
+     * @param permission the [Permission] to check for
+     * @param nodeDefinition definition of the node
+     * @param node Cypher DSL node to apply the condition to
      */
-    private fun generateAuthorizationConditionInternal(
-        node: org.neo4j.cypherdsl.core.Node,
-        pattern: ExposesRelationships<*>,
+    private fun generateDisallowRule(
+        permission: Permission,
         nodeDefinition: NodeDefinition,
-        permission: Permission,
-        isAllowed: Boolean
-    ): AuthorizationConditionPart {
-        val subNodeDefinitions = authorizationSubtypeNodeDefinitionLookup[nodeDefinition]!!
-        return if (subNodeDefinitions.isNotEmpty()) {
-            val subNodesCondition = subNodeDefinitions.fold(Conditions.noCondition()) { condition, subNodeDefinition ->
-                val typeCondition = node.hasLabels(subNodeDefinition.primaryLabel)
-                val subPart = generateFullAuthorizationConditionForFinalType(
-                    node, pattern, subNodeDefinition, permission, isAllowed
-                )
-                val subCondition = subPart.toCondition()
-                condition.or(typeCondition.and(subCondition))
-            }
-            AuthorizationConditionPart(null, subNodesCondition)
-        } else {
-            generateFullAuthorizationConditionForFinalType(
-                node, pattern, nodeDefinition, permission, isAllowed
-            )
-        }
-    }
-
-    /**
-     * Generates the full authorization condition for a final authorization type
-     * (a final authorization type is a Node subclass where all subclasses do not define additional
-     * authorizations).
-     *
-     * @param node the Cypher-DSL node on which the condition should be applied
-     * @param permission context for condition creation
-     * @param pattern the already existing pattern part which might be extended
-     * @param nodeDefinition used to obtain the [MergedAuthorization]
-     * @param isAllowed if `true`, allow is assumed to be present and only disallow conditions are checked
-     * @return the generated  authorization condition part, the optionalPattern is defined iff the pattern is extended
-     */
-    private fun generateFullAuthorizationConditionForFinalType(
-        node: org.neo4j.cypherdsl.core.Node,
-        pattern: ExposesRelationships<*>,
-        nodeDefinition: NodeDefinition,
-        permission: Permission,
-        isAllowed: Boolean
-    ): AuthorizationConditionPart {
-        val authorization = getAuthorization(permission.name, nodeDefinition)
-        return if (isAllowed) {
-            AuthorizationConditionPart(null, generateDisallowCondition(node, authorization, permission))
-        } else {
-            generateFullAuthorizationConditionForFinalType(
-                node, authorization, permission, pattern
-            )
-        }
-    }
-
-    /**
-     * Generates the full authorization condition for a final authorization type
-     * (a final authorization type is a Node subclass where all subclasses do not define additional
-     * authorizations).
-     *
-     * @param authorization the authorization to convert into a condition
-     * @param node the Cypher-DSL node on which the condition should be applied
-     * @param permission context for condition creation
-     * @param pattern the already existing pattern part which might be extended
-     * @return the generated  authorization condition part, the optionalPattern is defined iff the pattern is extended
-     */
-    private fun generateFullAuthorizationConditionForFinalType(
-        node: org.neo4j.cypherdsl.core.Node,
-        authorization: MergedAuthorization,
-        permission: Permission,
-        pattern: ExposesRelationships<*>
-    ): AuthorizationConditionPart {
-        val allowCondition = generateAllowCondition(node, authorization, permission)
-        val disallowCondition = generateDisallowCondition(node, authorization, permission)
-        return if (authorization.allowFromRelated.isEmpty()) {
-            AuthorizationConditionPart(null, allowCondition.and(disallowCondition))
-        } else if (authorization.allowFromRelated.size == 1 && authorization.allow.isEmpty()) {
-            generateFullAuthorizationConditionForFinalTypeSingleRelatedAllow(
-                authorization, pattern, permission, disallowCondition
-            )
-        } else {
-            generateFullAuthorizationConditionForFinalTypeRelatedAllows(
-                authorization, node, permission, disallowCondition, allowCondition
-            )
-        }
-    }
-
-    /**
-     * Generates the full authorization condition for a final authorization type
-     * (a final authorization type is a Node subclass where all subclasses do not define additional
-     * authorizations). There must be related allows and may be additional allow conditions.
-     *
-     * @param authorization the authorization to convert into a condition
-     * @param node the Cypher-DSL node on which the condition should be applied
-     * @param permission context for condition creation
-     * @param disallowCondition the already generated disallow condition
-     * @param allowCondition the already generated allow condition (does not include related allows)
-     * @return the generated  authorization condition part, the optionalPattern is never defined
-     */
-    private fun generateFullAuthorizationConditionForFinalTypeRelatedAllows(
-        authorization: MergedAuthorization,
-        node: org.neo4j.cypherdsl.core.Node,
-        permission: Permission,
-        disallowCondition: Condition,
-        allowCondition: Condition
-    ): AuthorizationConditionPart {
-        val allowFromRelatedCondition = authorization.allowFromRelated
-            .fold(Conditions.noCondition()) { condition, relationshipDefinition ->
-                val relatedNodeDefinition = getNodeDefinition(relationshipDefinition.nodeKClass)
-                val relatedNode = relatedNodeDefinition.node()
-                val newPattern = relationshipDefinition.generateRelationship(node, relatedNode)
-                val newPart = generateAuthorizationConditionInternal(
-                    relatedNode, newPattern, relatedNodeDefinition, permission, false
-                )
-                val relatedCondition = Cypher.match(newPart.optionalPattern ?: newPattern)
-                    .where(newPart.condition)
-                    .asCondition()
-                condition.or(relatedCondition)
-            }
-        return AuthorizationConditionPart(
-            null,
-            disallowCondition.and(allowCondition.or(allowFromRelatedCondition))
-        )
-    }
-
-    /**
-     * Generates the full authorization condition for a final authorization type
-     * (a final authorization type is a Node subclass where all subclasses do not define additional
-     * authorizations). There must be no allow rules and exactly one related allow.
-     *
-     * @param authorization the authorization to convert into a condition
-     * @param pattern the already existing pattern part which might be extended
-     * @param permission context for condition creation
-     * @param disallowCondition the already generated disallow condition
-     * @return the generated  authorization condition part, the optionalPattern is always defined
-     */
-    private fun generateFullAuthorizationConditionForFinalTypeSingleRelatedAllow(
-        authorization: MergedAuthorization,
-        pattern: ExposesRelationships<*>,
-        permission: Permission,
-        disallowCondition: Condition
-    ): AuthorizationConditionPart {
-        val relationshipDefinition = authorization.allowFromRelated.first()
-        val relatedNodeDefinition = getNodeDefinition(relationshipDefinition.nodeKClass)
-        val relatedNode = relatedNodeDefinition.node()
-        val newPattern = relationshipDefinition.generateRelationship(pattern, relatedNode)
-        val newPart = generateAuthorizationConditionInternal(
-            relatedNode, newPattern, relatedNodeDefinition, permission, false
-        )
-        return AuthorizationConditionPart(
-            newPart.optionalPattern ?: newPattern,
-            newPart.condition.and(disallowCondition)
-        )
-    }
-
-    /**
-     * Generates the combined allow condition
-     *
-     * @param node the Cypher-DSL node on which the condition should be applied
-     * @param authorization contains allow rules
-     * @param permission context for condition creation
-     * @return the generated condition which enforces allow rules
-     */
-    private fun generateAllowCondition(
-        node: org.neo4j.cypherdsl.core.Node,
-        authorization: MergedAuthorization,
-        permission: Permission
+        node: org.neo4j.cypherdsl.core.Node
     ): Condition {
-        return if (authorization.allow.isEmpty()) {
-            Conditions.isFalse()
+        val disallowRules = authorizationDisallowRules[permission.name]!!
+        val nodeDefinitions = nodeDefinitionHierarchyLookup[nodeDefinition]!! intersect disallowRules.keys
+        val rules = nodeDefinitions.map { it to disallowRules[it]!! }
+        return if (rules.isEmpty()) {
+            Conditions.isTrue()
         } else {
-            authorization.allow.fold(Conditions.noCondition()) { condition, rule ->
-                condition.or(generateConditionForRule(rule, node, permission))
+            rules.fold(Conditions.noCondition()) { oldCondition, (definition, nodeDisallowRules) ->
+                val disallowCondition = nodeDisallowRules.fold(Conditions.noCondition()) { oldDisallowCondition, rule ->
+                    val ruleGenerator = beanFactory.getBean(rule.beanRef, DisallowRuleGenerator::class.java)
+                    oldDisallowCondition.and(
+                        ruleGenerator.generateRule(
+                            node, rule, permission
+                        ).not()
+                    )
+                }
+                oldCondition.and(node.hasLabels(definition.primaryLabel).not().or(disallowCondition))
             }
         }
-
     }
 
     /**
-     * Generates the combined disallow condition
-     *
-     * @param node the Cypher-DSL node on which the condition should be applied
-     * @param authorization contains disallow rules
-     * @param permission context for condition creation
-     * @return the generated condition which enforces disallow rules
-     */
-    private fun generateDisallowCondition(
-        node: org.neo4j.cypherdsl.core.Node,
-        authorization: MergedAuthorization,
-        permission: Permission
-    ): Condition {
-        return if (authorization.disallow.isNotEmpty()) {
-            authorization.disallow.fold(Conditions.noCondition()) { condition, rule ->
-                condition.or(generateConditionForRule(rule, node, permission))
-            }.not()
-        } else {
-            Conditions.noCondition()
-        }
-    }
-
-    /**
-     * Generates a [Condition] for a [Rule]
-     *
-     * @param rule the rule to convert
-     * @param node the Cypher-DSL node on which the condition should be applied
-     * @param permission context for condition creation
-     * @return the generated condition which enforces the rule
-     */
-    private fun generateConditionForRule(
-        rule: Rule,
-        node: org.neo4j.cypherdsl.core.Node,
-        permission: Permission
-    ): Condition {
-        val bean = beanFactory.getBean(rule.beanRef, AuthorizationRuleGenerator::class.java)
-        return bean.generateCondition(node, rule, permission)
-    }
-
-    /**
-     * If present, returns `nodeDefinition.authorizations[name]`
-     * If not, checks if the name is known, it returns an empty [MergedAuthorization]
+     * If present, returns `nodeDefinition.mergedAuthorizations[name]`
+     * If not, checks if the name is known, it returns an empty [Authorization]
      * Otherwise throws an exception, has this hints at a misspelled name
      *
      * @param name the name of the authorization
      * @param nodeDefinition the [NodeDefinition] to get the authorization from
-     * @return the found  [MergedAuthorization] or a default empty one
+     * @return the found  [Authorization] or a default empty one
      * @throws IllegalArgumentException if the name is completely unknown
      */
-    private fun getAuthorization(name: String, nodeDefinition: NodeDefinition): MergedAuthorization {
-        return nodeDefinition.authorizations[name] ?: if (name in allAuthorizationNames) {
-            MergedAuthorization(name, emptySet(), emptySet(), emptySet())
+    private fun getMergedAuthorization(name: String, nodeDefinition: NodeDefinition): MergedAuthorization {
+        return nodeDefinition.mergedAuthorizations[name] ?: if (name in allAuthorizationNames) {
+            MergedAuthorization(name, emptySet(), emptySet(), emptySet(), false)
         } else {
             throw IllegalArgumentException("Potentially wrong permission name: $name")
         }
@@ -477,27 +350,12 @@ class NodeDefinitionCollection(
 }
 
 /**
- * Part of an authorization condition
+ * Mapping from a [NodeDefinition] to a [AllowRuleGenerator]
  *
- * @param optionalPattern optional associated [PatternElement]
- * @param condition associated [Condition]
+ * @param nodeDefinitions the set of associated [NodeDefinition]s
+ * @param allowRule the associated [Rule]
  */
-private data class AuthorizationConditionPart(val optionalPattern: PatternElement?, val condition: Condition) {
-
-    /**
-     * Converts this into a condition
-     * If a [optionalPattern] is present, a subquery is generated
-     * Otherwise the condition is returned
-     *
-     * @return the generated condition
-     */
-    fun toCondition(): Condition {
-        return if (optionalPattern != null) {
-            Cypher.match(optionalPattern)
-                .where(condition)
-                .asCondition()
-        } else {
-            condition
-        }
-    }
-}
+private data class NodeAllowRule(
+    val nodeDefinitions: Set<NodeDefinition>,
+    val allowRule: Rule? = null
+)

@@ -6,6 +6,7 @@ import io.github.graphglue.graphql.extensions.getSimpleName
 import io.github.graphglue.model.Authorization
 import io.github.graphglue.model.Node
 import io.github.graphglue.model.Rule
+import io.github.graphglue.util.iterateGraph
 import org.neo4j.cypherdsl.core.*
 import org.springframework.beans.factory.BeanFactory
 import kotlin.reflect.KClass
@@ -83,6 +84,8 @@ class NodeDefinitionCollection(
 
     /**
      * Associates each authorization name with a set of all disallow rules (by [NodeDefinition]
+     *
+     * @return the generated authorization name and [NodeDefinition] to disallow [Rule]s lookup
      */
     private fun generateAuthorizationDisallowRules(): Map<String, Map<NodeDefinition, Set<Rule>>> {
         return allAuthorizationNames.associateWith { name ->
@@ -94,6 +97,8 @@ class NodeDefinitionCollection(
 
     /**
      * Associates each [NodeDefinition] with all sub-NodeDefinitions and super-NodeDefinitions
+     *
+     * @return the generated [NodeDefinition] to all [NodeDefinition]s in hierarchy lookup
      */
     private fun generateNodeDefinitionHierarchyLookup(): Map<NodeDefinition, Set<NodeDefinition>> {
         return associateWith { nodeDefinition ->
@@ -103,49 +108,83 @@ class NodeDefinitionCollection(
         }
     }
 
+    /**
+     * Associates each authorization name and [NodeDefinition] with a set of [NodeAllowRule]s used to generate
+     * the allow condition
+     *
+     * @return the lookup from authorization name  and [NodeDefinition] to the generated set of [NodeAllowRule]s
+     */
     private fun generateAuthorizationAllowRules(): Map<String, Map<NodeDefinition, Set<NodeAllowRule>>> {
         return allAuthorizationNames.associateWith { name ->
             associateWith { nodeDefinition ->
-                val tempAllowRules = mutableSetOf<NodeAllowRule>()
-                val definitionsToCheck = ArrayDeque(nodeDefinitionHierarchyLookup[nodeDefinition]!!)
-                val checkedNodeDefinitions = nodeDefinitionHierarchyLookup[nodeDefinition]!!.toMutableSet()
-                val allowAllNodeDefinitions = mutableSetOf<NodeDefinition>()
-                while (definitionsToCheck.isNotEmpty()) {
-                    val toCheck = definitionsToCheck.removeFirst()
-                    val authorization = toCheck.authorizations[name]
-                    if (authorization?.allowAll == true) {
-                        allowAllNodeDefinitions += toCheck
-                    }
-                    authorization?.allowFromRelated?.forEach {
-                        val relationshipDefinition = toCheck.relationshipDefinitionsByProperty[it]!!
-                        val relatedNodeDefinition = getNodeDefinition(relationshipDefinition.nodeKClass)
-                        nodeDefinitionHierarchyLookup[relatedNodeDefinition]!!.filter {
-                            !checkedNodeDefinitions.contains(it)
-                        }.forEach {
-                            definitionsToCheck += it
-                            checkedNodeDefinitions += it
-                        }
-                    }
-                    authorization?.allow?.forEach {
-                        tempAllowRules += NodeAllowRule(
-                            setOf(toCheck),
-                            it
-                        )
-                    }
-                }
-                val allowRules = tempAllowRules.groupBy { it.allowRule }.values.map { rules ->
-                    rules.first().copy(nodeDefinitions = rules.flatMap { it.nodeDefinitions }.toSet())
-                }.toMutableSet()
-                if (allowAllNodeDefinitions.isNotEmpty()) {
-                    allowRules += NodeAllowRule(
-                        allowAllNodeDefinitions
-                    )
-                }
-                allowRules
+                generateAuthorizationNodeAllowRules(nodeDefinition, name)
             }
         }
     }
 
+    /**
+     * Generates the set of [NodeAllowRule] for a specific authorization name and [NodeDefinition]
+     * Also see [generateAuthorizationAllowRules]
+     *
+     * @param nodeDefinition the [NodeDefinition] for which to generate the allow rules
+     * @param name the name of the authorization
+     * @return the generated set of [NodeAllowRule]s used to generate the allow condition
+     */
+    private fun generateAuthorizationNodeAllowRules(
+        nodeDefinition: NodeDefinition,
+        name: String
+    ): Set<NodeAllowRule> {
+        val tempAllowRules = mutableSetOf<NodeAllowRule>()
+        val allowAllNodeDefinitions = mutableSetOf<NodeDefinition>()
+        nodeDefinitionHierarchyLookup[nodeDefinition]!!.iterateGraph { toCheck ->
+            val authorization = toCheck.authorizations[name]
+            if (authorization?.allowAll == true) {
+                allowAllNodeDefinitions += toCheck
+            }
+            authorization?.allow?.forEach {
+                tempAllowRules += NodeAllowRule(
+                    setOf(toCheck),
+                    it
+                )
+            }
+            authorization?.allowFromRelated?.flatMap {
+                val relationshipDefinition = toCheck.relationshipDefinitionsByProperty[it]!!
+                val relatedNodeDefinition = getNodeDefinition(relationshipDefinition.nodeKClass)
+                nodeDefinitionHierarchyLookup[relatedNodeDefinition]!!
+            }?: emptyList()
+        }
+        return generateFinalAllowRules(tempAllowRules, allowAllNodeDefinitions)
+    }
+
+    /**
+     * Takes a temporary set of [NodeAllowRule] and a set of allow all [NodeDefinition]s and creates the
+     * final set of [NodeAllowRule]s
+     *
+     * @param tempAllowRules already existing [NodeAllowRule]s, merged by [NodeAllowRule.allowRule]
+     * @param allowAllNodeDefinitions used to create a new [NodeAllowRule] without a [NodeAllowRule.allowRule]
+     * @return the transformed [tempAllowRules] and a new [NodeAllowRule] generated based on [allowAllNodeDefinitions]
+     *         (if necessary)
+     */
+    private fun generateFinalAllowRules(
+        tempAllowRules: Set<NodeAllowRule>,
+        allowAllNodeDefinitions: Set<NodeDefinition>
+    ): Set<NodeAllowRule> {
+        val allowRules = tempAllowRules.groupBy { it.allowRule }.values.map { rules ->
+            rules.first().copy(nodeDefinitions = rules.flatMap { it.nodeDefinitions }.toSet())
+        }.toMutableSet()
+        if (allowAllNodeDefinitions.isNotEmpty()) {
+            allowRules += NodeAllowRule(
+                allowAllNodeDefinitions
+            )
+        }
+        return allowRules
+    }
+
+    /**
+     * Generates a set of always allowed [NodeDefinition]s for each authorization name
+     *
+     * @return the lookup from authorization name to always allowed [NodeDefinition]s
+     */
     private fun generateAuthorizationAllAllowedNodeDefinitions(): Map<String, Set<NodeDefinition>> {
         return allAuthorizationNames.associateWith { name ->
             filter { it.mergedAuthorizations[name]?.allowAll ?: false }.toSet()
@@ -241,28 +280,40 @@ class NodeDefinitionCollection(
                 CypherConditionGenerator { Conditions.isFalse() }
             } else {
                 CypherConditionGenerator { node ->
-                    allowRules.fold(Conditions.noCondition()) { oldCondition, rule ->
-                        val allowEndNode = Cypher.anyNode("a__0")
-                        val relationshipStart = node.relationshipTo(allowEndNode).unbounded()
-                            .withProperties(mapOf(permission.name to Cypher.literalTrue()))
-                        val nodeDefinitionsCondition = rule.nodeDefinitions.fold(Conditions.noCondition()) { oldNodeCondition, definition ->
-                            oldNodeCondition.or(allowEndNode.hasLabels(definition.primaryLabel))
-                        }
-                        val (relationship, condition) = if (rule.allowRule != null) {
-                            val ruleGenerator = beanFactory.getBean(rule.allowRule.beanRef, AllowRuleGenerator::class.java)
-                            ruleGenerator.generateRule(allowEndNode, relationshipStart, rule.allowRule, permission)
-                        } else {
-                            relationshipStart to Conditions.noCondition()
-                        }
-                        val relationshipName = Cypher.name("a__1")
-                        val namedRelationship = Cypher.path(relationshipName).definedBy(relationship)
-                        val nodeInPath = Cypher.name("a__2")
-                        val nodeDisallowRule = generateDisallowRule(permission, getNodeDefinition<Node>(), Cypher.anyNode(nodeInPath))
-                        val disallowRule = Predicates.all(nodeInPath).`in`(Functions.nodes(namedRelationship)).where(nodeDisallowRule)
-                        oldCondition.or(Cypher.match(namedRelationship).where(nodeDefinitionsCondition.and(condition).and(disallowRule)).asCondition())
-                    }
+                    generateFullAuthorizationCondition(allowRules, node, permission)
                 }
             }
+        }
+    }
+
+    private fun generateFullAuthorizationCondition(
+        allowRules: Set<NodeAllowRule>,
+        node: org.neo4j.cypherdsl.core.Node,
+        permission: Permission
+    ): Condition {
+        return allowRules.fold(Conditions.noCondition()) { oldCondition, rule ->
+            val allowEndNode = Cypher.anyNode("a__0")
+            val relationshipStart = node.relationshipTo(allowEndNode).min(0)
+                .withProperties(mapOf(permission.name to Cypher.literalTrue()))
+            val nodeDefinitionsCondition =
+                rule.nodeDefinitions.fold(Conditions.noCondition()) { oldNodeCondition, definition ->
+                    oldNodeCondition.or(allowEndNode.hasLabels(definition.primaryLabel))
+                }
+            val (relationship, condition) = if (rule.allowRule != null) {
+                val ruleGenerator = beanFactory.getBean(rule.allowRule.beanRef, AllowRuleGenerator::class.java)
+                ruleGenerator.generateRule(allowEndNode, relationshipStart, rule.allowRule, permission)
+            } else {
+                relationshipStart to Conditions.noCondition()
+            }
+            val relationshipName = Cypher.name("a__1")
+            val namedRelationship = Cypher.path(relationshipName).definedBy(relationship)
+            val nodeInPath = Cypher.name("a__2")
+            val nodeDisallowRule = generateDisallowRule(permission, getNodeDefinition<Node>(), Cypher.anyNode(nodeInPath))
+            val disallowRule = Predicates.all(nodeInPath).`in`(Functions.nodes(namedRelationship)).where(nodeDisallowRule)
+            oldCondition.or(
+                Cypher.match(namedRelationship).where(nodeDefinitionsCondition.and(condition).and(disallowRule))
+                    .asCondition()
+            )
         }
     }
 
@@ -353,7 +404,7 @@ class NodeDefinitionCollection(
  * Mapping from a [NodeDefinition] to a [AllowRuleGenerator]
  *
  * @param nodeDefinitions the set of associated [NodeDefinition]s
- * @param allowRule the associated [Rule]
+ * @param allowRule the associated [Rule], if not present, no rule is used to generate a [Condition]
  */
 private data class NodeAllowRule(
     val nodeDefinitions: Set<NodeDefinition>,

@@ -58,7 +58,7 @@ abstract class BasePropertyDelegate<T : Node?, R>(protected val parent: Node, pr
                     dataFetchingEnvironment.getParentNodeDefinition(nodeQueryParser.nodeDefinitionCollection)
                 }.query
             val options = providedNodeQuery.options
-            result = cache[options] ?: throw IllegalStateException("Result not found in cache")
+            result = cache[options] ?: NodeQueryResult(options, emptyList(), 0)
             providedNodeQuery
         } else {
             val (loadResult, nodeQuery) = parent.loadNodesOfRelationship<T>(property, dataFetchingEnvironment)

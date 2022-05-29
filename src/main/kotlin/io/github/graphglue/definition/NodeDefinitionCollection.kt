@@ -148,10 +148,11 @@ class NodeDefinitionCollection(
                 )
             }
             authorization?.allowFromRelated?.flatMap {
-                val relationshipDefinition = toCheck.relationshipDefinitionsByProperty[it]!!
+                val relationshipDefinition = toCheck.relationshipDefinitionsByProperty[it]
+                    ?: throw IllegalStateException("Cannot find relationship defined by property $it on $toCheck")
                 val relatedNodeDefinition = getNodeDefinition(relationshipDefinition.nodeKClass)
                 nodeDefinitionHierarchyLookup[relatedNodeDefinition]!!
-            }?: emptyList()
+            } ?: emptyList()
         }
         return generateFinalAllowRules(tempAllowRules, allowAllNodeDefinitions)
     }

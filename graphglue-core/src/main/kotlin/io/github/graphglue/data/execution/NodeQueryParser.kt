@@ -26,12 +26,12 @@ const val DEFAULT_PART_ID = "default"
  * Can be used to create queries which load a subtree of nodes in one query
  *
  * @param nodeDefinitionCollection used to get the [NodeDefinition] for a specific [Node]
- * @param filterDefinitionCollection used to get the [FilterDefinition] for a specific [Node]
+ * @param filterDefinitionCollection used to get the [FilterDefinition] for a specific [Node], if existing
  * @param objectMapper used to parse cursors
  */
 class NodeQueryParser(
     val nodeDefinitionCollection: NodeDefinitionCollection,
-    val filterDefinitionCollection: FilterDefinitionCollection,
+    val filterDefinitionCollection: FilterDefinitionCollection?,
     val objectMapper: ObjectMapper
 ) {
 
@@ -342,9 +342,12 @@ class NodeQueryParser(
         additionalConditions: List<CypherConditionGenerator>,
         requiredPermission: Permission?
     ): NodeQuery {
-        val filterDefinition = filterDefinitionCollection.getFilterDefinition<Node>(nodeDefinition.nodeType)
+        val filterDefinition = filterDefinitionCollection?.getFilterDefinition<Node>(nodeDefinition.nodeType)
         val filters = ArrayList(additionalConditions)
         arguments["filter"]?.also {
+            if (filterDefinition == null) {
+                throw IllegalStateException("Cannot parse filter using only graphglue-core dependency")
+            }
             filters.add(filterDefinition.parseFilter(it, requiredPermission))
         }
         val orderBy = arguments["orderBy"]?.let { parseOrder(it) } ?: IdOrder

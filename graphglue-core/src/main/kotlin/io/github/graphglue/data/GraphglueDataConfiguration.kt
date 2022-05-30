@@ -1,7 +1,11 @@
 package io.github.graphglue.data
 
+import com.fasterxml.jackson.databind.ObjectMapper
+import io.github.graphglue.connection.filter.definition.FilterDefinition
+import io.github.graphglue.connection.filter.definition.FilterDefinitionCollection
 import io.github.graphglue.data.execution.NodeQueryParser
 import io.github.graphglue.data.repositories.GraphglueNeo4jOperations
+import io.github.graphglue.definition.NodeDefinition
 import io.github.graphglue.definition.NodeDefinitionCollection
 import io.github.graphglue.model.Node
 import org.neo4j.driver.Driver
@@ -18,6 +22,7 @@ import org.springframework.data.neo4j.core.mapping.Neo4jMappingContext
 import org.springframework.data.neo4j.core.mapping.Neo4jPersistentEntity
 import org.springframework.data.neo4j.core.mapping.callback.AfterConvertCallback
 import org.springframework.data.neo4j.core.transaction.ReactiveNeo4jTransactionManager
+import java.util.*
 
 /**
  * Name for the bean which provides an instance of  [GraphglueNeo4jOperations]
@@ -79,4 +84,21 @@ class GraphglueDataConfiguration {
     fun graphGlueNeo4jOperations(
         neo4jTemplate: ReactiveNeo4jTemplate, neo4jClient: ReactiveNeo4jClient, beanFactory: BeanFactory
     ) = GraphglueNeo4jOperations(neo4jTemplate, neo4jClient, beanFactory)
+
+    /**
+     * Parser for incoming GraphQL queries
+     * Allows transforming (a part of) a GraphQL query into a single Cypher query
+     *
+     * @param nodeDefinitionCollection collection of all [NodeDefinition]s
+     * @param filterDefinitionCollection collection of all [FilterDefinition]s, if existing
+     * @param objectMapper necessary for cursor serialization and deserialization
+     * @return the generated [NodeQueryParser]
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    fun queryParser(
+        nodeDefinitionCollection: NodeDefinitionCollection,
+        filterDefinitionCollection: Optional<FilterDefinitionCollection>,
+        objectMapper: ObjectMapper
+    ) = NodeQueryParser(nodeDefinitionCollection, filterDefinitionCollection.orElse(null), objectMapper)
 }

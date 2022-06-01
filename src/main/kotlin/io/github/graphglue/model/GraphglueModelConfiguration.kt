@@ -1,7 +1,5 @@
 package io.github.graphglue.model
 
-import io.github.graphglue.authorization.AuthorizationRuleGenerator
-import org.neo4j.cypherdsl.core.Conditions
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
@@ -22,13 +20,4 @@ class GraphglueModelConfiguration {
     @ConditionalOnMissingBean
     fun nodeIdGenerator() = UUIDStringGenerator()
 
-    /**
-     * Bean for a rule which allows all access
-     *
-     * @return the generated bean
-     */
-    @Bean(ALL_RULE)
-    fun allRuleGenerator() = AuthorizationRuleGenerator { _, _, _ ->
-        Conditions.isTrue()
-    }
 }

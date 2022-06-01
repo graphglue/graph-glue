@@ -12,6 +12,7 @@ package io.github.graphglue.model
  *                         name. Works in combination with `allow`
  * @param disallow rules which disallow access, if any rule evaluates to `true`, access is not granted (independent of
  *                 `allow` and `allowFromRelated`)
+ * @param allowAll if `true`, allow is always granted
  */
 @Target(AnnotationTarget.CLASS)
 @MustBeDocumented
@@ -21,5 +22,6 @@ annotation class Authorization(
     val name: String,
     val allow: Array<Rule> = [],
     val allowFromRelated: Array<String> = [],
-    val disallow: Array<Rule> = []
+    val disallow: Array<Rule> = [],
+    val allowAll: Boolean = false
 )

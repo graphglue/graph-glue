@@ -1,6 +1,5 @@
 package io.github.graphglue.authorization
 
-import io.github.graphglue.definition.RelationshipDefinition
 import io.github.graphglue.model.Authorization
 import io.github.graphglue.model.Rule
 
@@ -11,10 +10,12 @@ import io.github.graphglue.model.Rule
  * @param allow see [Authorization.allow]
  * @param allowFromRelated see [Authorization.allowFromRelated]
  * @param disallow see [Authorization.disallow]
+ * @param allowAll see [Authorization.allowAll]
  */
 data class MergedAuthorization(
     val name: String,
     val allow: Set<Rule>,
-    val allowFromRelated: Set<RelationshipDefinition>,
-    val disallow: Set<Rule>
+    val allowFromRelated: Set<String>,
+    val disallow: Set<Rule>,
+    val allowAll: Boolean
 )

@@ -17,16 +17,23 @@ import kotlin.reflect.jvm.jvmErasure
  * @param type the type of the relation (label associated with Neo4j relationship)
  * @param direction direction of the relation (direction associated with Neo4j relationship)
  * @param parentKClass the class associated with the [NodeDefinition] this is used as part of,
- *                        must be a subclass of the property defining class
+ *                     must be a subclass of the property defining class
+ * @param allowedAuthorizations the names of authorizations which allow via this relation.
+ *                              These names result in properties with value `true` on the relation
  */
 class ManyRelationshipDefinition(
-    property: KProperty1<*, *>, type: String, direction: Direction, parentKClass: KClass<out Node>
+    property: KProperty1<*, *>,
+    type: String,
+    direction: Direction,
+    parentKClass: KClass<out Node>,
+    allowedAuthorizations: Set<String>
 ) : RelationshipDefinition(
     property,
     @Suppress("UNCHECKED_CAST") (property.returnType.firstTypeArgument.jvmErasure as KClass<out Node>),
     type,
     direction,
-    parentKClass
+    parentKClass,
+    allowedAuthorizations
 ) {
     override fun generateFieldDefinition(transformationContext: SchemaTransformationContext): GraphQLFieldDefinition {
         @Suppress("UNCHECKED_CAST") val returnNodeType =

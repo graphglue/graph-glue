@@ -58,7 +58,7 @@ abstract class BasePropertyDelegate<T : Node?, R>(protected val parent: Node, pr
                     dataFetchingEnvironment.getParentNodeDefinition(nodeQueryParser.nodeDefinitionCollection)
                 }.query
             val options = providedNodeQuery.options
-            result = cache[options] ?: throw IllegalStateException("Result not found in cache")
+            result = cache[options] ?: NodeQueryResult(options, emptyList(), 0)
             providedNodeQuery
         } else {
             val (loadResult, nodeQuery) = parent.loadNodesOfRelationship<T>(property, dataFetchingEnvironment)
@@ -96,13 +96,10 @@ abstract class BasePropertyDelegate<T : Node?, R>(protected val parent: Node, pr
     /**
      * Gets the diff of added and removed relationships to persist in the database
      *
-     * @param nodeIdLookup lookup from [Node] to its id to add relation to non-persisted nodes
-     *                     (these nodes are already persisted, but not newly fetched from the database)
      * @param nodeDefinition the definition of the nodes in this property, can be used to get the Label(s) of the node(s)
      * @return the diff which describes how to add and remove relationships
      */
     internal abstract fun getRelationshipDiff(
-        nodeIdLookup: Map<Node, String>,
         nodeDefinition: NodeDefinition
     ): RelationshipDiff
 

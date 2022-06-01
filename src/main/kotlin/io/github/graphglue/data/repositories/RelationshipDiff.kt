@@ -1,6 +1,7 @@
 package io.github.graphglue.data.repositories
 
-import org.neo4j.cypherdsl.core.Node
+import io.github.graphglue.model.Node
+
 
 /**
  * Collection of added and removed relationships

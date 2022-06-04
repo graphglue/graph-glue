@@ -148,6 +148,17 @@ abstract class RelationshipDefinition(
     }
 
     /**
+     * Validates the relationship for [Node] by calling [Node]
+     */
+    internal fun validate(
+        node: Node,
+        savingNodes: Set<Node>,
+        nodeDefinitionCollection: NodeDefinitionCollection
+    ) {
+        node.getProperty<Node>(property).validate(savingNodes, this, nodeDefinitionCollection)
+    }
+
+    /**
      * Gets related nodes to save
      *
      * @param node the node which contains the property to get the related nodes to save
@@ -158,9 +169,18 @@ abstract class RelationshipDefinition(
     }
 
     /**
+     * Gets related nodes defined by this property, but only those already loaded (therefore no lazy loading)
+     * The relationships do not have to be persisted yet
+     *
+     * @param node the node which contains the property to get the loaded related nodes
+     * @return the already loaded related nodes
+     */
+    internal fun getLoadedRelatedNodes(node: Node): Collection<Node> {
+        return node.getProperty<Node>(property).getLoadedRelatedNodes()
+    }
+
+    /**
      * Generates a field definition
-     * Important: the field has to be annotated with  [NODE_RELATIONSHIP_DIRECTIVE], otherwise data fetching does
-     * not work
      *
      * @param transformationContext used to generate GraphQL types, register data fetchers, ...
      */

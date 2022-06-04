@@ -8,6 +8,7 @@ import io.github.graphglue.data.execution.*
 import io.github.graphglue.definition.NodeDefinitionCollection
 import io.github.graphglue.data.repositories.RelationshipDiff
 import io.github.graphglue.definition.NodeDefinition
+import io.github.graphglue.definition.RelationshipDefinition
 import io.github.graphglue.graphql.extensions.getParentNodeDefinition
 import io.github.graphglue.model.Node
 import org.springframework.beans.factory.annotation.Autowired
@@ -24,14 +25,17 @@ import kotlin.reflect.KProperty1
  * @param T the type of the value [Node] (s)
  * @param R the type of property
  */
-abstract class BasePropertyDelegate<T : Node?, R>(protected val parent: Node, protected val property: KProperty1<*, *>) {
+abstract class BasePropertyDelegate<T : Node?, R>(
+    protected val parent: Node,
+    protected val property: KProperty1<*, *>
+) {
 
     /**
      * Cache for database results for specific query parts
      */
     private val cache = IdentityHashMap<NodeQueryOptions, NodeQueryResult<T>>()
 
-    private val lazyLoadingDelegate = object: LazyLoadingDelegate<T, R> {
+    private val lazyLoadingDelegate = object : LazyLoadingDelegate<T, R> {
         override suspend fun invoke() = getLoadedProperty()
     }
 
@@ -46,7 +50,8 @@ abstract class BasePropertyDelegate<T : Node?, R>(protected val parent: Node, pr
      * @return the result, including a new local context
      */
     suspend fun getFromGraphQL(
-        @Autowired @GraphQLIgnore
+        @Autowired
+        @GraphQLIgnore
         nodeQueryParser: NodeQueryParser,
         dataFetchingEnvironment: DataFetchingEnvironment
     ): DataFetcherResult<*> {
@@ -105,8 +110,18 @@ abstract class BasePropertyDelegate<T : Node?, R>(protected val parent: Node, pr
 
     /**
      * Gets [Node]s which should be persisted when this [Node] is persisted
+     *
+     * @return other nodes to save
      */
     internal abstract fun getRelatedNodesToSave(): Collection<Node>
+
+    /**
+     * Gets related nodes defined by this property, but only those already loaded (therefore no lazy loading)
+     * The relationships do not have to be persisted yet
+     *
+     * @return the already loaded related nodes
+     */
+    internal abstract fun getLoadedRelatedNodes(): Collection<Node>
 
     /**
      * Gets the loaded property which is returned by the lazy loading delegate
@@ -125,4 +140,18 @@ abstract class BasePropertyDelegate<T : Node?, R>(protected val parent: Node, pr
     operator fun getValue(thisRef: Node, property: KProperty<*>): LazyLoadingDelegate<T, R> {
         return lazyLoadingDelegate
     }
+
+    /**
+     * Called to validate the property
+     * Should throw an exception if the property is invalid, with an appropriate reason
+     *
+     * @param savingNodes the nodes which are currently saved
+     * @param relationshipDefinition definition of the relationship
+     * @param nodeDefinitionCollection used to obtain the inverse of [relationshipDefinition]
+     */
+    abstract fun validate(
+        savingNodes: Set<Node>,
+        relationshipDefinition: RelationshipDefinition,
+        nodeDefinitionCollection: NodeDefinitionCollection
+    )
 }

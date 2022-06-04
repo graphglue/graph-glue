@@ -7,6 +7,8 @@ import io.github.graphglue.data.execution.NodeQueryParser
 import io.github.graphglue.data.execution.NodeQueryResult
 import io.github.graphglue.data.repositories.RelationshipDiff
 import io.github.graphglue.definition.NodeDefinition
+import io.github.graphglue.definition.NodeDefinitionCollection
+import io.github.graphglue.definition.RelationshipDefinition
 import io.github.graphglue.model.Node
 import org.neo4j.cypherdsl.core.Cypher
 import java.util.*
@@ -74,6 +76,10 @@ class NodeSetPropertyDelegate<T : Node>(
         return addedNodes
     }
 
+    override fun getLoadedRelatedNodes(): Collection<Node> {
+        return currentNodes ?: emptyList()
+    }
+
     /**
      * Ensures that this [NodeSetProperty] is loaded
      */
@@ -88,6 +94,12 @@ class NodeSetPropertyDelegate<T : Node>(
         ensureLoaded()
         return nodeSetProperty
     }
+
+    override fun validate(
+        savingNodes: Set<Node>,
+        relationshipDefinition: RelationshipDefinition,
+        nodeDefinitionCollection: NodeDefinitionCollection
+    ) {}
 
     /**
      * Node property representing the many side of a node relation.

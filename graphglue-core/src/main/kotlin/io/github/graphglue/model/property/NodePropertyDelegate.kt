@@ -7,13 +7,15 @@ import io.github.graphglue.data.execution.NodeQueryParser
 import io.github.graphglue.data.execution.NodeQueryResult
 import io.github.graphglue.data.repositories.RelationshipDiff
 import io.github.graphglue.definition.NodeDefinition
+import io.github.graphglue.definition.NodeDefinitionCollection
+import io.github.graphglue.definition.RelationshipDefinition
 import io.github.graphglue.definition.extensions.firstTypeArgument
 import io.github.graphglue.model.Node
 import io.github.graphglue.model.property.NodeSetPropertyDelegate.NodeSetProperty
-import org.neo4j.cypherdsl.core.Cypher
 import kotlin.reflect.KProperty1
 import kotlin.reflect.KTypeProjection
 import kotlin.reflect.full.createType
+import kotlin.reflect.jvm.jvmErasure
 
 /**
  * Property for the one side of a relation
@@ -82,13 +84,16 @@ class NodePropertyDelegate<T : Node?>(
     }
 
     override fun getRelatedNodesToSave(): Collection<Node> {
-        ensureValidSaveState()
         val current = currentNode
         return if (current != persistedNode && current != null) {
             listOf(current)
         } else {
             emptyList()
         }
+    }
+
+    override fun getLoadedRelatedNodes(): Collection<Node> {
+        return listOfNotNull(currentNode)
     }
 
     override fun constructGraphQLResult(
@@ -122,24 +127,33 @@ class NodePropertyDelegate<T : Node?>(
         }
     }
 
-    /**
-     * Ensures that this property is in a valid state
-     *
-     * @throws IllegalStateException if in an invalid state
-     */
-    private fun ensureValidSaveState() {
+    override suspend fun getLoadedProperty(): NodeProperty {
+        ensureLoaded()
+        return nodeProperty
+    }
+
+    override fun validate(
+        savingNodes: Set<Node>,
+        relationshipDefinition: RelationshipDefinition,
+        nodeDefinitionCollection: NodeDefinitionCollection
+    ) {
         if (!supportsNull) {
             val neverSetInitialRelationship = currentNode == null && parent.rawId == null
             val removedRequiredRelationship = currentNode == null && persistedNode != null
             if (neverSetInitialRelationship || removedRequiredRelationship) {
-                throw IllegalStateException("Non-nullable property $property cannot be saved, as it has value null")
+                val setByOtherSide = savingNodes.filter { relationshipDefinition.nodeKClass.isInstance(it) }
+                    .any {
+                        val relatedNodeDefinition = nodeDefinitionCollection.getNodeDefinition(it::class)
+                        val inverseRelationshipDefinition = relatedNodeDefinition.getRelationshipDefinitionByInverse(relationshipDefinition)
+                        inverseRelationshipDefinition?.getLoadedRelatedNodes(it)?.contains(parent) ?: false
+                    }
+                if (!setByOtherSide) {
+                    throw IllegalStateException(
+                        "Non-nullable property $property cannot be saved, as it has value null and is not set by other side."
+                    )
+                }
             }
         }
-    }
-
-    override suspend fun getLoadedProperty(): NodeProperty {
-        ensureLoaded()
-        return nodeProperty
     }
 
     /**

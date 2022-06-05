@@ -147,14 +147,33 @@ class NodeDefinitionCollection(
                     it
                 )
             }
-            authorization?.allowFromRelated?.flatMap {
-                val relationshipDefinition = toCheck.relationshipDefinitionsByProperty[it]
-                    ?: throw IllegalStateException("Cannot find relationship defined by property $it on $toCheck")
-                val relatedNodeDefinition = getNodeDefinition(relationshipDefinition.nodeKClass)
-                nodeDefinitionHierarchyLookup[relatedNodeDefinition]!!
-            } ?: emptyList()
+            getAllowFromRelatedNodeDefinitions(authorization, toCheck)
         }
         return generateFinalAllowRules(tempAllowRules, allowAllNodeDefinitions)
+    }
+
+    /**
+     * Gets [NodeDefinition] based on [Authorization.allowFromRelated] of a [MergedAuthorization]
+     *
+     * @param authorization defines the relationships
+     * @param nodeDefinition definition for node annotated with a part of [authorization]
+     * @return all [NodeDefinition]s from which allow is inherited
+     */
+    private fun getAllowFromRelatedNodeDefinitions(
+        authorization: MergedAuthorization?,
+        nodeDefinition: NodeDefinition
+    ): List<NodeDefinition> {
+        return authorization?.allowFromRelated?.mapNotNull {
+            val relationshipDefinition = nodeDefinition.relationshipDefinitionsByProperty[it]
+            if (relationshipDefinition == null && !nodeDefinition.nodeType.isAbstract) {
+                throw IllegalStateException("Cannot find relationship defined by property $it on $nodeDefinition")
+            }
+            relationshipDefinition
+        }
+            ?.flatMap {
+                val relatedNodeDefinition = getNodeDefinition(it.nodeKClass)
+                nodeDefinitionHierarchyLookup[relatedNodeDefinition]!!
+            } ?: emptyList()
     }
 
     /**

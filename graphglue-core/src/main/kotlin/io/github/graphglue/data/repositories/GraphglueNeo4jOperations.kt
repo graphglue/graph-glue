@@ -89,6 +89,7 @@ class GraphglueNeo4jOperations(
      */
     private fun saveNodes(entities: Iterable<Node>): Flux<Node> {
         val nodesToSave = getNodesToSaveRecursive(entities)
+        validateNodes(nodesToSave)
         return Flux.fromIterable(nodesToSave).flatMap { nodeToSave ->
             delegate.save(nodeToSave).map { nodeToSave to it }
         }.collectList().flatMapMany { saveResult ->
@@ -108,6 +109,20 @@ class GraphglueNeo4jOperations(
                     }
                 }
             })
+        }
+    }
+
+    /**
+     * Validates all relationship properties of all provided [nodes]
+     *
+     * @param nodes all currently saved nodes
+     */
+    private fun validateNodes(nodes: Set<Node>) {
+        for (node in nodes) {
+            val nodeDefinition = nodeDefinitionCollection.getNodeDefinition(node::class)
+            for (relationshipDefinition in nodeDefinition.relationshipDefinitions.values) {
+                relationshipDefinition.validate(node, nodes, nodeDefinitionCollection)
+            }
         }
     }
 

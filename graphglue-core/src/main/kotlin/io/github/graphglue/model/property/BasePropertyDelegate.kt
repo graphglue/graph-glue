@@ -35,8 +35,19 @@ abstract class BasePropertyDelegate<T : Node?, R>(
      */
     private val cache = IdentityHashMap<NodeQueryOptions, NodeQueryResult<T>>()
 
+    /**
+     * NodeCache used to load this property
+     * might be set after initial loading, but must not be changed
+     */
+    protected var nodeCache: NodeCache? = null
+
     private val lazyLoadingDelegate = object : LazyLoadingDelegate<T, R> {
-        override suspend fun invoke() = getLoadedProperty()
+        override suspend fun invoke(cache: NodeCache?): R {
+            if (nodeCache != null && cache != null && nodeCache != cache) {
+                throw IllegalStateException("This property was already loaded with another cache")
+            }
+            return getLoadedProperty(cache)
+        }
     }
 
     /**
@@ -126,9 +137,10 @@ abstract class BasePropertyDelegate<T : Node?, R>(
     /**
      * Gets the loaded property which is returned by the lazy loading delegate
      *
+     * @param cache used to load nodes from, if provided, not loading deleted nodes
      * @return the loaded property
      */
-    internal abstract suspend fun getLoadedProperty(): R
+    internal abstract suspend fun getLoadedProperty(cache: NodeCache?): R
 
     /**
      * Gets the lazy loading delegate which is used to get the value of the property

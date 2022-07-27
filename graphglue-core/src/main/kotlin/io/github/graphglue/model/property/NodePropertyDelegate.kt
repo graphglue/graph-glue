@@ -105,11 +105,17 @@ class NodePropertyDelegate<T : Node?>(
 
     /**
      * Ensures that this property is loaded
+     *
+     * @param cache used to load nodes from, if provided, not loading deleted nodes
      */
-    private suspend fun ensureLoaded() {
+    private suspend fun ensureLoaded(cache: NodeCache?) {
         if (!isLoaded) {
             val (result, _) = parent.loadNodesOfRelationship<T>(property)
             currentNode = result.nodes.firstOrNull()
+        }
+        if (cache != null && nodeCache == null) {
+            nodeCache = cache
+            currentNode = cache.getOrAdd(currentNode)
         }
     }
 
@@ -127,8 +133,8 @@ class NodePropertyDelegate<T : Node?>(
         }
     }
 
-    override suspend fun getLoadedProperty(): NodeProperty {
-        ensureLoaded()
+    override suspend fun getLoadedProperty(cache: NodeCache?): NodeProperty {
+        ensureLoaded(cache)
         return nodeProperty
     }
 

@@ -153,7 +153,7 @@ class NodeDefinition(
      */
     private fun generateOneRelationshipDefinitions(): List<OneRelationshipDefinition> {
         val properties = nodeType.memberProperties.filter { it.returnType.isSubtypeOf(NODE_PROPERTY_TYPE) }
-            .filter { it.returnType.firstTypeArgument.classifier !is KTypeParameter }
+            .filter { it.returnType.firstTypeArgument.classifier !is KTypeParameter }.filter { !it.isAbstract }
 
         return properties.map {
             val field = it.javaField
@@ -180,7 +180,7 @@ class NodeDefinition(
     private fun generateManyRelationshipDefinitions(): List<ManyRelationshipDefinition> {
         val properties = nodeType.memberProperties.filter { it.returnType.isSubtypeOf(NODE_SET_PROPERTY_TYPE) }.filter {
             it.returnType.firstTypeArgument.classifier !is KTypeParameter
-        }
+        }.filter { !it.isAbstract }
         return properties.map {
             val annotation = it.findAnnotation<NodeRelationship>()
                 ?: throw NodeSchemaException("Property of type Node is not annotated with NodeRelationship: $it")

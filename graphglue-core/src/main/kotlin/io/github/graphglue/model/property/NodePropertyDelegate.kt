@@ -112,6 +112,7 @@ class NodePropertyDelegate<T : Node?>(
         if (!isLoaded) {
             val (result, _) = parent.loadNodesOfRelationship<T>(property)
             currentNode = result.nodes.firstOrNull()
+            isLoaded = true
         }
         if (cache != null && nodeCache == null) {
             nodeCache = cache

@@ -141,7 +141,7 @@ class GraphglueNeo4jOperations(
         val diffToSave = relationshipDefinition.getRelationshipDiff(nodeToSave, relatedNodeDefinition)
         val deleteMono = Flux.fromIterable(diffToSave.nodesToRemove).flatMap {
             val nodeId = nodeIdLookup[nodeToSave]!!
-            val relatedNodeId = nodeIdLookup[it]!!
+            val relatedNodeId = it.rawId!!
             val type = relationshipDefinition.type
             if (relationshipDefinition.direction == Direction.OUTGOING) {
                 deleteRelationship(type, nodeId, relatedNodeId, nodeDefinition, relatedNodeDefinition)

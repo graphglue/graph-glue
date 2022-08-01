@@ -5,13 +5,13 @@ import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.data.neo4j.core.ReactiveNeo4jClient
 
-/***
+/**
  * Autoconfiguration associated with authorization part of library
  */
 @Configuration
 class GraphglueAuthorizationConfiguration {
 
-    /***
+    /**
      * Bean to provide [AuthorizationChecker] which support checking if a certain permission is given
      *
      * @param collection collection in which the node is defined

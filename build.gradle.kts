@@ -1,10 +1,11 @@
 import org.jetbrains.dokka.gradle.DokkaTask
+import org.jetbrains.dokka.gradle.DokkaTaskPartial
 
 plugins {
 	kotlin("jvm")
 	kotlin("plugin.spring")
     id("maven-publish")
-    id("org.jetbrains.dokka") apply false
+    id("org.jetbrains.dokka")
     signing
     id("io.github.gradle-nexus.publish-plugin")
 }
@@ -48,7 +49,7 @@ subprojects {
                     configureEach(builder)
                 }
             }
-            val dokkaHtml by getting(DokkaTask::class) {
+            val dokkaHtmlPartial by getting(DokkaTaskPartial::class) {
                 dokkaSourceSets {
                     configureEach(builder)
                 }

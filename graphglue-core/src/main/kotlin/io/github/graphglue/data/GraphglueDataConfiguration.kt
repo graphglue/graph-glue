@@ -29,7 +29,7 @@ import java.util.*
  */
 const val GRAPHGLUE_NEO4J_OPERATIONS_BEAN_NAME = "graphglueNeo4jOperations"
 
-/***
+/**
  * Autoconfiguration associated with Neo4j part of library
  */
 @Configuration
@@ -72,7 +72,7 @@ class GraphglueDataConfiguration {
         return LazyLoadingContext(neo4jClient, neo4jMappingContext, nodeQueryParser)
     }
 
-    /***
+    /**
      * Bean to provide [Neo4jOperations] which support save over lazy loaded relations
      *
      * @param neo4jTemplate template which provides base operation functionality

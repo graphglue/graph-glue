@@ -5,15 +5,16 @@ const lightCodeTheme = require('prism-react-renderer/themes/github');
 const darkCodeTheme = require('prism-react-renderer/themes/dracula');
 
 /** @type {import('@docusaurus/types').Config} */
+const apiSidebar = require("./docs/api/sidebar.json")
 const config = {
     title: 'GraphGlue',
-    url: 'https://graphglue.github.io/',
-    baseUrl: '/graph-glue/',
+    url: 'https://graphglue.github.io',
+    baseUrl: '/',
     onBrokenLinks: 'throw',
     onBrokenMarkdownLinks: 'throw',
     onDuplicateRoutes: 'throw',
     organizationName: 'graphglue',
-    projectName: 'graph-glue',
+    projectName: 'graphglue.github.io',
     trailingSlash: false,
 
     presets: [
@@ -43,10 +44,16 @@ const config = {
             title: 'GraphGlue',
             items: [{
                     type: 'doc',
-                    docId: 'docs',
+                    docId: 'docs/docs',
                     position: 'left',
                     label: 'Docs',
                 },
+                {
+                    type: 'doc',
+                    docId: apiSidebar[0].items[0].id ?? apiSidebar[0].items[0].link?.id,
+                    position: 'left',
+                    label: 'API',
+                  },
                 {
                     href: 'https://github.com/graphglue/graph-glue',
                     label: 'GitHub',

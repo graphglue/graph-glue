@@ -20,16 +20,19 @@ jobs:
       - name: Setup Gradle
         uses: gradle/gradle-build-action@v2
       - name: Execute Gradle build
-        run: ./gradlew build dokkaHTML
+        run: ./gradlew build dokkaHtmlMultiModule
       - uses: actions/setup-node@v3
         with:
           node-version: 16.x
           cache: npm
           cache-dependency-path: website/package-lock.json
       - name: Modify Dokka output
-        uses: nk-coding/dokka-html-mdx-transform@1_6_20
+        uses: nk-coding/dokka-html-mdx-transform@1_7_10
         with:
-          src: "build/dokka/html/graph-glue"
+          src: "build/dokka/htmlMultiModule"
+          modules: |
+            graphglue-core
+            graphglue
           dest: "website/docs"
           folder: "api"
       - name: Install dependencies

@@ -1,4 +1,5 @@
 import org.jetbrains.dokka.gradle.DokkaTask
+import org.jetbrains.dokka.gradle.DokkaTaskPartial
 
 plugins {
 	kotlin("jvm")
@@ -48,7 +49,7 @@ subprojects {
                     configureEach(builder)
                 }
             }
-            val dokkaHtml by getting(DokkaTask::class) {
+            val dokkaHtmlPartial by getting(DokkaTaskPartial::class) {
                 dokkaSourceSets {
                     configureEach(builder)
                 }

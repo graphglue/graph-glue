@@ -8,13 +8,13 @@ const darkCodeTheme = require('prism-react-renderer/themes/dracula');
 const apiSidebar = require("./docs/api/sidebar.json")
 const config = {
     title: 'GraphGlue',
-    url: 'https://graphglue.github.io/',
-    baseUrl: '/graph-glue/',
+    url: 'https://graphglue.github.io',
+    baseUrl: '/',
     onBrokenLinks: 'throw',
     onBrokenMarkdownLinks: 'throw',
     onDuplicateRoutes: 'throw',
     organizationName: 'graphglue',
-    projectName: 'graph-glue',
+    projectName: 'graphglue.github.io',
     trailingSlash: false,
 
     presets: [
@@ -50,7 +50,7 @@ const config = {
                 },
                 {
                     type: 'doc',
-                    docId: apiSidebar[0].id ?? apiSidebar[0].link.id,
+                    docId: apiSidebar[0].items[0].id ?? apiSidebar[0].items[0].link?.id,
                     position: 'left',
                     label: 'API',
                   },

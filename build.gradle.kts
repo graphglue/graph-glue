@@ -78,7 +78,7 @@ subprojects {
                     pom {
                         name.set("graph-glue")
                         description.set(project.description)
-                        url.set("https://graphglue.github.io/graph-glue")
+                        url.set("https://graphglue.github.io")
 
                         organization {
                             name.set("Software Quality and Architecture - University of Stuttgart")

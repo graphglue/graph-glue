@@ -13,6 +13,8 @@ GraphGlue is a library to develop annotation-based code-first GraphQL servers us
 
 ## Installation
 
+### Full Installation
+
 <Tabs
   defaultValue="gradle"
   values={[
@@ -24,7 +26,7 @@ GraphGlue is a library to develop annotation-based code-first GraphQL servers us
 <TabItem value="gradle">
 
 ```kts
-implementation("io.github.graphglue", "graphglue", "1.1.0")
+implementation("io.github.graphglue", "graphglue", "4.0.1")
 ```
 
 </TabItem>
@@ -34,7 +36,40 @@ implementation("io.github.graphglue", "graphglue", "1.1.0")
 <dependency>
     <groupId>io.github.graphglue</groupId>
     <artifactId>graphglue</artifactId>
-    <version>1.1.0</version>
+    <version>4.0.1</version>
+</dependency>
+```
+
+</TabItem>
+</Tabs>
+
+### Core Installation
+
+This is meant to be used when the project consits of multiple modules, and the module containing the domain model should not provide the beans for the GraphQL server.
+this has no dependency on `com.expediagroup:graphql-kotlin-spring-server`, however it still depends on `com.expediagroup:graphql-kotlin-server`.
+
+<Tabs
+  defaultValue="gradle"
+  values={[
+    { label: 'Gradle Kotlin', value: 'gradle' },
+    { label: 'Maven', value: 'maven' }
+  ]
+}>
+
+<TabItem value="gradle">
+
+```kts
+implementation("io.github.graphglue", "graphglue-core", "4.0.1")
+```
+
+</TabItem>
+<TabItem value="maven">
+
+```xml
+<dependency>
+    <groupId>io.github.graphglue</groupId>
+    <artifactId>graphglue-core</artifactId>
+    <version>4.0.1</version>
 </dependency>
 ```
 

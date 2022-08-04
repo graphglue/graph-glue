@@ -4,8 +4,9 @@
 const lightCodeTheme = require('prism-react-renderer/themes/github');
 const darkCodeTheme = require('prism-react-renderer/themes/dracula');
 
+const apiSidebar = require('./sidebars').apiSidebar
+
 /** @type {import('@docusaurus/types').Config} */
-const apiSidebar = require("./docs/api/sidebar.json")
 const config = {
     title: 'GraphGlue',
     url: 'https://graphglue.github.io',
@@ -50,7 +51,7 @@ const config = {
                 },
                 {
                     type: 'doc',
-                    docId: apiSidebar[0].items[0].id ?? apiSidebar[0].items[0].link?.id,
+                    docId: apiSidebar[0]?.items[0]?.id ?? apiSidebar[0]?.items[0]?.link?.id ?? "docs/docs",
                     position: 'left',
                     label: 'API',
                   },
@@ -72,6 +73,22 @@ const config = {
             additionalLanguages: ['kotlin'],
         },
     }),
+
+    plugins: [
+        () => ({
+            name: 'custom-webpack-loaders',
+            configureWebpack: () => ({
+                module: {
+                    rules: [
+                        {
+                            test: /\.source$/,
+                            type: 'asset/source'
+                        }
+                    ]
+                }
+            })
+        })
+    ]
 };
 
 module.exports = config;

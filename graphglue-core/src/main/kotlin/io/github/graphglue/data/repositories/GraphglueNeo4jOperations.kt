@@ -225,9 +225,9 @@ class GraphglueNeo4jOperations(
         val rootIdParameter = Cypher.anonParameter(rootNodeId)
         val relatedIdParameter = Cypher.anonParameter(relatedNodeId)
         val rootNode =
-            rootNodeDefinition.node().withProperties(mapOf("id" to rootIdParameter)).named(Cypher.name("node1"))
+            rootNodeDefinition.node().named("node1").withProperties(mapOf("id" to rootIdParameter))
         val relatedNode =
-            relatedNodeDefinition.node().withProperties(mapOf("id" to relatedIdParameter)).named(Cypher.name("node2"))
+            relatedNodeDefinition.node().named("node2").withProperties(mapOf("id" to relatedIdParameter))
         val relationship = rootNode.relationshipTo(relatedNode, type)
             .withProperties(relationshipDefinition?.allowedAuthorizations?.associateWith { Cypher.literalTrue() }
                 ?: emptyMap())
@@ -262,8 +262,8 @@ class GraphglueNeo4jOperations(
     ): Mono<Void> {
         val idParameter = Cypher.anonParameter(rootNodeId)
         val relatedIdParameter = Cypher.anonParameter(relatedNodeId)
-        val rootNode = rootNodeDefinition.node().withProperties(mapOf("id" to idParameter))
-        val relatedNode = relatedNodeDefinition.node().withProperties(mapOf("id" to relatedIdParameter))
+        val rootNode = rootNodeDefinition.node().named("node1").withProperties(mapOf("id" to idParameter))
+        val relatedNode = relatedNodeDefinition.node().named("node2").withProperties(mapOf("id" to relatedIdParameter))
         val relationship = rootNode.relationshipTo(relatedNode, type)
         val inverseRelationship = rootNode.relationshipFrom(relatedNode, "_$type")
         val statement = Cypher.optionalMatch(relationship, inverseRelationship)

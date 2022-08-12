@@ -36,7 +36,7 @@ subprojects {
     apply(plugin = "signing")
 
     dependencies {
-        api("org.springframework.boot", "spring-boot-starter-webflux", springBootVersion)
+        api("org.springframework.boot", "spring-boot-starter-json", springBootVersion)
         api("com.expediagroup", "graphql-kotlin-server", graphqlKotlinVersion)
         api("org.springframework.boot", "spring-boot-starter-data-neo4j", springBootVersion)
         api("org.jetbrains.kotlinx", "kotlinx-coroutines-reactor", kotlinxCoroutinesReactorVersion)

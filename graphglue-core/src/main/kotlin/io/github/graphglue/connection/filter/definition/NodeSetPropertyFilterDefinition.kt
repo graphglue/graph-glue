@@ -26,6 +26,7 @@ class NodeSetPropertyFilterDefinition(
     relationshipDefinition: RelationshipDefinition
 ) : SimpleObjectFilterDefinitionEntry<NodeSubFilterDefinition>(
     name,
+    "Filter by $name",
     "Used to filter by a connection-based property. Fields are joined by AND",
     "${nodeType.jvmErasure.getSimpleName()}ListFilterInput",
     listOf(

@@ -11,12 +11,14 @@ import io.github.graphglue.util.CacheMap
  *
  * @param name the name of the field on the [GraphQLInputObjectType]
  * @param description the description of the field
+ * @param typeDescription the description of the generated GraphQL object type
  * @param typeName name of the constructed [GraphQLInputType] which serves as input for the filter
  * @param fields list of fields for the filter, when evaluating these fields are joined by AND
  */
 abstract class SimpleObjectFilterDefinitionEntry<T : FilterEntryDefinition>(
     name: String,
     description: String,
+    val typeDescription: String,
     val typeName: String,
     fields: List<T>
 ) : FilterEntryDefinition(name, description) {
@@ -32,7 +34,7 @@ abstract class SimpleObjectFilterDefinitionEntry<T : FilterEntryDefinition>(
         return inputTypeCache.computeIfAbsent(typeName, GraphQLTypeReference(typeName)) {
             val builder = GraphQLInputObjectType.newInputObject()
             builder.name(typeName)
-            builder.description(description)
+            builder.description(typeDescription)
             for (field in fields.values) {
                 builder.field {
                     it.name(field.name).description(field.description).type(field.toGraphQLType(inputTypeCache))

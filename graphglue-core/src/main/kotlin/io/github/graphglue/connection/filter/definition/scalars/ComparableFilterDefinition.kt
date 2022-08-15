@@ -10,7 +10,7 @@ import graphql.schema.GraphQLInputType
  * Already defines `eq`, `in`, `lt`, `lte`, `gt` and `gte` entries
  *
  * @param name the name of the field on the [GraphQLInputObjectType]
- * @param description the description of the field
+ * @param description the description of the object type
  * @param typeName name of the constructed [GraphQLInputType] which serves as input for the filter
  * @param scalarType the [GraphQLInputType] for the field inputs (e.g. for eq, startsWith, ...)
  * @param neo4jName the name of the property of the node in the database (might be different from [name])

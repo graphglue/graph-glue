@@ -15,7 +15,7 @@ import io.github.graphglue.connection.filter.model.SimpleObjectFilter
  * Already defines `eq` and `in` entries
  *
  * @param name the name of the field on the [GraphQLInputObjectType]
- * @param description the description of the field
+ * @param description the description of the object type
  * @param typeName name of the constructed [GraphQLInputType] which serves as input for the filter
  * @param scalarType the [GraphQLInputType] for the field inputs (e.g. for eq, startsWith, ...)
  * @param neo4jName the name of the property of the node in the database (might be different from [name])
@@ -31,6 +31,7 @@ abstract class ScalarFilterDefinition(
     nullable: Boolean,
     entries: List<ScalarFilterEntryBase>,
 ) : SimpleObjectFilterDefinitionEntry<FilterEntryDefinition>(name,
+    "Filter by $name",
     description,
     if (nullable) "Nullable${typeName}FilterInput" else "${typeName}FilterInput",
     (entries + getDefaultFilterEntries(nullable)).map {

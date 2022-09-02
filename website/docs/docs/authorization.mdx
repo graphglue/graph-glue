@@ -72,7 +72,7 @@ It can be used like this:
 class NamedNode(val name: String) : Node()
 ```
 
-`AllowRuleGenerator` works the same, with the difference that is is provided a `RelationshipPattern` it can extend and must return.
+`AllowRuleGenerator` works the same, with the difference that it is provided a `RelationshipPattern` it can extend and must return.
 This can be used to improve the performance of the check, as without the possibility to continue the pattern, a worse performing existential subquery would be necessary.
 
 Note that the `AllowRuleGenerator`/`DisllowRuleGenerator` generates a [CypherDSL](https://neo4j-contrib.github.io/cypher-dsl/current/) `Conditon`, which allows checking complex conditions directly in the database.

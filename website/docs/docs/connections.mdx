@@ -54,6 +54,9 @@ type Type implements Node {
 }
 
 input TypeFilterInput {
+    and: [TypeFilterInput!]
+    or: [TypeFilterInput!]
+    not: TypeFilterInput
     # ...
 }
 

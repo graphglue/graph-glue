@@ -39,7 +39,7 @@ class Tree(
 
 1. Necessary annotation for all `Node` classes. If the `name` parameter is provided, a connection-like query with the name `name` is exposed.
 1. Specifies the `READ` permission for this Node, for more info, see [Authorization](./authorization)
-1. Property which is exposed in the GraaphQL schema. As it is annotated with both `@OrderProperty` and `@FilterProperty`, connections of type `Tree` can both be filtered and ordered by this property.
+1. Property which is exposed in the GraphQL schema. As it is annotated with both `@OrderProperty` and `@FilterProperty`, connections of type `Tree` can both be filtered and ordered by this property.
 1. Internal property NOT exposed in the GraphQL schema.
 1. Each class needs to extend `Node` in order to use any GraphGlue specific features.
 1. An outgoing relation of type `Root`.
@@ -71,7 +71,7 @@ By default, both Spring Data Neo4j and GraphQL Kotlin use the name of the proper
 :::caution
 
 Spring Data Neo4j and GraphQL Kotlin use different visibilities.
-While property backed by a field (this includes delegated properties) is saved in the database. GraphQL Kotlin only exposes `public` properties not annotated with `@GraphQLIgnore`.
+While properties backed by a field (this includes delegated properties) are saved in the database, GraphQL Kotlin only exposes `public` properties not annotated with `@GraphQLIgnore`.
 
 :::
 
@@ -166,7 +166,7 @@ For more information, see [Connecting nodes: @Relationship](https://docs.spring.
             </th>
             <th>
                 No lazy loading is supported, all relationships are eagerly loaded, which can result in large subgraphs being loaded. To prevent this, you may use 
-                <a href="https://docs.spring.io/spring-data/neo4j/docs/current/reference/html/#projections" rel="noopener noreferer">Projections</a>
+                <a href="https://docs.spring.io/spring-data/neo4j/docs/current/reference/html/#projections" rel="noopener noreferer"> Projections</a>
             </th>
         </tr>
         <tr>
@@ -246,7 +246,9 @@ Here an example for the Kotlin `Float` type:
 @Bean
 fun floatFilter() =
     TypeFilterDefinitionEntry(Float::class.createType()) { name, property, parentNodeDefinition, _ ->
-        FloatFilterDefinition(name, parentNodeDefinition.getNeo4jNameOfProperty(property))
+        FloatFilterDefinition(
+            name, parentNodeDefinition.getNeo4jNameOfProperty(property), property.returnType.isMarkedNullable
+        )
     }
 ```
 Note that `TypeFilterDefinitionEntry` are free to not create a filter definition by returning `null` in the callback.

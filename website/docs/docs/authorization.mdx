@@ -23,14 +23,14 @@ Declaraing a permission looks like this:
 @DomainNode
 @Authorization(
     name = "READ",
-    allow = [Rule("leafAllowedBean")],
-    allowFromRelated = ["tree"],
-    disallow = [Rule("leafDisallowedBean")]
+    allow = [Rule("actorAllowedBean")],
+    allowFromRelated = ["movies"],
+    disallow = [Rule("actorDisallowedBean")]
 )
-class Leaf : Node() {
-    @NodeRelationship("LEAF", Direction.OUTGOING)
+class Actor : Node() {
+    @NodeRelationship("ACTOR", Direction.INCOMING)
     @delegate:Transient
-    val tree by NodeProperty<Tree>()
+    val movies by NodeProperty<Movie>()
 }
 ```
 
@@ -47,8 +47,8 @@ The checking algorithm works in two steps:
    :::
 1. Check if access is disallowed. Access is granted if an only if NO `Rule` in `disallow` evaluates to `true`.
 
-In this example, allow is granted if the `"leftAllowedBean"` Rule evaluate to `true`, OR if `"READ"` is granted to `tree`.
-Then, the permission is granted if also `"leafDisallowedBean"` evaluates to `false`
+In this example, allow is granted if the `"actorAllowedBean"` Rule evaluate to `true`, OR if `"READ"` is granted to any Movie in `movies`.
+Then, the permission is granted if also `"actorDisallowedBean"` evaluates to `false`
 
 ### Rule
 
@@ -114,18 +114,18 @@ Any other properties returning `Node` types are NOT automatically checked!
 This is due to checking is only done directly in the database.
 This is espacially the case when returning nodes from functions which use the lazy-loading functionality of GraphGlue relationships, or when returning nodes in mutations.
 
-Consider the following example with the `Leaf` class from [above](#overview)
+Consider the following example with the `Actor` class from [above](#overview)
 ```kotlin
-data class CreateLeafOutput(val leaf: Leaf)
+data class CreateActorOutput(val actor: Actor)
 ```
-When returing this, `leaf` is NOT checked, however, note that the permission is checked for GraphGlue relationships on `leaf`, in this example the `tree` property.
+When returing this, `actor` is NOT checked, however, note that the permission is checked for GraphGlue relationships on `actor`, in this example the `movies` property.
 
 :::
 
 :::info
 
 Permissions are only checked if necessary. 
-Considering the [above](#overview), if `leafs` is accessed on `Tree`, allow is not checked as `Leaf` allows from related `tree`.
+Considering the [above](#overview), if `actors` is accessed on `Movie`, allow is not checked as `Actor` allows from related `movies`.
 
 :::
 

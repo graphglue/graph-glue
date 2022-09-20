@@ -4,7 +4,17 @@ sidebar_position: 5
 
 # Configuration Properties
 
+GraphGlue uses [Spring configuration properties](https://docs.spring.io/spring-boot/docs/current/reference/html/features.html#features.external-config).
+
+GraphGlue itself provides the following configuration properties:
+
 |Name|Default value|Description|
 |--|--|--|
 |graphglue.graphiql.enabled|`true`|If true, a GraphiQL instance will be provided|
 |graphglue.graphiql.endpoint|`"graphiql"`|The endpoint where the GraphiQL instance is provided|
+
+:::info
+
+Additionally, it is necessary to configure both [GraphQL Kotlin](https://opensource.expediagroup.com/graphql-kotlin/docs/server/spring-server/spring-properties) and [Spring Data Neo4j](https://docs.spring.io/spring-data/neo4j/docs/current/reference/html/#getting-started) correctly.
+
+:::

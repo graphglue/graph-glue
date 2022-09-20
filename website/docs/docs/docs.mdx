@@ -88,7 +88,7 @@ If you want to use Spring Data Repositories, please make sure to annotate your `
   - Many side of relations are automatically transformed to connections in GraphQL
   - Lazy loading support in Kotlin for easy algorithm implementation
 - GraphQL queries directly translated into Neo4j Cypher
-  - One GraphQL query maps to one Cypher query (in almost all cases)
+  - One GraphQL query maps to one Cypher query (in case lazy loading and manual authorization checking are not used)
 - Declarative & extensible authorization aproach
   - Specify Node-based authorization using annotations
   - Implement custom logic using Spring beans
@@ -101,7 +101,7 @@ If you want to use Spring Data Repositories, please make sure to annotate your `
   - Order by properties
   - Always performed directly in the database
 - Use your favorite [GraphQL Kotlin](https://opensource.expediagroup.com/graphql-kotlin) and [Spring Data Neo4j](https://spring.io/projects/spring-data-neo4j) features
-- Integrated GraphiQL with explorer plugin
+- Integrated [GraphiQL](https://github.com/graphql/graphiql/blob/main/packages/graphiql/README.md) GraphQL IDE with explorer plugin
 
 ## Building locally
 

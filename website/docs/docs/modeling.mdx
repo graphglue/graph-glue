@@ -15,35 +15,37 @@ Almost all of their features still work when using this library. For more inform
 
 ## Overview
 
-Consider the following example of a `Node`:
+Consider a simple domain model, consisting of movies, actors and directors:
+Each movie has exactly one director, and any amount of actors.
+Given is the code for the `Movie` node:
 
 ```kotlin
-@DomainNode("trees")                                // (1)
-@Authorization("READ")                              // (2)
-class Tree(
-    @OrderProperty @FilterProperty val age: Int,    // (3)
-    internal val name: String                       // (4)
-) : Node() {                                        // (5)
+@DomainNode("movies")                                 // (1)
+@Authorization("READ")                                // (2)
+class Movie(
+    @OrderProperty @FilterProperty val name: String,  // (3)
+    internal val releaseYear: Int                     // (4)
+) : Node() {                                          // (5)
     
-    @NodeRelationship("ROOT", Direction.OUTGOING)   // (6)
+    @NodeRelationship("DIRECTOR", Direction.OUTGOING) // (6)
     @delegate:Transient
-    val root by NodeProperty<Root>()
+    val director by NodeProperty<Director>()
     
-    @NodeRelationship("LEAF", Direction.OUTGOING)   // (7)
+    @NodeRelationship("ACTOR", Direction.OUTGOING)    // (7)
     @delegate:Transient
-    val leafs by NodeSetProperty<Leaf>()
+    val actors by NodeSetProperty<Actor>()
     
-    fun ageInDays() = age * 365                     // (8)
+    fun actorsCount() = actors.size                   // (8)
 }
 ```
 
 1. Necessary annotation for all `Node` classes. If the `name` parameter is provided, a connection-like query with the name `name` is exposed.
 1. Specifies the `READ` permission for this Node, for more info, see [Authorization](./authorization)
-1. Property which is exposed in the GraphQL schema. As it is annotated with both `@OrderProperty` and `@FilterProperty`, connections of type `Tree` can both be filtered and ordered by this property.
+1. Property which is exposed in the GraphQL schema. As it is annotated with both `@OrderProperty` and `@FilterProperty`, connections of type `Movie` can both be filtered and ordered by this property.
 1. Internal property NOT exposed in the GraphQL schema.
 1. Each class needs to extend `Node` in order to use any GraphGlue specific features.
-1. An outgoing relation of type `Root`.
-1. An outgoing relation of type `Set<Leaf>`. In the GraphQL schema, it is exposed as `LeafConnection`
+1. An outgoing relation of type `Director`, each movie has exactly one director.
+1. An outgoing relation of type `Set<Actor>`. In the GraphQL schema, it is exposed as `ActorConnection`
 1. Function exposed as field in the GraphQL schema.
 
 ## Class Definition
@@ -88,6 +90,11 @@ The used type must both be supported by GraphQL Kotlin and Spring Data Neo4j, ho
 Like properties, functions can be used to expose field in the GraphQL schema.
 
 ## Relationships
+
+GraphGlue supports two types of relationships: native GraphGlue relationships, and Spring Data Neo4j relationships.
+Both support many-to-many, many-to-one and one-to-one relationships by combining one- and many-sides of relationships.
+Both bidirectional (defining both ends) and unidirectional (defining only one end) relationships are supported.
+Note that for bidirectional relationships, both sides must use the same type of relationship, it is not possible to combine GraphGlue with Spring Data Neo4j relationship sides.
 
 ###  GraphGlue relationships
 

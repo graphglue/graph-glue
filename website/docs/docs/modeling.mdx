@@ -113,6 +113,9 @@ val propertyName by NodeSetProperty<NodeType>()
 ```
 
 where `label` is a `String`, and direction is either `Direction.INCOMING` or `Direction.OUTGOING`.
+Relations are always directional, due to being directional in Neo4j.
+When modeling a bidirectional relationship, one side needs to use `Direction.INCOMING`, while the other needs to use `Direction.OUTGOING`.
+The direction is considered an implementation detail and not exposed in the GraphQL API.
 
 :::caution
 

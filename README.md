@@ -9,7 +9,7 @@ For the full documentation, have a look at our [website](https://graphglue.githu
 
 #### Gradle
 ```kts
-implementation("io.github.graphglue", "graphglue", "4.1.2")
+implementation("io.github.graphglue", "graphglue", "4.1.3")
 ```
 
 #### Maven
@@ -17,7 +17,7 @@ implementation("io.github.graphglue", "graphglue", "4.1.2")
 <dependency>
     <groupId>io.github.graphglue</groupId>
     <artifactId>graphglue</artifactId>
-    <version>4.1.2</version>
+    <version>4.1.3</version>
 </dependency>
 ```
 
@@ -28,7 +28,7 @@ this has no dependency on `com.expediagroup:graphql-kotlin-spring-server`, howev
 
 #### Gradle
 ```kts
-implementation("io.github.graphglue", "graphglue-core", "4.1.2")
+implementation("io.github.graphglue", "graphglue-core", "4.1.3")
 ```
 
 #### Maven
@@ -36,7 +36,7 @@ implementation("io.github.graphglue", "graphglue-core", "4.1.2")
 <dependency>
     <groupId>io.github.graphglue</groupId>
     <artifactId>graphglue-core</artifactId>
-    <version>4.1.2</version>
+    <version>4.1.3</version>
 </dependency>
 ```
 

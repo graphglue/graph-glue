@@ -22,6 +22,11 @@ import kotlin.reflect.full.isSubclassOf
 const val DEFAULT_PART_ID = "default"
 
 /**
+ * Amount of nodes which are fetched additionally to determine if there are more nodes to come
+ */
+private const val NODE_FETCH_OFFSET = 1
+
+/**
  * Parser to get [NodeQuery]s
  * Can be used to create queries which load a subtree of nodes in one query
  *
@@ -356,8 +361,8 @@ class NodeQueryParser(
             orderBy = orderBy,
             after = arguments["after"]?.let { orderBy.parseCursor(it as String, objectMapper) },
             before = arguments["before"]?.let { orderBy.parseCursor(it as String, objectMapper) },
-            first = arguments["first"]?.let { (it as Int) + 1 },
-            last = arguments["last"]?.let { (it as Int) + 1 },
+            first = arguments["first"]?.let { (it as Int) + NODE_FETCH_OFFSET },
+            last = arguments["last"]?.let { (it as Int) + NODE_FETCH_OFFSET },
             fetchTotalCount = selectionSet?.contains("totalCount") ?: true
         )
         val parts = HashMap<String, List<SelectedField>>()

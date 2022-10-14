@@ -156,7 +156,7 @@ class NodePropertyDelegate<T : Node?>(
                     }
                 if (!setByOtherSide) {
                     throw IllegalStateException(
-                        "Non-nullable property $property cannot be saved, as it has value null and is not set by other side."
+                        "Non-nullable property $property on $parent cannot be saved, as it has value null and is not set by other side."
                     )
                 }
             }

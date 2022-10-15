@@ -100,12 +100,9 @@
   word-break: break-all;
 }
 
-.sidebar-package-title > div > a {
-  align-items:end;
-}
-
 .sidebar-package-title > div > a::after {
   margin-left: 6px;
+  margin-bottom: -2px;
   width: 18px;
   height: 18px;
   display: inline-block;

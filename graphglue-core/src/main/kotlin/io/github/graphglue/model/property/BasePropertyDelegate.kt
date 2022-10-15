@@ -41,6 +41,11 @@ abstract class BasePropertyDelegate<T : Node?, R>(
      */
     protected var nodeCache: NodeCache? = null
 
+    /**
+     * Dynamic type of [parent] and name of [property], can be used for error messages without leaking information
+     */
+    protected val propertyName = "${parent::class.qualifiedName}.${property.name}"
+
     private val lazyLoadingDelegate = object : LazyLoadingDelegate<T, R> {
         override suspend fun invoke(cache: NodeCache?): R {
             if (nodeCache != null && cache != null && nodeCache != cache) {

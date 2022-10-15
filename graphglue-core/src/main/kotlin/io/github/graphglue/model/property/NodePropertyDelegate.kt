@@ -58,7 +58,7 @@ class NodePropertyDelegate<T : Node?>(
         super.registerQueryResult(nodeQueryResult)
         if (!isLoaded && nodeQueryResult.options.isAllQuery) {
             if (nodeQueryResult.nodes.size > 1) {
-                throw IllegalArgumentException("Too many  nodes for one side of relation")
+                throw IllegalArgumentException("Too many nodes for one side of relation")
             }
             currentNode = nodeQueryResult.nodes.firstOrNull()
             persistedNode = currentNode
@@ -111,6 +111,9 @@ class NodePropertyDelegate<T : Node?>(
     private suspend fun ensureLoaded(cache: NodeCache?) {
         if (!isLoaded) {
             val (result, _) = parent.loadNodesOfRelationship<T>(property)
+            if (result.nodes.size > 1) {
+                throw IllegalArgumentException("Too many nodes for one side of relation")
+            }
             currentNode = result.nodes.firstOrNull()
             isLoaded = true
         }
@@ -118,6 +121,7 @@ class NodePropertyDelegate<T : Node?>(
             nodeCache = cache
             currentNode = cache.getOrAdd(currentNode)
         }
+        persistedNode = currentNode
     }
 
     /**

@@ -27,6 +27,12 @@ const val DEFAULT_PART_ID = "default"
 private const val NODE_FETCH_OFFSET = 1
 
 /**
+ * Amount of nodes which are fetched when fetching a one-side of a query
+ * Fetches two nodes to detect an inconsistent state in the database
+ */
+private const val ONE_NODE_QUERY_LIMIT = 2
+
+/**
  * Parser to get [NodeQuery]s
  * Can be used to create queries which load a subtree of nodes in one query
  *
@@ -397,7 +403,8 @@ class NodeQueryParser(
         additionalConditions: List<CypherConditionGenerator>,
         requiredPermission: Permission?
     ): NodeQuery {
-        val subNodeQueryOptions = NodeQueryOptions(filters = additionalConditions, first = 1, fetchTotalCount = false)
+        val subNodeQueryOptions =
+            NodeQueryOptions(filters = additionalConditions, first = ONE_NODE_QUERY_LIMIT, fetchTotalCount = false)
         return generateNodeQuery(
             nodeDefinition,
             mapOf(DEFAULT_PART_ID to (selectionSet?.immediateFields ?: emptyList())),

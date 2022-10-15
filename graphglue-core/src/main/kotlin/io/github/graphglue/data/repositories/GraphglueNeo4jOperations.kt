@@ -146,7 +146,7 @@ class GraphglueNeo4jOperations(
             if (relationshipDefinition.direction == Direction.OUTGOING) {
                 deleteRelationship(type, nodeId, relatedNodeId, nodeDefinition, relatedNodeDefinition)
             } else {
-                deleteRelationship(type, relatedNodeId, relatedNodeId, relatedNodeDefinition, nodeDefinition)
+                deleteRelationship(type, relatedNodeId, nodeId, relatedNodeDefinition, nodeDefinition)
             }
         }.then()
         val addMono = Flux.fromIterable(diffToSave.nodesToAdd).flatMap {
@@ -224,10 +224,8 @@ class GraphglueNeo4jOperations(
     ): Mono<Void> {
         val rootIdParameter = Cypher.anonParameter(rootNodeId)
         val relatedIdParameter = Cypher.anonParameter(relatedNodeId)
-        val rootNode =
-            rootNodeDefinition.node().named("node1").withProperties(mapOf("id" to rootIdParameter))
-        val relatedNode =
-            relatedNodeDefinition.node().named("node2").withProperties(mapOf("id" to relatedIdParameter))
+        val rootNode = rootNodeDefinition.node().named("node1").withProperties(mapOf("id" to rootIdParameter))
+        val relatedNode = relatedNodeDefinition.node().named("node2").withProperties(mapOf("id" to relatedIdParameter))
         val relationship = rootNode.relationshipTo(relatedNode, type)
             .withProperties(relationshipDefinition?.allowedAuthorizations?.associateWith { Cypher.literalTrue() }
                 ?: emptyMap())
@@ -264,9 +262,9 @@ class GraphglueNeo4jOperations(
         val relatedIdParameter = Cypher.anonParameter(relatedNodeId)
         val rootNode = rootNodeDefinition.node().named("node1").withProperties(mapOf("id" to idParameter))
         val relatedNode = relatedNodeDefinition.node().named("node2").withProperties(mapOf("id" to relatedIdParameter))
-        val relationship = rootNode.relationshipTo(relatedNode, type)
-        val inverseRelationship = rootNode.relationshipFrom(relatedNode, "_$type")
-        val statement = Cypher.optionalMatch(relationship, inverseRelationship)
+        val relationship = rootNode.relationshipTo(relatedNode, type).named("r1")
+        val inverseRelationship = rootNode.relationshipFrom(relatedNode, "_$type").named("r2")
+        val statement = Cypher.match(relationship).optionalMatch(inverseRelationship)
             .delete(relationship.requiredSymbolicName, inverseRelationship.requiredSymbolicName).build()
         return executeStatement(statement)
     }

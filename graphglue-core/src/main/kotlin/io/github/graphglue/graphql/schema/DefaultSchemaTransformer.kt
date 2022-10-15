@@ -120,9 +120,11 @@ class DefaultSchemaTransformer(
     ): GraphQLObjectType {
         return type.transform {
             for (relationshipDefinition in nodeDefinition.relationshipDefinitions.values) {
-                val field = relationshipDefinition.generateFieldDefinition(context)
-                it.field(field)
-                registerRelationshipDataFetcher(relationshipDefinition, context)
+                if (relationshipDefinition.isGraphQLVisible) {
+                    val field = relationshipDefinition.generateFieldDefinition(context)
+                    it.field(field)
+                    registerRelationshipDataFetcher(relationshipDefinition, context)
+                }
             }
             getNodeInterfaces(nodeDefinition).forEach(it::withInterface)
         }

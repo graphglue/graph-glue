@@ -58,7 +58,7 @@ class NodePropertyDelegate<T : Node?>(
         super.registerQueryResult(nodeQueryResult)
         if (!isLoaded && nodeQueryResult.options.isAllQuery) {
             if (nodeQueryResult.nodes.size > 1) {
-                throw IllegalArgumentException("Too many nodes for one side of relation")
+                throw IllegalArgumentException("Too many nodes for one side of relation $propertyName")
             }
             currentNode = nodeQueryResult.nodes.firstOrNull()
             persistedNode = currentNode
@@ -112,7 +112,7 @@ class NodePropertyDelegate<T : Node?>(
         if (!isLoaded) {
             val (result, _) = parent.loadNodesOfRelationship<T>(property)
             if (result.nodes.size > 1) {
-                throw IllegalArgumentException("Too many nodes for one side of relation")
+                throw IllegalArgumentException("Too many nodes for one side of relation $propertyName")
             }
             currentNode = result.nodes.firstOrNull()
             isLoaded = true
@@ -160,7 +160,7 @@ class NodePropertyDelegate<T : Node?>(
                     }
                 if (!setByOtherSide) {
                     throw IllegalStateException(
-                        "Non-nullable property $property on $parent cannot be saved, as it has value null and is not set by other side."
+                        "Non-nullable property $propertyName cannot be saved, as it has value null and is not set by other side."
                     )
                 }
             }
@@ -181,7 +181,7 @@ class NodePropertyDelegate<T : Node?>(
             get() {
                 assert(isLoaded)
                 if (!supportsNull && currentNode == null) {
-                    throw IllegalStateException("The non-nullable property $property has a null value")
+                    throw IllegalStateException("The non-nullable property $propertyName has a null value")
                 }
                 return currentNode as T
             }

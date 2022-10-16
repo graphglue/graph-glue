@@ -152,7 +152,7 @@ abstract class Node {
         return propertyLookup[property.name]!! as BasePropertyDelegate<T, *>
     }
 
-    override fun equals(other: Any?): Boolean {
+    final override fun equals(other: Any?): Boolean {
         return if (other !is Node) {
             false
         } else if (this === other) {
@@ -162,7 +162,7 @@ abstract class Node {
         }
     }
 
-    override fun hashCode(): Int {
+    final override fun hashCode(): Int {
         return if (rawId != null) {
             rawId.hashCode()
         } else {

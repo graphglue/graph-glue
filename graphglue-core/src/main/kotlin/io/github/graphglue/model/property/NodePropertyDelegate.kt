@@ -115,13 +115,14 @@ class NodePropertyDelegate<T : Node?>(
                 throw IllegalArgumentException("Too many nodes for one side of relation $propertyName")
             }
             currentNode = result.nodes.firstOrNull()
+            persistedNode = currentNode
             isLoaded = true
         }
         if (cache != null && nodeCache == null) {
             nodeCache = cache
             currentNode = cache.getOrAdd(currentNode)
+            persistedNode = currentNode
         }
-        persistedNode = currentNode
     }
 
     /**

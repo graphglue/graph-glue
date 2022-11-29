@@ -121,7 +121,7 @@ class NodePropertyDelegate<T : Node?>(
         if (cache != null && nodeCache == null) {
             nodeCache = cache
             val newNode = cache.getOrAdd(currentNode)
-            if (currentNode != persistedNode) {
+            if (currentNode == persistedNode) {
                 persistedNode = newNode
             }
             currentNode = newNode

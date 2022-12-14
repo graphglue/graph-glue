@@ -13,10 +13,44 @@
         #graphiql {
             height: 100vh;
         }
+
+        .graphiql-explorer-root>div:first-child {
+            overflow: auto !important;
+        }
+
+        ::-webkit-scrollbar {
+            width: 7px !important;
+            height: 7px !important;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent; 
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            border: 2px solid transparent;
+            border-radius: 10px;
+            background: hsla(var(--color-neutral),var(--alpha-tertiary));
+            background-clip: padding-box;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            border: 0;
+        }
+
+        ::-webkit-scrollbar-corner {
+            visibility: hidden;
+        }
+
+        .CodeMirror-scrollbar-filler {
+            visibility: collapse;
+        }
+
     </style>
     <script crossorigin src="https://unpkg.com/react@17/umd/react.development.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@17/umd/react-dom.development.js"></script>
     <link rel="stylesheet" href="https://unpkg.com/graphiql/graphiql.min.css" />
+    <link rel="stylesheet" href="https://unpkg.com/@graphiql/plugin-explorer/dist/style.css" />
 </head>
 
 <body>
@@ -25,7 +59,7 @@
     <script crossorigin src="https://unpkg.com/@graphiql/plugin-explorer/dist/graphiql-plugin-explorer.umd.js"></script>
     <script>
         const gqlFetcher = GraphiQL.createFetcher({
-            url: '${graphQLEndpoint}',
+            url: 'https://swapi-graphql.netlify.app/.netlify/functions/index',
             subscriptionUrl: '${subscriptionsEndpoint}'
         });
 

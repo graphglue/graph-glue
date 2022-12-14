@@ -59,7 +59,7 @@
     <script crossorigin src="https://unpkg.com/@graphiql/plugin-explorer/dist/graphiql-plugin-explorer.umd.js"></script>
     <script>
         const gqlFetcher = GraphiQL.createFetcher({
-            url: 'https://swapi-graphql.netlify.app/.netlify/functions/index',
+            url: '${graphQLEndpoint}',
             subscriptionUrl: '${subscriptionsEndpoint}'
         });
 

@@ -1,5 +1,6 @@
 import org.jetbrains.dokka.gradle.DokkaTask
 import org.jetbrains.dokka.gradle.DokkaTaskPartial
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
 	kotlin("jvm")
@@ -11,6 +12,8 @@ plugins {
 }
 
 allprojects {
+    val javaVersion: String by project
+
     buildscript {
         repositories {
             mavenCentral()
@@ -18,6 +21,13 @@ allprojects {
     }
     repositories {
         mavenCentral()
+    }
+    tasks.withType<KotlinCompile> {
+        kotlinOptions.jvmTarget = javaVersion
+    }
+    tasks.withType<JavaCompile> {
+        sourceCompatibility = javaVersion
+        targetCompatibility = javaVersion
     }
 }
 
@@ -27,6 +37,7 @@ subprojects {
     val springBootVersion: String by project
     val graphqlKotlinVersion: String by project
     val kotlinxCoroutinesReactorVersion: String by project
+    val kotlinVersion: String by project
 
     val currentProject = this
 
@@ -40,6 +51,11 @@ subprojects {
         api("com.expediagroup", "graphql-kotlin-server", graphqlKotlinVersion)
         api("org.springframework.boot", "spring-boot-starter-data-neo4j", springBootVersion)
         api("org.jetbrains.kotlinx", "kotlinx-coroutines-reactor", kotlinxCoroutinesReactorVersion)
+        api("org.jetbrains.kotlin", "kotlin-reflect") {
+            version {
+                strictly(kotlinVersion)
+            }
+        }
     }
 
     tasks {

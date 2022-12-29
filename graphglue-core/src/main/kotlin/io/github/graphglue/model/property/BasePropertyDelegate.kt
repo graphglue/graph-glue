@@ -12,6 +12,8 @@ import io.github.graphglue.definition.RelationshipDefinition
 import io.github.graphglue.graphql.extensions.getParentNodeDefinition
 import io.github.graphglue.model.Node
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.data.annotation.Transient
+import java.lang.annotation.Inherited
 import java.util.*
 import kotlin.reflect.KProperty
 import kotlin.reflect.KProperty1

@@ -8,20 +8,17 @@ import io.github.graphglue.data.repositories.GraphglueNeo4jOperations
 import io.github.graphglue.definition.NodeDefinition
 import io.github.graphglue.definition.NodeDefinitionCollection
 import io.github.graphglue.model.Node
-import org.neo4j.driver.Driver
 import org.neo4j.driver.types.MapAccessor
 import org.springframework.beans.factory.BeanFactory
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.data.neo4j.core.Neo4jOperations
-import org.springframework.data.neo4j.core.ReactiveDatabaseSelectionProvider
 import org.springframework.data.neo4j.core.ReactiveNeo4jClient
 import org.springframework.data.neo4j.core.ReactiveNeo4jTemplate
 import org.springframework.data.neo4j.core.mapping.Neo4jMappingContext
 import org.springframework.data.neo4j.core.mapping.Neo4jPersistentEntity
 import org.springframework.data.neo4j.core.mapping.callback.AfterConvertCallback
-import org.springframework.data.neo4j.core.transaction.ReactiveNeo4jTransactionManager
 import java.util.*
 
 /**

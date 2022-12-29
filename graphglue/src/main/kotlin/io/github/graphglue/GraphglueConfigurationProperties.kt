@@ -1,14 +1,12 @@
 package io.github.graphglue
 
 import org.springframework.boot.context.properties.ConfigurationProperties
-import org.springframework.boot.context.properties.ConstructorBinding
 
 /**
  * Configuration properties for graphglue
  *
  * @param graphiql GraphiQL related configuration properties
  */
-@ConstructorBinding
 @ConfigurationProperties("graphglue")
 data class GraphglueConfigurationProperties(
     val graphiql: GraphiQLConfigurationProperties = GraphiQLConfigurationProperties()

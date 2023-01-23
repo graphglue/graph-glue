@@ -29,7 +29,6 @@ Continuing the sample domain model introduced in [Modeling](./modeling#overview)
 )
 class Actor : Node() {
     @NodeRelationship("ACTOR", Direction.INCOMING)
-    @delegate:Transient
     val movies by NodeProperty<Movie>()
 }
 ```

@@ -28,11 +28,9 @@ class Movie(
 ) : Node() {                                          // (5)
     
     @NodeRelationship("DIRECTOR", Direction.OUTGOING) // (6)
-    @delegate:Transient
     val director by NodeProperty<Director>()
     
     @NodeRelationship("ACTOR", Direction.OUTGOING)    // (7)
-    @delegate:Transient
     val actors by NodeSetProperty<Actor>()
     
     fun actorsCount() = actors.size                   // (8)
@@ -101,14 +99,12 @@ Note that for bidirectional relationships, both sides must use the same type of 
 Declaration of one-sides of relationships
 ```kotlin
 @NodeRelationship(label, direction)
-@delegate:Transient
 val propertyName by NodeProperty<NodeType>()
 ```
 
 Declaration of many-sides of relationships
 ```kotlin
 @NodeRelationship(label, direction)
-@delegate:Transient
 val propertyName by NodeSetProperty<NodeType>()
 ```
 
@@ -116,13 +112,6 @@ where `label` is a `String`, and direction is either `Direction.INCOMING` or `Di
 Relations are always directional, due to being directional in Neo4j.
 When modeling a bidirectional relationship, one side needs to use `Direction.INCOMING`, while the other needs to use `Direction.OUTGOING`.
 The direction is considered an implementation detail and not exposed in the GraphQL API.
-
-:::caution
-
-Make sure to use `org.springframework.data.annotation.Transient`.
-Kotlin `Transient` does not work and will result in strange errors, as Spring Data Neo4j tries to persist the backing field of the delegated property.
-
-:::
 
 :::caution
 

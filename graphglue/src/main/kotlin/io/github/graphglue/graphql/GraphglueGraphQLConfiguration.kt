@@ -86,6 +86,7 @@ class GraphglueGraphQLConfiguration {
      * Generates the [GraphQLSchema] and the [NodeDefinitionCollection]
      * Automatically adds the generated [Node] type based connection queries
      *
+     * @param config used to generate the [SchemaGeneratorConfig]
      * @param queries queries used in GraphQL schema
      * @param mutations mutations used in GraphQL schema
      * @param subscriptions subscriptions used in GraphQL schema
@@ -101,6 +102,7 @@ class GraphglueGraphQLConfiguration {
     @Bean
     @ConditionalOnMissingBean
     fun graphglueSchema(
+        config: GraphQLConfigurationProperties,
         queries: Optional<List<Query>>,
         mutations: Optional<List<Mutation>>,
         subscriptions: Optional<List<Subscription>>,
@@ -130,7 +132,9 @@ class GraphglueGraphQLConfiguration {
                 filters, CacheMap(), nodeDefinitionCollection, additionalFilterBeans, nodeFilterGenerators
             )
         )
-        logger.info("\n${schemaTransformer.schema.print()}")
+        if (config.printSchema) {
+            logger.info("\n${schemaTransformer.schema.print()}")
+        }
         return GraphglueSchema(schemaTransformer.schema, schemaTransformer.filterDefinitionCollection)
     }
 

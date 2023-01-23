@@ -8,6 +8,8 @@ import io.github.graphglue.data.repositories.GraphglueNeo4jOperations
 import io.github.graphglue.definition.NodeDefinition
 import io.github.graphglue.definition.NodeDefinitionCollection
 import io.github.graphglue.model.Node
+import io.github.graphglue.model.property.BasePropertyDelegate
+import io.github.graphglue.model.property.NodeSetPropertyDelegate
 import org.neo4j.driver.types.MapAccessor
 import org.springframework.beans.factory.BeanFactory
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
@@ -18,8 +20,11 @@ import org.springframework.data.neo4j.core.ReactiveNeo4jClient
 import org.springframework.data.neo4j.core.ReactiveNeo4jTemplate
 import org.springframework.data.neo4j.core.mapping.Neo4jMappingContext
 import org.springframework.data.neo4j.core.mapping.Neo4jPersistentEntity
+import org.springframework.data.neo4j.core.mapping.PersistentPropertyCharacteristics
+import org.springframework.data.neo4j.core.mapping.PersistentPropertyCharacteristicsProvider
 import org.springframework.data.neo4j.core.mapping.callback.AfterConvertCallback
 import java.util.*
+import kotlin.reflect.full.isSuperclassOf
 
 /**
  * Name for the bean which provides an instance of  [GraphglueNeo4jOperations]
@@ -98,4 +103,21 @@ class GraphglueDataConfiguration {
         filterDefinitionCollection: Optional<FilterDefinitionCollection>,
         objectMapper: ObjectMapper
     ) = NodeQueryParser(nodeDefinitionCollection, filterDefinitionCollection.orElse(null), objectMapper)
+
+    /**
+     * Ensures that [BasePropertyDelegate]s are ignored
+     *
+     * @return [PersistentPropertyCharacteristicsProvider] which ensures that [BasePropertyDelegate]s are ignored
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    fun persistentPropertyCharacteristicsProvider(): PersistentPropertyCharacteristicsProvider {
+        return PersistentPropertyCharacteristicsProvider { property, _ ->
+            if (BasePropertyDelegate::class.isSuperclassOf(property.type.kotlin)) {
+                PersistentPropertyCharacteristics.treatAsTransient()
+            } else {
+                PersistentPropertyCharacteristics.useDefaults()
+            }
+        }
+    }
 }

@@ -304,9 +304,11 @@ class NodeQueryExecutor(
         val firstOrLast = options.first ?: options.last
         return if (firstOrLast != null) {
             val orderedBuilder = if (options.first != null) {
-                builder.orderBy(generateOrderFields(options.orderBy, nodeAlias, false)).limit(options.first).with(nodeAlias)
+                builder.orderBy(generateOrderFields(options.orderBy, nodeAlias, false)).limit(options.first)
+                    .with(nodeAlias)
             } else {
-                builder.orderBy(generateOrderFields(options.orderBy, nodeAlias, true)).limit(options.last).with(nodeAlias)
+                builder.orderBy(generateOrderFields(options.orderBy, nodeAlias, true)).limit(options.last)
+                    .with(nodeAlias)
             }
             val skippedBuilder = if (options.skip != null) {
                 orderedBuilder.skip(options.skip)
@@ -314,8 +316,7 @@ class NodeQueryExecutor(
                 orderedBuilder
             }
             skippedBuilder.limit(firstOrLast).with(nodeAlias)
-        }
-         else {
+        } else {
             builder
         }
     }
@@ -418,9 +419,7 @@ class NodeQueryExecutor(
      * @return the generated statement builder, and the node representing the unwound [allNodes] collection
      */
     private fun applySubQueryUnwind(
-        allNodes: SymbolicName,
-        unwindCount: Int,
-        parentNodeDefinition: NodeDefinition
+        allNodes: SymbolicName, unwindCount: Int, parentNodeDefinition: NodeDefinition
     ): Pair<StatementBuilder.OngoingReading, Node> {
         var builder: StatementBuilder.OngoingReading = Cypher.with(allNodes)
         var toUnwind = allNodes

@@ -32,7 +32,7 @@ class AuthorizationChecker(
         val condition = conditionGenerator.generateCondition(cypherNode)
         val statement = Cypher.match(cypherNode).where(condition)
             .returning(Functions.count(Cypher.asterisk()).gt(Cypher.literalOf<Int>(0))).build()
-        val queryResult = client.query(Renderer.getDefaultRenderer().render(statement)).bindAll(statement.parameters)
+        val queryResult = client.query(Renderer.getDefaultRenderer().render(statement)).bindAll(statement.catalog.parameters)
         return queryResult.fetchAs(Boolean::class.java).one()
     }
 }

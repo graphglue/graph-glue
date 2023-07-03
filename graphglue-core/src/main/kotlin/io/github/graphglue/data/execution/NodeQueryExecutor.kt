@@ -64,7 +64,7 @@ class NodeQueryExecutor(
      */
     suspend fun execute(): NodeQueryResult<*> {
         val (statement, returnName) = createRootNodeQuery()
-        return client.query(Renderer.getDefaultRenderer().render(statement)).bindAll(statement.parameters)
+        return client.query(Renderer.getDefaultRenderer().render(statement)).bindAll(statement.catalog.parameters)
             .fetchAs(NodeQueryResult::class.java).mappedBy { _, record ->
                 parseQueryResultInternal(record, returnName, nodeQuery)
             }.one().awaitSingle()
@@ -199,7 +199,7 @@ class NodeQueryExecutor(
     ) = if (options.fetchTotalCount) {
         builder.with(
             listOf(
-                Functions.size(allNodesCollected).`as`(totalCount), allNodesCollected as Expression
+                Functions.size(allNodesCollected).`as`(totalCount), allNodesCollected
             ) + additionalNames
         )
     } else {

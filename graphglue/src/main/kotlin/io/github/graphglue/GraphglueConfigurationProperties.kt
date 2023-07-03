@@ -6,10 +6,12 @@ import org.springframework.boot.context.properties.ConfigurationProperties
  * Configuration properties for graphglue
  *
  * @param graphiql GraphiQL related configuration properties
+ * @param includeSkipField if `true`, connections support the non-standard `skip` field
  */
 @ConfigurationProperties("graphglue")
 data class GraphglueConfigurationProperties(
-    val graphiql: GraphiQLConfigurationProperties = GraphiQLConfigurationProperties()
+    val graphiql: GraphiQLConfigurationProperties = GraphiQLConfigurationProperties(),
+    val includeSkipField: Boolean = false
 ) {
 
     /**

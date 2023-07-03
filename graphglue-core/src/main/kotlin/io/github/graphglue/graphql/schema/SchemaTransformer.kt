@@ -56,5 +56,10 @@ interface SchemaTransformer {
      * Collection with all filter definitions
      */
     val filterDefinitionCollection: FilterDefinitionCollection
+
+    /**
+     * Whether to include the skip field in the connection
+     */
+    val includeSkipField: Boolean
 }
 

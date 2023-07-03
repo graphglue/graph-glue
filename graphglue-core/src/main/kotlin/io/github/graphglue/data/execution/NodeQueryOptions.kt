@@ -21,6 +21,7 @@ data class NodeQueryOptions(
     val before: Map<String, Any?>? = null,
     val first: Int? = null,
     val last: Int? = null,
+    val skip: Int? = null,
     val fetchTotalCount: Boolean = true
 ) {
     init {

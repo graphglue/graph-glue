@@ -276,7 +276,7 @@ class GraphglueNeo4jOperations(
      * @return an empty [Mono] to wait for the end of the operation
      */
     private fun executeStatement(statement: Statement): Mono<Void> {
-        return neo4jClient.query(Renderer.getDefaultRenderer().render(statement)).bindAll(statement.parameters).run()
+        return neo4jClient.query(Renderer.getDefaultRenderer().render(statement)).bindAll(statement.catalog.parameters).run()
             .then()
     }
 

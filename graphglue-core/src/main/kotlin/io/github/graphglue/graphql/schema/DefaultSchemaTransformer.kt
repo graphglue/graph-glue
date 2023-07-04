@@ -34,13 +34,15 @@ import kotlin.reflect.full.memberFunctions
  * @param nodeDefinitionCollection collection of all [NodeDefinition]s
  * @param dataFetcherFactoryProvider provides function and property data fetchers
  * @param subFilterGenerator used to generate the filter entries
+ * @param includeSkipField if true, connections provide the non-standard skip field
  */
 class DefaultSchemaTransformer(
     private val oldSchema: GraphQLSchema,
     override val mappingContext: Neo4jMappingContext,
     override val nodeDefinitionCollection: NodeDefinitionCollection,
     override val dataFetcherFactoryProvider: KotlinDataFetcherFactoryProvider,
-    override val subFilterGenerator: SubFilterGenerator
+    override val subFilterGenerator: SubFilterGenerator,
+    override val includeSkipField: Boolean
 ) : SchemaTransformer {
 
     override val inputTypeCache = CacheMap<String, GraphQLInputType>()

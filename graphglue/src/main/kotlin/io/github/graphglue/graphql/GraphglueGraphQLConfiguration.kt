@@ -14,11 +14,13 @@ import com.expediagroup.graphql.server.operations.Subscription
 import com.expediagroup.graphql.server.spring.GraphQLConfigurationProperties
 import graphql.schema.GraphQLSchema
 import graphql.schema.GraphQLType
+import io.github.graphglue.GraphglueConfigurationProperties
 import io.github.graphglue.connection.filter.NodeFilterGenerator
 import io.github.graphglue.connection.filter.TypeFilterDefinitionEntry
 import io.github.graphglue.connection.filter.definition.FilterDefinitionCollection
 import io.github.graphglue.connection.filter.definition.FilterEntryDefinition
 import io.github.graphglue.connection.filter.definition.SubFilterGenerator
+import io.github.graphglue.connection.model.PageInfo
 import io.github.graphglue.connection.order.OrderDirection
 import io.github.graphglue.definition.NodeDefinition
 import io.github.graphglue.definition.NodeDefinitionCollection
@@ -27,7 +29,6 @@ import io.github.graphglue.graphql.query.GraphglueQuery
 import io.github.graphglue.graphql.schema.DefaultSchemaTransformer
 import io.github.graphglue.model.Node
 import io.github.graphglue.model.NodeRelationship
-import io.github.graphglue.connection.model.PageInfo
 import io.github.graphglue.util.CacheMap
 import org.slf4j.LoggerFactory
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
@@ -87,6 +88,7 @@ class GraphglueGraphQLConfiguration {
      * Automatically adds the generated [Node] type based connection queries
      *
      * @param config used to generate the [SchemaGeneratorConfig]
+     * @param graphglueConfig graphglue specific configuration
      * @param queries queries used in GraphQL schema
      * @param mutations mutations used in GraphQL schema
      * @param subscriptions subscriptions used in GraphQL schema
@@ -103,6 +105,7 @@ class GraphglueGraphQLConfiguration {
     @ConditionalOnMissingBean
     fun graphglueSchema(
         config: GraphQLConfigurationProperties,
+        graphglueConfig: GraphglueConfigurationProperties,
         queries: Optional<List<Query>>,
         mutations: Optional<List<Mutation>>,
         subscriptions: Optional<List<Subscription>>,
@@ -130,7 +133,7 @@ class GraphglueGraphQLConfiguration {
         val schemaTransformer = DefaultSchemaTransformer(
             schema, neo4jMappingContext, nodeDefinitionCollection, dataFetcherFactoryProvider, SubFilterGenerator(
                 filters, CacheMap(), nodeDefinitionCollection, additionalFilterBeans, nodeFilterGenerators
-            )
+            ), graphglueConfig.includeSkipField
         )
         if (config.printSchema) {
             logger.info("\n${schemaTransformer.schema.print()}")

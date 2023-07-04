@@ -4,12 +4,12 @@ import graphql.Scalars
 import graphql.language.EnumValue
 import graphql.schema.*
 import io.github.graphglue.connection.filter.definition.generateFilterDefinition
-import io.github.graphglue.connection.order.OrderField
-import io.github.graphglue.connection.order.generateOrders
-import io.github.graphglue.graphql.schema.SchemaTransformationContext
-import io.github.graphglue.graphql.extensions.getSimpleName
 import io.github.graphglue.connection.model.Connection
 import io.github.graphglue.connection.model.Edge
+import io.github.graphglue.connection.order.OrderField
+import io.github.graphglue.connection.order.generateOrders
+import io.github.graphglue.graphql.extensions.getSimpleName
+import io.github.graphglue.graphql.schema.SchemaTransformationContext
 import io.github.graphglue.model.Node
 import kotlin.reflect.KClass
 
@@ -29,7 +29,7 @@ fun generateConnectionFieldDefinition(
     val nodeName = nodeType.getSimpleName()
     val filter = generateFilterDefinition(nodeType, transformer.subFilterGenerator)
     val orders = generateOrders(nodeType, transformer.mappingContext.getPersistentEntity(nodeType.java)!!)
-    return GraphQLFieldDefinition.newFieldDefinition().name(name).description(description).argument {
+    val builder = GraphQLFieldDefinition.newFieldDefinition().name(name).description(description).argument {
         it.name("filter").description("Filter for specific items in the connection")
             .type(filter.toGraphQLType(transformer.inputTypeCache))
     }.argument {
@@ -45,7 +45,15 @@ fun generateConnectionFieldDefinition(
     }.argument {
         it.name("last").description("Get the last n items. Must not be used if after is specified")
             .type(Scalars.GraphQLInt)
-    }.type(GraphQLNonNull(generateConnectionGraphQLType(nodeName, transformer))).build()
+    }.type(GraphQLNonNull(generateConnectionGraphQLType(nodeName, transformer)))
+    return if (transformer.includeSkipField) {
+        builder.argument {
+            it.name("skip").description("Skips n items. First or last MUST be specified, is otherwise ignored")
+                .type(Scalars.GraphQLInt)
+        }.build()
+    } else {
+        builder.build()
+    }
 }
 
 /**

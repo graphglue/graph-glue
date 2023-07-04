@@ -289,23 +289,36 @@ class NodeQueryExecutor(
     }
 
     /**
-     * Orders the nodes and adds  first and last filters
+     * Orders the nodes and adds  first and last filters, and adds skip
      *
-     * @param options defines first and last
+     * @param options defines first, last and skip
      * @param builder ongoing statement builder
      * @param nodeAlias name of the variable containing the node
-     * @return the builder with first/last applied
+     * @return the builder with first/last/skip applied
      */
     private fun applyResultLimiters(
         options: NodeQueryOptions,
         builder: StatementBuilder.OrderableOngoingReadingAndWithWithoutWhere,
         nodeAlias: SymbolicName
-    ) = if (options.first != null) {
-        builder.orderBy(generateOrderFields(options.orderBy, nodeAlias, false)).limit(options.first).with(nodeAlias)
-    } else if (options.last != null) {
-        builder.orderBy(generateOrderFields(options.orderBy, nodeAlias, true)).limit(options.last).with(nodeAlias)
-    } else {
-        builder
+    ): StatementBuilder.OrderableOngoingReadingAndWithWithoutWhere {
+        val firstOrLast = options.first ?: options.last
+        return if (firstOrLast != null) {
+            val orderedBuilder = if (options.first != null) {
+                builder.orderBy(generateOrderFields(options.orderBy, nodeAlias, false)).limit(options.first)
+                    .with(nodeAlias)
+            } else {
+                builder.orderBy(generateOrderFields(options.orderBy, nodeAlias, true)).limit(options.last)
+                    .with(nodeAlias)
+            }
+            val skippedBuilder = if (options.skip != null) {
+                orderedBuilder.skip(options.skip)
+            } else {
+                orderedBuilder
+            }
+            skippedBuilder.limit(firstOrLast).with(nodeAlias)
+        } else {
+            builder
+        }
     }
 
     /**
@@ -406,9 +419,7 @@ class NodeQueryExecutor(
      * @return the generated statement builder, and the node representing the unwound [allNodes] collection
      */
     private fun applySubQueryUnwind(
-        allNodes: SymbolicName,
-        unwindCount: Int,
-        parentNodeDefinition: NodeDefinition
+        allNodes: SymbolicName, unwindCount: Int, parentNodeDefinition: NodeDefinition
     ): Pair<StatementBuilder.OngoingReading, Node> {
         var builder: StatementBuilder.OngoingReading = Cypher.with(allNodes)
         var toUnwind = allNodes

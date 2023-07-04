@@ -369,6 +369,7 @@ class NodeQueryParser(
             before = arguments["before"]?.let { orderBy.parseCursor(it as String, objectMapper) },
             first = arguments["first"]?.let { (it as Int) + NODE_FETCH_OFFSET },
             last = arguments["last"]?.let { (it as Int) + NODE_FETCH_OFFSET },
+            skip = arguments["skip"]?.let { it as Int },
             fetchTotalCount = selectionSet?.contains("totalCount") ?: true
         )
         val parts = HashMap<String, List<SelectedField>>()

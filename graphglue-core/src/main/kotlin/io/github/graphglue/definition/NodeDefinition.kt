@@ -45,6 +45,11 @@ class NodeDefinition(
     val mergedAuthorizations: Map<String, MergedAuthorization> = generateMergedAuthorizations()
 
     /**
+     * All [ExtensionFieldDefinition]s
+     */
+    private val extensionFieldDefinitions = generateExtensionFieldDefinitions().associateBy { it.graphQLName }
+
+    /**
      * All one [RelationshipDefinition]s
      */
     private val oneRelationshipDefinitions: List<OneRelationshipDefinition> = generateOneRelationshipDefinitions()
@@ -145,6 +150,11 @@ class NodeDefinition(
                 )
                 authorization
             }
+
+
+    private fun generateExtensionFieldDefinitions(): List<ExtensionFieldDefinition> {
+        TODO()
+    }
 
     /**
      * Generates the [OneRelationshipDefinition]s for this [NodeDefinition]

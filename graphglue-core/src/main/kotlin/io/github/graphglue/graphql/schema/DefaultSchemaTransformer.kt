@@ -157,11 +157,11 @@ class DefaultSchemaTransformer(
             for (relationshipDefinition in nodeDefinition.relationshipDefinitions.values) {
                 val field = relationshipDefinition.generateFieldDefinition(context)
                 it.field(field)
-                //registerRelationshipDataFetcher(relationshipDefinition, context)
+                registerRelationshipDataFetcher(relationshipDefinition, context, nodeDefinition)
             }
             for (extensionFieldDefinition in nodeDefinition.extensionFieldDefinitions.values) {
                 it.field(extensionFieldDefinition.field)
-                //registerExtensionFieldDataFetcher(extensionFieldDefinition, context)
+                registerExtensionFieldDataFetcher(extensionFieldDefinition, context, nodeDefinition)
             }
             getNodeInterfaces(nodeDefinition).forEach(it::withInterface)
         }

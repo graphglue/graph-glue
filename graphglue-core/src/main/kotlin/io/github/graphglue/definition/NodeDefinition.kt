@@ -172,9 +172,8 @@ class NodeDefinition(
      */
     private fun generateExtensionFieldDefinitions(extensionFieldGenerators: Map<String, ExtensionFieldDefinition>): List<ExtensionFieldDefinition> {
         val allExtensionFields = nodeType.springGetRepeatableAnnotations<ExtensionField>()
-        return allExtensionFields.map {
+        return allExtensionFields.mapNotNull {
             extensionFieldGenerators[it.beanName]
-                ?: throw NodeSchemaException("No extension field generator found for ${it.beanName}")
         }
     }
 

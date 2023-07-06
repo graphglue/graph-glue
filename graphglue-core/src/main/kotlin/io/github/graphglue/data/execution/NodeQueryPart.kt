@@ -7,19 +7,36 @@ import io.github.graphglue.definition.NodeDefinition
  * Used to partition the total list of subqueries
  *
  * @param subQueries the list of [NodeSubQuery]s
+ * @param extensionFields the list of [NodeExtensionField]s
  */
-class NodeQueryPart(val subQueries: List<NodeSubQuery>) {
+class NodeQueryPart(subQueries: List<NodeSubQuery>, extensionFields: List<NodeExtensionField>) {
     /**
-     * Lookup to get a subquery efficiently by `resultKey`
-     * Each group contains all subqueries under a specific resultKey
-     * Necessary as `resultKey` may not be unique, as only
-     * [NodeSubQuery.resultKey] with any element of [NodeSubQuery.onlyOnTypes] must be unique
+     * Lookup for subqueries
      */
-    private val subQueryLookup = subQueries.groupBy { it.resultKey }
+    val subQueries = NodeQueryPartEntrySet(subQueries)
 
     /**
-     * Gets a subquery by [NodeSubQuery.resultKey].
-     * As multiple subqueries can use the same `resultKey` if they use different [NodeSubQuery.onlyOnTypes],
+     * Lookup for extension fields
+     */
+    val extensionFields = NodeQueryPartEntrySet(extensionFields)
+}
+
+/**
+ * Set of NodeQueryPartEntries
+ * @param T the type of entries handled
+ */
+class NodeQueryPartEntrySet<T : NodeQueryPartEntry>(val entries: List<T>) {
+    /**
+     * Lookup to get an entry efficiently by `resultKey`
+     * Each group contains all entries under a specific resultKey
+     * Necessary as `resultKey` may not be unique, as only
+     * [NodeQueryPartEntry.resultKey] with any element of [NodeQueryPartEntry.onlyOnTypes] must be unique
+     */
+    private val lookup = entries.groupBy { it.resultKey }
+
+    /**
+     * Gets an entry by [NodeQueryPartEntry.resultKey].
+     * As multiple subqueries can use the same `resultKey` if they use different [NodeQueryPartEntry.onlyOnTypes],
      * a list of [NodeDefinition]s may be necessary to get the correct subquery.
      * This is provided as provider as evaluation is expensive and only necessary in few cases
      *
@@ -27,13 +44,13 @@ class NodeQueryPart(val subQueries: List<NodeSubQuery>) {
      * @param nodeDefinitionProvider provides the set of [NodeDefinition]s for which the subquery must be fetched
      * @return the found subquery
      */
-    fun getSubQuery(resultKey: String, nodeDefinitionProvider: () -> NodeDefinition): NodeSubQuery {
-        val subQueries = subQueryLookup[resultKey]!!
-        return if (subQueries.size == 1) {
-            subQueries.first()
+    fun getEntry(resultKey: String, nodeDefinitionProvider: () -> NodeDefinition): T {
+        val entries = lookup[resultKey]!!
+        return if (entries.size == 1) {
+            entries.first()
         } else {
             val nodeDefinition = nodeDefinitionProvider()
-            subQueries.first { it.onlyOnTypes.contains(nodeDefinition) }
+            entries.first { it.onlyOnTypes.contains(nodeDefinition) }
         }
     }
 }

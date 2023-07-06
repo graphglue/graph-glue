@@ -8,6 +8,7 @@ import graphql.util.TraverserContext
 import io.github.graphglue.connection.filter.definition.FilterDefinitionCollection
 import io.github.graphglue.connection.filter.definition.SubFilterGenerator
 import io.github.graphglue.connection.generateConnectionFieldDefinition
+import io.github.graphglue.definition.ExtensionFieldDefinition
 import io.github.graphglue.definition.NodeDefinition
 import io.github.graphglue.definition.NodeDefinitionCollection
 import io.github.graphglue.definition.RelationshipDefinition
@@ -18,6 +19,9 @@ import io.github.graphglue.model.DomainNode
 import io.github.graphglue.model.Node
 import io.github.graphglue.model.property.BasePropertyDelegate
 import io.github.graphglue.util.CacheMap
+import org.neo4j.cypherdsl.core.Cypher
+import org.neo4j.cypherdsl.core.renderer.Renderer
+import org.springframework.data.neo4j.core.ReactiveNeo4jClient
 import org.springframework.data.neo4j.core.mapping.Neo4jMappingContext
 import kotlin.reflect.full.allSuperclasses
 import kotlin.reflect.full.hasAnnotation
@@ -35,6 +39,7 @@ import kotlin.reflect.full.memberFunctions
  * @param dataFetcherFactoryProvider provides function and property data fetchers
  * @param subFilterGenerator used to generate the filter entries
  * @param includeSkipField if true, connections provide the non-standard skip field
+ * @param reactiveNeo4jClient used to execute Cypher queries
  */
 class DefaultSchemaTransformer(
     private val oldSchema: GraphQLSchema,
@@ -42,7 +47,8 @@ class DefaultSchemaTransformer(
     override val nodeDefinitionCollection: NodeDefinitionCollection,
     override val dataFetcherFactoryProvider: KotlinDataFetcherFactoryProvider,
     override val subFilterGenerator: SubFilterGenerator,
-    override val includeSkipField: Boolean
+    override val includeSkipField: Boolean,
+    private val reactiveNeo4jClient: ReactiveNeo4jClient
 ) : SchemaTransformer {
 
     override val inputTypeCache = CacheMap<String, GraphQLInputType>()
@@ -125,8 +131,12 @@ class DefaultSchemaTransformer(
                 if (relationshipDefinition.isGraphQLVisible) {
                     val field = relationshipDefinition.generateFieldDefinition(context)
                     it.field(field)
-                    registerRelationshipDataFetcher(relationshipDefinition, context)
+                    registerRelationshipDataFetcher(relationshipDefinition, context, nodeDefinition)
                 }
+            }
+            for (extensionFieldDefinition in nodeDefinition.extensionFieldDefinitions.values) {
+                it.field(extensionFieldDefinition.field)
+                registerExtensionFieldDataFetcher(extensionFieldDefinition, context, nodeDefinition)
             }
             getNodeInterfaces(nodeDefinition).forEach(it::withInterface)
         }
@@ -147,7 +157,11 @@ class DefaultSchemaTransformer(
             for (relationshipDefinition in nodeDefinition.relationshipDefinitions.values) {
                 val field = relationshipDefinition.generateFieldDefinition(context)
                 it.field(field)
-                registerRelationshipDataFetcher(relationshipDefinition, context)
+                //registerRelationshipDataFetcher(relationshipDefinition, context)
+            }
+            for (extensionFieldDefinition in nodeDefinition.extensionFieldDefinitions.values) {
+                it.field(extensionFieldDefinition.field)
+                //registerExtensionFieldDataFetcher(extensionFieldDefinition, context)
             }
             getNodeInterfaces(nodeDefinition).forEach(it::withInterface)
         }
@@ -174,9 +188,12 @@ class DefaultSchemaTransformer(
      *
      * @param relationshipDefinition the definition of the relationship to create the data fetcher for
      * @param context provides the [GraphQLCodeRegistry]
+     * @param nodeDefinition the parent [NodeDefinition] of the relationship
      */
     private fun registerRelationshipDataFetcher(
-        relationshipDefinition: RelationshipDefinition, context: SchemaTransformationContext
+        relationshipDefinition: RelationshipDefinition,
+        context: SchemaTransformationContext,
+        nodeDefinition: NodeDefinition
     ) {
         val kProperty = relationshipDefinition.property
         val functionDataFetcherFactory =
@@ -189,9 +206,44 @@ class DefaultSchemaTransformer(
                 functionDataFetcher.get(environment)
             }
         }
-        val coordinates = FieldCoordinates.coordinates(
-            relationshipDefinition.parentKClass.getSimpleName(), relationshipDefinition.graphQLName
-        )
+        val coordinates = FieldCoordinates.coordinates(nodeDefinition.name, relationshipDefinition.graphQLName)
+        context.codeRegistry.dataFetcher(coordinates, dataFetcherFactory)
+    }
+
+    /**
+     * Registers a DataFetcher for a [ExtensionFieldDefinition]
+     *
+     * @param extensionFieldDefinition the definition of the extension field to create the data fetcher for
+     * @param context provides the [GraphQLCodeRegistry]
+     * @param nodeDefinition the parent [NodeDefinition] of the extension field
+     */
+    private fun registerExtensionFieldDataFetcher(
+        extensionFieldDefinition: ExtensionFieldDefinition,
+        context: SchemaTransformationContext,
+        nodeDefinition: NodeDefinition
+    ) {
+        val dataFetcherFactory = DataFetcherFactory { _ ->
+            DataFetcher {
+                val node = it.getSource<Node>()
+                val extensionFields = node.extensionFields
+                if (extensionFields != null) {
+                    return@DataFetcher extensionFields[it.field.resultKey]
+                } else {
+                    val nodeName = Cypher.name("a_node")
+                    val cypherNode = nodeDefinition.node().named(nodeName)
+                        .withProperties(mapOf("id" to Cypher.parameter("a_id", node.rawId!!)))
+                    val expression = extensionFieldDefinition.generateFetcher(it, it.arguments, nodeName)
+                    val resultName = "a_result"
+                    val statement = Cypher.match(cypherNode).returning(expression.`as`(resultName)).build()
+                    val queryResult = reactiveNeo4jClient.query(Renderer.getDefaultRenderer().render(statement))
+                        .bindAll(statement.catalog.parameters)
+                    return@DataFetcher queryResult.fetchAs(Any::class.java).mappedBy { _, record ->
+                        extensionFieldDefinition.transformResult(record[resultName])
+                    }.one().toFuture()
+                }
+            }
+        }
+        val coordinates = FieldCoordinates.coordinates(nodeDefinition.name, extensionFieldDefinition.graphQLName)
         context.codeRegistry.dataFetcher(coordinates, dataFetcherFactory)
     }
 

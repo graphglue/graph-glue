@@ -53,6 +53,11 @@ class NodeQueryExecutor(
     private val subQueryLookup = HashMap<NodeSubQuery, String>()
 
     /**
+     * lookup for generated ExtensionFields
+     */
+    private val extensionFieldLookup = HashMap<NodeExtensionField, String>()
+
+    /**
      * Lookup table for already created nodes
      */
     private val nodeLookup = HashMap<String, io.github.graphglue.model.Node>()
@@ -114,7 +119,7 @@ class NodeQueryExecutor(
         var callBuilder = builder
         val returnNames = mutableListOf<SymbolicName>()
         for (part in nodeQuery.parts.values) {
-            for (subQuery in part.subQueries) {
+            for (subQuery in part.subQueries.entries) {
                 val parentDefinition = nodeQuery.definition
                 val (statement, resultNodes, nodes) = createSubQuery(subQuery, parentDefinition, allNodes, unwindCount)
                 returnNames += resultNodes
@@ -225,7 +230,7 @@ class NodeQueryExecutor(
         val afterAndBeforeBuilder = applyAfterAndBefore(options, nodeAlias, subQueryBuilder)
         val limitedBuilder = applyResultLimiters(options, afterAndBeforeBuilder, nodeAlias)
         return generateMainSubQueryResultStatement(
-            nodeDefinition, limitedBuilder, nodeAlias, options
+            nodeDefinition, limitedBuilder, nodeAlias, options, nodeQuery
         )
     }
 
@@ -237,15 +242,17 @@ class NodeQueryExecutor(
      * @param builder ongoing statement builder
      * @param nodeAlias name of the variable containing the node
      * @param options options for the query, defines order
+     * @param nodeQuery the currently converted query
      * @return the generated statement, the result name and the name of a collection with all raw nodes
      */
     private fun generateMainSubQueryResultStatement(
         nodeDefinition: NodeDefinition,
         builder: StatementBuilder.OngoingReading,
         nodeAlias: SymbolicName,
-        options: NodeQueryOptions
+        options: NodeQueryOptions,
+        nodeQuery: NodeQuery
     ): StatementWithResultNodesAndNodes {
-        val resultNodeMap = mapOf(NODE_KEY to Cypher.listOf(nodeDefinition.returnExpression))
+        val resultNodeMap = mapOf(NODE_KEY to Cypher.listOf(nodeDefinition.returnExpression)) + generateExtensionFields(nodeQuery, nodeAlias)
         val resultNodeExpression = Cypher.asExpression(resultNodeMap)
         val resultNode = generateUniqueName()
         val resultBuilder = builder.with(
@@ -259,6 +266,30 @@ class NodeQueryExecutor(
             Functions.collect(resultNode).`as`(collectedResultNodes), Functions.collect(nodeAlias).`as`(collectedNodes)
         ).returning(collectedResultNodes, collectedNodes).build()
         return StatementWithResultNodesAndNodes(statement, collectedResultNodes, collectedNodes)
+    }
+
+    /**
+     * Generate a map to fetch extension fields for a NodeQuery.
+     * Registers all extension fields in [extensionFieldLookup]
+     *
+     * @param nodeQuery the currently converted query
+     * @param nodeAlias name of the variable containing the node
+     * @return a map of extension field names to their expressions
+     */
+    private fun generateExtensionFields(nodeQuery: NodeQuery, nodeAlias: SymbolicName): Map<String, Expression> {
+        val extensionFields = mutableMapOf<String, Expression>()
+        nodeQuery.parts.values.forEach {part ->
+            part.extensionFields.entries.forEach {
+                val node = nodeQuery.definition.node().named(nodeAlias.value!!)
+                val labelCondition = generateLabelCondition(node, it)
+                val expression = it.definition.generateFetcher(it.dfe, it.field.arguments, nodeAlias)
+                val withLabelCheck = Cypher.caseExpression().`when`(labelCondition).then(expression)
+                val fieldName = generateUniqueName().value!!
+                extensionFields[fieldName] = withLabelCheck
+                extensionFieldLookup[it] = fieldName
+            }
+        }
+        return extensionFields
     }
 
     /**
@@ -390,10 +421,7 @@ class NodeQueryExecutor(
         subQuery: NodeSubQuery, parentNodeDefinition: NodeDefinition, allNodes: SymbolicName, unwindCount: Int
     ): StatementWithResultNodesAndNodes {
         val (builder, node) = applySubQueryUnwind(allNodes, unwindCount, parentNodeDefinition)
-        var labelCondition = Conditions.noCondition()
-        for (nodeDefinition in subQuery.onlyOnTypes) {
-            labelCondition = labelCondition.or(node.hasLabels(nodeDefinition.primaryLabel))
-        }
+        val labelCondition = generateLabelCondition(node, subQuery)
         val nodeQuery = subQuery.query
         val relatedNode = nodeQuery.definition.node().named(generateUniqueName().value)
         val innerBuilder = Cypher.with(node).with(node).where(labelCondition)
@@ -408,6 +436,19 @@ class NodeQueryExecutor(
                 Functions.collect(innerResultNodes).`as`(resultNodes), Functions.collect(innerNodes).`as`(nodes)
             ).build(), resultNodes, nodes
         )
+    }
+
+    /**
+     * Creates a condition to check that [node] has all labels specified in [entry] onlyOnTypes
+     *
+     * @param node the [Node] to generate the condition for
+     * @param entry defining the labels to check for
+     * @return the generated condition
+     */
+    private fun generateLabelCondition(node: Node, entry: NodeQueryPartEntry): Condition {
+        return entry.onlyOnTypes.fold(Conditions.noCondition()) { condition, nodeDefinition ->
+            condition.or(node.hasLabels(nodeDefinition.primaryLabel))
+        }
     }
 
     /**
@@ -555,7 +596,7 @@ class NodeQueryExecutor(
         val node = nodeLookup.computeIfAbsent(nodeId) {
             mappingContext.entityConverter.read(nodeQuery.definition.nodeType.java, value[NODE_KEY])
         }
-        for (subQuery in nodeQuery.parts.flatMap { it.value.subQueries }) {
+        for (subQuery in nodeQuery.parts.flatMap { it.value.subQueries.entries }) {
             val nodesValue = partsResults[subQuery]!![nodeId]
             if (nodesValue != null) {
                 val subQueryResult = parseQueryResultInternal(
@@ -567,6 +608,16 @@ class NodeQueryExecutor(
                 )
             }
         }
+        val extensionFields = mutableMapOf<String, Any>()
+        for (extensionField in nodeQuery.parts.flatMap { it.value.extensionFields.entries }) {
+            val name = extensionFieldLookup[extensionField]!!
+            val extensionFieldValue =  value[name]
+            if (!extensionFieldValue.isNull) {
+                val transformedExtensionFieldValue = extensionField.definition.transformResult(extensionFieldValue)
+                extensionFields[extensionField.resultKey] = transformedExtensionFieldValue
+            }
+        }
+        node.extensionFields = extensionFields
         return node
     }
 }

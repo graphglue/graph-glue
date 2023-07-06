@@ -6,6 +6,7 @@ import io.github.graphglue.graphql.extensions.getSimpleName
 import io.github.graphglue.graphql.extensions.springFindRepeatableAnnotations
 import io.github.graphglue.graphql.extensions.springGetRepeatableAnnotations
 import io.github.graphglue.model.Authorization
+import io.github.graphglue.model.ExtensionField
 import io.github.graphglue.model.Node
 import io.github.graphglue.model.NodeRelationship
 import io.github.graphglue.model.property.NODE_PROPERTY_TYPE
@@ -29,10 +30,12 @@ import kotlin.reflect.jvm.javaField
  *
  * @param nodeType the class associated with the definition
  * @param persistentEntity defines Neo4j's view on the node
+ * @param extensionFieldDefinitions all known [ExtensionFieldDefinition] beans
  */
 class NodeDefinition(
     val nodeType: KClass<out Node>,
-    val persistentEntity: Neo4jPersistentEntity<*>
+    val persistentEntity: Neo4jPersistentEntity<*>,
+    extensionFieldDefinitions: Map<String, ExtensionFieldDefinition>
 ) {
     /**
      * map of all found authorizations defined on this type from authorization name to [Authorization]
@@ -47,7 +50,8 @@ class NodeDefinition(
     /**
      * All [ExtensionFieldDefinition]s
      */
-    private val extensionFieldDefinitions = generateExtensionFieldDefinitions().associateBy { it.graphQLName }
+    val extensionFieldDefinitions =
+        generateExtensionFieldDefinitions(extensionFieldDefinitions).associateBy { it.graphQLName }
 
     /**
      * All one [RelationshipDefinition]s
@@ -75,7 +79,15 @@ class NodeDefinition(
     /**
      * Lookup for [RelationshipDefinition]s by its inverse
      */
-    private val relationshipDefinitionByInverse: MutableMap<RelationshipDefinition, RelationshipDefinition?> = mutableMapOf()
+    private val relationshipDefinitionByInverse: MutableMap<RelationshipDefinition, RelationshipDefinition?> =
+        mutableMapOf()
+
+    /**
+     * Set of all extension fields GraphQL names
+     * Can be used to check if a field is an extension field
+     */
+    val extensionFieldGraphQLNames =
+        this.extensionFieldDefinitions.values.map(ExtensionFieldDefinition::graphQLName).toSet()
 
     /**
      * Set of all relationship GraphQL names
@@ -152,8 +164,18 @@ class NodeDefinition(
             }
 
 
-    private fun generateExtensionFieldDefinitions(): List<ExtensionFieldDefinition> {
-        TODO()
+    /**
+     * Finds the [ExtensionFieldDefinition]s for this [NodeDefinition] from the provided list of all definitions
+     *
+     * @param extensionFieldGenerators all known [ExtensionFieldDefinition] beans
+     * @return the list of found [ExtensionFieldDefinition]s
+     */
+    private fun generateExtensionFieldDefinitions(extensionFieldGenerators: Map<String, ExtensionFieldDefinition>): List<ExtensionFieldDefinition> {
+        val allExtensionFields = nodeType.springGetRepeatableAnnotations<ExtensionField>()
+        return allExtensionFields.map {
+            extensionFieldGenerators[it.beanName]
+                ?: throw NodeSchemaException("No extension field generator found for ${it.beanName}")
+        }
     }
 
     /**

@@ -81,9 +81,15 @@ abstract class Node {
     internal val propertyLookup: MutableMap<String, BasePropertyDelegate<*, *>> = mutableMapOf()
 
     /**
+     * Cached fetched values for extension fields by resultKey
+     * Caution: null values should be omitted
+     */
+    @Transient
+    internal var extensionFields: MutableMap<String, Any>? = null
+
+    /**
      * Creates a new node property used for many sides
      *
-     * @param value the current value
      * @param T value type
      * @return a provider for the property delegate
      */
@@ -94,7 +100,6 @@ abstract class Node {
     /**
      * Creates a new node property used for one sides
      *
-     * @param value the current value
      * @param T value type
      * @return a provider for the property delegate
      */

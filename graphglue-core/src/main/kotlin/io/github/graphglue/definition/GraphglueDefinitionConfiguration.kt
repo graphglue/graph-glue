@@ -21,17 +21,20 @@ class GraphglueDefinitionConfiguration {
      *
      * @param beanFactory necessary for the [NodeDefinitionCollection]
      * @param neo4jMappingContext used to get all [Node]s
+     *  * @param extensionFieldDefinitions all known [ExtensionFieldDefinition] beans
+     *
      * @return the [NodeDefinitionCollection]
      */
     @Suppress("UNCHECKED_CAST")
     @Bean
     fun nodeDefinitionCollection(
         beanFactory: BeanFactory,
-        neo4jMappingContext: Neo4jMappingContext
+        neo4jMappingContext: Neo4jMappingContext,
+        extensionFieldDefinitions: Map<String, ExtensionFieldDefinition>
     ): NodeDefinitionCollection {
         val nodeDefinitions =
             neo4jMappingContext.managedTypes.map { it.type.kotlin }.filter { it.isSubclassOf(Node::class) }
-                .map { it as KClass<out Node> }.associateWith { generateNodeDefinition(it, neo4jMappingContext) }
+                .map { it as KClass<out Node> }.associateWith { generateNodeDefinition(it, neo4jMappingContext, extensionFieldDefinitions) }
         return NodeDefinitionCollection(nodeDefinitions, beanFactory)
     }
 

@@ -232,7 +232,8 @@ class DefaultSchemaTransformer(
                     val nodeName = Cypher.name("a_node")
                     val cypherNode = nodeDefinition.node().named(nodeName)
                         .withProperties(mapOf("id" to Cypher.parameter("a_id", node.rawId!!)))
-                    val expression = extensionFieldDefinition.generateFetcher(it, it.arguments, nodeName)
+                    val expression =
+                        extensionFieldDefinition.generateFetcher(it, it.arguments, cypherNode, nodeDefinition)
                     val resultName = "a_result"
                     val statement = Cypher.match(cypherNode).returning(expression.`as`(resultName)).build()
                     val queryResult = reactiveNeo4jClient.query(Renderer.getDefaultRenderer().render(statement))

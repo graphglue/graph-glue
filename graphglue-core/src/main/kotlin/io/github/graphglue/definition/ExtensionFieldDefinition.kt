@@ -2,11 +2,9 @@ package io.github.graphglue.definition
 
 import graphql.schema.DataFetchingEnvironment
 import graphql.schema.GraphQLFieldDefinition
-import graphql.schema.SelectedField
-import io.github.graphglue.model.Node
 import org.neo4j.cypherdsl.core.Expression
-import org.neo4j.cypherdsl.core.SymbolicName
 import org.neo4j.driver.Value
+import org.neo4j.cypherdsl.core.Node
 
 /**
  * Definition of an extension field on a [Node]
@@ -25,10 +23,11 @@ abstract class ExtensionFieldDefinition(val field: GraphQLFieldDefinition) {
      *
      * @param dfe the data fetching environment, caution: NOT SPECIFIC TO THIS FIELD
      * @param arguments arguments provided for the field
-     * @param node the name of the current node
+     * @param node the current node
+     * @param nodeDefinition the definition of the current node
      * @return the generated expression
      */
-    abstract fun generateFetcher(dfe: DataFetchingEnvironment, arguments: Map<String, Any?>, node: SymbolicName): Expression
+    abstract fun generateFetcher(dfe: DataFetchingEnvironment, arguments: Map<String, Any?>, node: Node, nodeDefinition: NodeDefinition): Expression
 
     /**
      * Transforms the result fetched from the database to the result returned via the GraphQL API

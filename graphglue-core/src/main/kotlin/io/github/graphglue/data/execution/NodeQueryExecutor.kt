@@ -282,7 +282,7 @@ class NodeQueryExecutor(
             part.extensionFields.entries.forEach {
                 val node = nodeQuery.definition.node().named(nodeAlias.value!!)
                 val labelCondition = generateLabelCondition(node, it)
-                val expression = it.definition.generateFetcher(it.dfe, it.field.arguments, nodeAlias)
+                val expression = it.definition.generateFetcher(it.dfe, it.field.arguments, node, nodeQuery.definition)
                 val withLabelCheck = Cypher.caseExpression().`when`(labelCondition).then(expression)
                 val fieldName = generateUniqueName().value!!
                 extensionFields[fieldName] = withLabelCheck

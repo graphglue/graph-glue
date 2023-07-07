@@ -75,7 +75,7 @@ abstract class BasePropertyDelegate<T : Node?, R>(
         val result: NodeQueryResult<T>
         val localContext = if (parentNodeQueryPart != null) {
             val providedNodeQuery =
-                parentNodeQueryPart.getSubQuery(dataFetchingEnvironment.executionStepInfo.resultKey) {
+                parentNodeQueryPart.subQueries.getEntry(dataFetchingEnvironment.executionStepInfo.resultKey) {
                     dataFetchingEnvironment.getParentNodeDefinition(nodeQueryParser.nodeDefinitionCollection)
                 }.query
             val options = providedNodeQuery.options

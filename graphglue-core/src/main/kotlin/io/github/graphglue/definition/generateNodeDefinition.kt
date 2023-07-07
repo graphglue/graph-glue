@@ -10,11 +10,15 @@ import kotlin.reflect.KClass
  *
  * @param nodeClass the class to generate the definition for
  * @param mappingContext used to obtain the [Neo4jPersistentEntity]
+ * @param extensionFieldDefinitions all known [ExtensionFieldDefinition] beans
  * @return the generated NodeDefinition
  */
-fun generateNodeDefinition(nodeClass: KClass<out Node>, mappingContext: Neo4jMappingContext): NodeDefinition {
+fun generateNodeDefinition(
+    nodeClass: KClass<out Node>,
+    mappingContext: Neo4jMappingContext,
+    extensionFieldDefinitions: Map<String, ExtensionFieldDefinition>
+): NodeDefinition {
     return NodeDefinition(
-        nodeClass,
-        mappingContext.getPersistentEntity(nodeClass.java)!!
+        nodeClass, mappingContext.getPersistentEntity(nodeClass.java)!!, extensionFieldDefinitions
     )
 }

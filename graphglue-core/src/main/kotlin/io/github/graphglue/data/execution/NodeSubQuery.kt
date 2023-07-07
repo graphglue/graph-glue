@@ -12,9 +12,9 @@ import io.github.graphglue.definition.RelationshipDefinition
  * @param relationshipDefinition defines the relationship to fetch
  * @param resultKey used to identify the result
  */
-data class NodeSubQuery(
+class NodeSubQuery(
     val query: NodeQuery,
-    val onlyOnTypes: List<NodeDefinition>,
+    onlyOnTypes: List<NodeDefinition>,
     val relationshipDefinition: RelationshipDefinition,
-    val resultKey: String
-)
+    resultKey: String
+) : NodeQueryPartEntry(onlyOnTypes, resultKey)

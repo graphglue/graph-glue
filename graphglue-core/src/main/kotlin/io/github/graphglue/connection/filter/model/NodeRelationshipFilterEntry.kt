@@ -26,7 +26,6 @@ abstract class NodeRelationshipFilterEntry(
         val relationshipDefinition = subFilterDefinition.relationshipDefinition
         val relatedNode = Cypher.anyNode(node.requiredSymbolicName.value + "_")
         val relationship = relationshipDefinition.generateRelationship(node, relatedNode)
-        val condition = filter.generateCondition(relatedNode)
         val patternComprehension = if (permission != null) {
             val authorizationCondition =
                 subFilterDefinition.generateAuthorizationCondition(permission).generateCondition(relatedNode)
@@ -34,7 +33,9 @@ abstract class NodeRelationshipFilterEntry(
         } else {
             Cypher.listBasedOn(relationship).returning(relatedNode)
         }
-        return generatePredicate(relatedNode.requiredSymbolicName).`in`(patternComprehension).where(condition)
+        val relatedNodeAlias = Cypher.anyNode(node.requiredSymbolicName.value + "_")
+        val condition = filter.generateCondition(relatedNodeAlias)
+        return generatePredicate(relatedNodeAlias.requiredSymbolicName).`in`(patternComprehension).where(condition)
     }
 
     /**

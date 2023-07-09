@@ -86,7 +86,7 @@ class NodeQueryParser(
         val idParameter = Cypher.anonParameter(parentNode.rawId)
         val rootCypherNode = parentDefinition.node().named("a_related").withProperties(mapOf("id" to idParameter))
         val additionalConditions = listOf(CypherConditionGenerator { node ->
-            Predicates.any(rootCypherNode.requiredSymbolicName).`in`(
+            Predicates.any(Cypher.name("a_related_alias")).`in`(
                 Cypher.listBasedOn(relationshipDefinition.generateRelationship(rootCypherNode, node))
                     .returning(rootCypherNode)
             ).where(Conditions.isTrue())

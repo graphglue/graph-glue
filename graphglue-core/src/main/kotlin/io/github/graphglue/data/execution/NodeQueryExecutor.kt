@@ -335,10 +335,10 @@ class NodeQueryExecutor(
         val firstOrLast = options.first ?: options.last
         return if (firstOrLast != null) {
             val orderedBuilder = if (options.first != null) {
-                builder.orderBy(generateOrderFields(options.orderBy, nodeAlias, false)).limit(options.first)
+                builder.orderBy(generateOrderFields(options.orderBy, nodeAlias, false))
                     .with(nodeAlias)
             } else {
-                builder.orderBy(generateOrderFields(options.orderBy, nodeAlias, true)).limit(options.last)
+                builder.orderBy(generateOrderFields(options.orderBy, nodeAlias, true))
                     .with(nodeAlias)
             }
             val skippedBuilder = if (options.skip != null) {

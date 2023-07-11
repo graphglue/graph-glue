@@ -1,1 +1,2 @@
 io.github.graphglue.GraphglueAutoConfiguration
+com.expediagroup.graphql.server.spring.GraphQLAutoConfiguration

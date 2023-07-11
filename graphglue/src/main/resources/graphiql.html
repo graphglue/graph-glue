@@ -54,14 +54,14 @@
     </style>
     <script crossorigin src="https://unpkg.com/react@17/umd/react.development.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@17/umd/react-dom.development.js"></script>
-    <link rel="stylesheet" href="https://unpkg.com/graphiql/graphiql.min.css" />
-    <link rel="stylesheet" href="https://unpkg.com/@graphiql/plugin-explorer/dist/style.css" />
+    <link rel="stylesheet" href="https://unpkg.com/graphiql@3.0.0/graphiql.min.css" />
+    <link rel="stylesheet" href="https://unpkg.com/@graphiql/plugin-explorer@0.3.0/dist/style.css" />
 </head>
 
 <body>
     <div id="graphiql">Loading...</div>
-    <script src="https://unpkg.com/graphiql/graphiql.min.js" type="application/javascript"></script>
-    <script crossorigin src="https://unpkg.com/@graphiql/plugin-explorer/dist/index.umd.js"></script>
+    <script src="https://unpkg.com/graphiql@3.0.0/graphiql.min.js" type="application/javascript"></script>
+    <script crossorigin src="https://unpkg.com/@graphiql/plugin-explorer@0.3.0/dist/index.umd.js"></script>
     <script>
         const gqlFetcher = GraphiQL.createFetcher({
             url: '${graphQLEndpoint}',
@@ -72,10 +72,7 @@
             var [query, setQuery] = React.useState(
                 '',
             );
-            var explorerPlugin = GraphiQLPluginExplorer.useExplorerPlugin({
-                query: query,
-                onEdit: setQuery,
-            })
+            var explorerPlugin = GraphiQLPluginExplorer.explorerPlugin()
             return React.createElement(GraphiQL, {
                 fetcher: gqlFetcher,
                 defaultVariableEditorOpen: true,

@@ -1,6 +1,7 @@
 package io.github.graphglue.data.execution
 
 import io.github.graphglue.definition.NodeDefinition
+import io.github.graphglue.model.Node
 
 /**
  * Part of a [NodeQuery], consisting of a list of [NodeSubQuery]s
@@ -19,6 +20,15 @@ class NodeQueryPart(subQueries: List<NodeSubQuery>, extensionFields: List<NodeEx
      * Lookup for extension fields
      */
     val extensionFields = NodeQueryPartEntrySet(extensionFields)
+
+    /**
+     * The cost of this NodeQueryPart
+     */
+    val cost: Int = subQueries.sumOf { it.cost } + extensionFields.sumOf { it.cost }
+
+    fun affectsNode(node: Node): Boolean {
+        return subQueries.affectsNode(node) || extensionFields.affectsNode(node)
+    }
 }
 
 /**
@@ -52,5 +62,15 @@ class NodeQueryPartEntrySet<T : NodeQueryPartEntry>(val entries: List<T>) {
             val nodeDefinition = nodeDefinitionProvider()
             entries.first { it.onlyOnTypes.contains(nodeDefinition) }
         }
+    }
+
+    /**
+     * Checks if any entry affects the given node
+     *
+     * @param node the node to check
+     * @return true if any entry affects the node
+     */
+    fun affectsNode(node: Node): Boolean {
+        return entries.any { it.affectsNode(node) }
     }
 }

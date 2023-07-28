@@ -1,5 +1,6 @@
 package io.github.graphglue.data
 
+import io.github.graphglue.data.execution.NodeQueryEngine
 import io.github.graphglue.data.execution.NodeQueryParser
 import org.springframework.data.neo4j.core.ReactiveNeo4jClient
 import org.springframework.data.neo4j.core.mapping.Neo4jMappingContext
@@ -7,12 +8,10 @@ import org.springframework.data.neo4j.core.mapping.Neo4jMappingContext
 /**
  * Context used to lazily load nodes
  *
- * @param neo4jClient client used to perform Cypher queries
- * @param neo4jMappingContext context used to get mapping functions
  * @param nodeQueryParser used to generate the Cypher query
+ * @param nodeQueryEngine used to execute the Cypher query
  */
 class LazyLoadingContext(
-    val neo4jClient: ReactiveNeo4jClient,
-    val neo4jMappingContext: Neo4jMappingContext,
-    val nodeQueryParser: NodeQueryParser
+    val nodeQueryParser: NodeQueryParser,
+    val nodeQueryEngine: NodeQueryEngine
 )

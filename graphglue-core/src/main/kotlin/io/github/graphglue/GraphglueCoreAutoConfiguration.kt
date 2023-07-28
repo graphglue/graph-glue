@@ -9,6 +9,7 @@ import org.springframework.boot.autoconfigure.AutoConfiguration
 import org.springframework.boot.autoconfigure.AutoConfigureAfter
 import org.springframework.boot.autoconfigure.data.neo4j.Neo4jReactiveDataAutoConfiguration
 import org.springframework.boot.autoconfigure.neo4j.Neo4jAutoConfiguration
+import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Import
 
 /**
@@ -23,6 +24,7 @@ import org.springframework.context.annotation.Import
     GraphglueConnectionConfiguration::class,
     GraphglueDefinitionConfiguration::class
 )
+@EnableConfigurationProperties(GraphglueCoreConfigurationProperties::class)
 @AutoConfigureAfter(
     value = [Neo4jAutoConfiguration::class, Neo4jReactiveDataAutoConfiguration::class]
 )

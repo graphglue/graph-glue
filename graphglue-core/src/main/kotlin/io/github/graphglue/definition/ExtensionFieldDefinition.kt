@@ -10,8 +10,9 @@ import org.neo4j.cypherdsl.core.Node
  * Definition of an extension field on a [Node]
  *
  * @param field the field definition in the GraphQL schema
+ * @param cost the cost of this field, defaults to 0
  */
-abstract class ExtensionFieldDefinition(val field: GraphQLFieldDefinition) {
+abstract class ExtensionFieldDefinition(val field: GraphQLFieldDefinition, val cost: Int = 0) {
 
     /**
      * The name of the field in the GraphQL schema

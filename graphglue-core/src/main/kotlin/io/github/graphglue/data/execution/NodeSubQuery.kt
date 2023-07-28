@@ -17,4 +17,10 @@ class NodeSubQuery(
     onlyOnTypes: List<NodeDefinition>,
     val relationshipDefinition: RelationshipDefinition,
     resultKey: String
-) : NodeQueryPartEntry(onlyOnTypes, resultKey)
+) : NodeQueryPartEntry(onlyOnTypes, resultKey) {
+
+    /**
+     * The cost of the underlying [query]
+     */
+    override val cost: Int get() = query.cost
+}

@@ -19,5 +19,9 @@ class NodeExtensionField(
     val dfe: DataFetchingEnvironment,
     val field: SelectedField,
     onlyOnTypes: List<NodeDefinition>,
-    resultKey: String
-) : NodeQueryPartEntry(onlyOnTypes, resultKey)
+    resultKey: String,
+) : NodeQueryPartEntry(onlyOnTypes, resultKey) {
+
+    override val cost: Int get() = definition.cost
+
+}

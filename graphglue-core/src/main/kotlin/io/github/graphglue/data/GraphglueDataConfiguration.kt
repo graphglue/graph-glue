@@ -1,8 +1,10 @@
 package io.github.graphglue.data
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import io.github.graphglue.GraphglueCoreConfigurationProperties
 import io.github.graphglue.connection.filter.definition.FilterDefinition
 import io.github.graphglue.connection.filter.definition.FilterDefinitionCollection
+import io.github.graphglue.data.execution.NodeQueryEngine
 import io.github.graphglue.data.execution.NodeQueryParser
 import io.github.graphglue.data.repositories.GraphglueNeo4jOperations
 import io.github.graphglue.definition.NodeDefinition
@@ -60,18 +62,32 @@ class GraphglueDataConfiguration {
         }
 
     /**
+     * Creates a new [NodeQueryEngine]
+     *
+     * @param configurationProperties properties used to configure the engine
+     * @param client client used to execute queries
+     * @param mappingContext context used to get mapping functions
+     * @return the created [NodeQueryEngine]
+     */
+    @Bean
+    fun nodeQueryEngine(
+        configurationProperties: GraphglueCoreConfigurationProperties,
+        client: ReactiveNeo4jClient,
+        mappingContext: Neo4jMappingContext
+    ): NodeQueryEngine = NodeQueryEngine(configurationProperties, client, mappingContext)
+
+    /**
      * Creates a new [LazyLoadingContext]
      *
-     * @param neo4jClient client used to perform Cypher queries
-     * @param neo4jMappingContext context used to get mapping functions
      * @param nodeQueryParser used to generate the Cypher query
+     * @param nodeQueryEngine used to execute the Cypher query
      * @return the generated [LazyLoadingContext]
      */
     @Bean
     fun lazyLoadingContext(
-        neo4jClient: ReactiveNeo4jClient, neo4jMappingContext: Neo4jMappingContext, nodeQueryParser: NodeQueryParser
+       nodeQueryParser: NodeQueryParser, nodeQueryEngine: NodeQueryEngine
     ): LazyLoadingContext {
-        return LazyLoadingContext(neo4jClient, neo4jMappingContext, nodeQueryParser)
+        return LazyLoadingContext(nodeQueryParser, nodeQueryEngine)
     }
 
     /**

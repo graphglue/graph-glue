@@ -11,7 +11,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties
 @ConfigurationProperties("graphglue")
 data class GraphglueConfigurationProperties(
     val graphiql: GraphiQLConfigurationProperties = GraphiQLConfigurationProperties(),
-    val includeSkipField: Boolean = false
+    val includeSkipField: Boolean = false,
 ) {
 
     /**

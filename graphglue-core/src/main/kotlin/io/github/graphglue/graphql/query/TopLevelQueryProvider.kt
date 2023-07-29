@@ -11,6 +11,7 @@ import io.github.graphglue.data.execution.NodeQueryResult
 import io.github.graphglue.definition.NodeDefinition
 import io.github.graphglue.graphql.extensions.requiredPermission
 import io.github.graphglue.connection.model.Connection
+import io.github.graphglue.data.execution.NodeQueryEngine
 import io.github.graphglue.model.Node
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.data.neo4j.core.ReactiveNeo4jClient
@@ -30,7 +31,7 @@ class TopLevelQueryProvider<T : Node>(private val nodeDefinition: NodeDefinition
      *
      * @param nodeQueryParser used to parse the query
      * @param dataFetchingEnvironment necessary to generate the node query, used for caching
-     * @param lazyLoadingContext used to get the [ReactiveNeo4jClient] and the [Neo4jMappingContext]
+     * @param nodeQueryEngine used to execute the query
      * @param objectMapper necessary for cursor encoding and decoding
      * @return the result with the correct local context
      */
@@ -40,7 +41,7 @@ class TopLevelQueryProvider<T : Node>(private val nodeDefinition: NodeDefinition
         nodeQueryParser: NodeQueryParser,
         dataFetchingEnvironment: DataFetchingEnvironment,
         @Autowired @GraphQLIgnore
-        lazyLoadingContext: LazyLoadingContext,
+        nodeQueryEngine: NodeQueryEngine,
         @Autowired @GraphQLIgnore
         objectMapper: ObjectMapper
     ): DataFetcherResult<Connection<T>> {
@@ -50,9 +51,8 @@ class TopLevelQueryProvider<T : Node>(private val nodeDefinition: NodeDefinition
             emptyList(),
             dataFetchingEnvironment.requiredPermission
         )
-        val queryExecutor =
-            NodeQueryExecutor(nodeQuery, lazyLoadingContext.neo4jClient, lazyLoadingContext.neo4jMappingContext)
-        val queryResult = queryExecutor.execute() as NodeQueryResult<T>
+
+        val queryResult = nodeQueryEngine.execute(nodeQuery) as NodeQueryResult<T>
         return DataFetcherResult.newResult<Connection<T>>()
             .data(Connection.fromQueryResult(queryResult, objectMapper))
             .localContext(nodeQuery)

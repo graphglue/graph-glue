@@ -137,11 +137,8 @@ abstract class Node {
                 this,
                 dataFetchingEnvironment?.requiredPermission
             )
-            val queryExecutor = NodeQueryExecutor(
-                query, lazyLoadingContext.neo4jClient, lazyLoadingContext.neo4jMappingContext
-            )
             @Suppress("UNCHECKED_CAST")
-            return queryExecutor.execute() as NodeQueryResult<T> to query
+            return lazyLoadingContext.nodeQueryEngine.execute(query) as NodeQueryResult<T> to query
         }
     }
 

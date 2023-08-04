@@ -679,7 +679,10 @@ class NodeQueryExecutor(
                 )
             }
         }
-        val extensionFields = mutableMapOf<String, Any>()
+        if (node.extensionFields == null) {
+            node.extensionFields = mutableMapOf()
+        }
+        val extensionFields = node.extensionFields!!
         for (extensionField in nodeQuery.parts.flatMap { it.value.extensionFields.entries }) {
             val name = extensionFieldLookup[extensionField]!!
             val extensionFieldValue =  value[name]
@@ -688,7 +691,6 @@ class NodeQueryExecutor(
                 extensionFields[extensionField.resultKey] = transformedExtensionFieldValue
             }
         }
-        node.extensionFields = extensionFields
         return node
     }
 }

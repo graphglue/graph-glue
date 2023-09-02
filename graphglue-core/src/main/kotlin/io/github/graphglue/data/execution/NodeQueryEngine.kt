@@ -38,6 +38,22 @@ class NodeQueryEngine(
     }
 
     /**
+     * Executes the given query
+     * May perform multiple requests to the database if the query is too complex.
+     *
+     * @param query the query to execute
+     * @return the result of the query
+     */
+    suspend fun execute(query: SearchQuery): SearchQueryResult<*> {
+        val instance = NodeQueryEngineInstance()
+        val newQuery = instance.splitNodeQuery(query)
+        val executor = NodeQueryExecutor(client, mappingContext)
+        val result = executor.execute(newQuery)
+        instance.executeAdditionalQueries(executor)
+        return result
+    }
+
+    /**
      * Instance of the query engine, used for executing a single query
      */
     private inner class NodeQueryEngineInstance {
@@ -45,7 +61,7 @@ class NodeQueryEngine(
         /**
          * Map of the additional queries that need to be executed
          */
-        val additionalQueries = mutableMapOf<NodeQuery, List<NodeQuery>>()
+        val additionalQueries = mutableMapOf<QueryBase<*>, List<PartialNodeQuery>>()
 
         /**
          * Splits up a query into multiple smaller queries if necessary
@@ -54,7 +70,7 @@ class NodeQueryEngine(
          * @param query the query to split up
          * @return the initial query if it is small enough, otherwise a query that can be executed
          */
-        fun splitNodeQuery(query: NodeQuery): NodeQuery {
+        fun <T : QueryBase<T>> splitNodeQuery(query: T): T {
             if (query.cost <= configurationProperties.maxQueryCost) {
                 return query
             }
@@ -75,9 +91,9 @@ class NodeQueryEngine(
             }
             val extensionFieldParts = query.parts.filterValues { it.extensionFields.entries.isNotEmpty() }
                 .mapValues { NodeQueryPart(emptyList(), it.value.extensionFields.entries) }
-            val initialQuery = NodeQuery(query.definition, query.options, extensionFieldParts)
+            val initialQuery = query.copyWithParts(extensionFieldParts)
             val queries = groupedParts.map {
-                NodeQuery(query.definition, query.options, it)
+                PartialNodeQuery(query.definition, it)
             }
             if (queries.isNotEmpty()) {
                 additionalQueries[initialQuery] = queries

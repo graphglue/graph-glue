@@ -11,12 +11,12 @@ import io.github.graphglue.definition.NodeDefinition
 import io.github.graphglue.definition.NodeDefinitionCollection
 import io.github.graphglue.model.Node
 import io.github.graphglue.model.property.BasePropertyDelegate
-import io.github.graphglue.model.property.NodeSetPropertyDelegate
 import org.neo4j.driver.types.MapAccessor
 import org.springframework.beans.factory.BeanFactory
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
+import org.springframework.data.neo4j.core.Neo4jClient
 import org.springframework.data.neo4j.core.Neo4jOperations
 import org.springframework.data.neo4j.core.ReactiveNeo4jClient
 import org.springframework.data.neo4j.core.ReactiveNeo4jTemplate
@@ -85,7 +85,7 @@ class GraphglueDataConfiguration {
      */
     @Bean
     fun lazyLoadingContext(
-       nodeQueryParser: NodeQueryParser, nodeQueryEngine: NodeQueryEngine
+        nodeQueryParser: NodeQueryParser, nodeQueryEngine: NodeQueryEngine
     ): LazyLoadingContext {
         return LazyLoadingContext(nodeQueryParser, nodeQueryEngine)
     }
@@ -136,4 +136,16 @@ class GraphglueDataConfiguration {
             }
         }
     }
+
+    /**
+     * Creates the [DefaultIndexCreator]
+     *
+     * @param nodeDefinitionCollection collection of all [NodeDefinition]s
+     * @param neo4jClient client used to execute queries
+     * @return the created [DefaultIndexCreator]
+     */
+    @Bean
+    fun defaultIndexCreator(
+        nodeDefinitionCollection: NodeDefinitionCollection, neo4jClient: Neo4jClient
+    ) = DefaultIndexCreator(nodeDefinitionCollection, neo4jClient)
 }

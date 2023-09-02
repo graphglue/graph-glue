@@ -37,8 +37,7 @@ const val TOTAL_COUNT_KEY = "total_count"
  * @param mappingContext used to transform the result into a node
  */
 class NodeQueryExecutor(
-    private val client: ReactiveNeo4jClient,
-    private val mappingContext: Neo4jMappingContext
+    private val client: ReactiveNeo4jClient, private val mappingContext: Neo4jMappingContext
 ) {
     /**
      * Counter for unique name generation
@@ -63,7 +62,7 @@ class NodeQueryExecutor(
     /**
      * Map of all nodes that were returned by a query
      */
-    val returnedNodesByNodeQuery = HashMap<NodeQuery, MutableSet<io.github.graphglue.model.Node>>()
+    val returnedNodesByNodeQuery = HashMap<QueryBase<*>, MutableSet<io.github.graphglue.model.Node>>()
 
     /**
      * Executes the query
@@ -74,7 +73,21 @@ class NodeQueryExecutor(
         val (statement, returnName) = createRootNodeQuery(query)
         return client.query(Renderer.getDefaultRenderer().render(statement)).bindAll(statement.catalog.parameters)
             .fetchAs(NodeQueryResult::class.java).mappedBy { _, record ->
-                parseQueryResultInternal(record, returnName, query)
+                parseQueryResultInternal(record, returnName, query).toCompleteResult(query)
+            }.one().awaitSingle()
+    }
+
+    /**
+     * Executes the query
+     *
+     * @return the query result including all found nodes
+     */
+    suspend fun execute(query: SearchQuery): SearchQueryResult<*> {
+        val (statement, returnName) = createSearchRootQuery(query)
+        return client.query(Renderer.getDefaultRenderer().render(statement)).bindAll(statement.catalog.parameters)
+            .fetchAs(SearchQueryResult::class.java).mappedBy { _, record ->
+                val partialResult = parseQueryResultInternal(record, returnName, query)
+                SearchQueryResult(query.options, partialResult.nodes)
             }.one().awaitSingle()
     }
 
@@ -84,14 +97,14 @@ class NodeQueryExecutor(
      *
      * @param nodes the nodes for which to execute subqueries and where results are registered
      */
-    suspend fun executePartial(query: NodeQuery, nodes: Collection<io.github.graphglue.model.Node>) {
+    suspend fun executePartial(query: PartialNodeQuery, nodes: Collection<io.github.graphglue.model.Node>) {
         if (query.parts.values.any { it.extensionFields.entries.isNotEmpty() }) {
             throw IllegalArgumentException("Partial queries with extension fields are not supported")
         }
         val (statement, returnName) = createPartialRootNodeQuery(query, nodes)
         nodes.forEach { nodeLookup[it.rawId!!] = it }
         client.query(Renderer.getDefaultRenderer().render(statement)).bindAll(statement.catalog.parameters)
-            .fetchAs(NodeQueryResult::class.java).mappedBy { _, record ->
+            .fetchAs(PartialNodeQueryResult::class.java).mappedBy { _, record ->
                 parseQueryResultInternal(record, returnName, query)
             }.one().awaitSingle()
     }
@@ -106,17 +119,47 @@ class NodeQueryExecutor(
         val node = query.definition.node().named(generateUniqueName().value)
         val builder = Cypher.match(node).with(node)
         val options = query.options
-        val filteredBuilder = applyFilterConditions(options, builder, node)
+        val filteredBuilder = applyFilterConditions(options.filters, builder, node)
         val allNodesCollected = generateUniqueName()
         val collectedNodesBuilder = filteredBuilder.with(Functions.collect(node).`as`(allNodesCollected))
-        val totalCount = generateUniqueName()
-        val totalCountBuilder =
-            applyTotalCount(options, collectedNodesBuilder, allNodesCollected, emptyList(), totalCount)
+        val (totalCountBuilder, totalCount) = applyTotalCountIfRequired(
+            options, collectedNodesBuilder, allNodesCollected, emptyList()
+        )
         val (mainSubQuery, resultNodes, nodes) = generateMainSubQuery(query, node, allNodesCollected)
         val mainSubQueryBuilder = totalCountBuilder.call(mainSubQuery)
         val (subPartsBuilder, returnNames) = createPartsSubQueriesRecursive(mainSubQueryBuilder, query, nodes, 1)
         val (statement, returnName) = createRootReturnStatement(
-            subPartsBuilder, resultNodes, returnNames, options, totalCount
+            subPartsBuilder, resultNodes, returnNames, totalCount
+        )
+        return StatementWithSymbolicName(statement, returnName)
+    }
+
+    /**
+     * Generates a search root query based
+     *
+     * @return the generated query and result column name
+     */
+    private fun createSearchRootQuery(query: SearchQuery): StatementWithSymbolicName {
+        val nodeAlias = generateUniqueName()
+        val node = query.definition.node().named(nodeAlias.value)
+        val score = generateUniqueName()
+        val builder = Cypher.call("db.index.fulltext.queryNodes").withArgs(
+            Cypher.literalOf<String>(query.definition.searchIndexName!!), Cypher.anonParameter(query.options.query)
+        ).yield(Cypher.name("node").`as`(nodeAlias), Cypher.name("score").`as`(score))
+            .with(node, score)
+        val filteredBuilder = applyFilterConditions(query.options.filters, builder, node).with(node, score, nodeAlias.`as`(query.definition.returnNodeName))
+        val limitedBuilder = filteredBuilder.limit(Cypher.anonParameter(query.options.first))
+        val resultNode = generateUniqueName()
+        val resultNodeExpression = generateResultNodeExpression(query.definition, query, nodeAlias)
+        val withResultBuilder = limitedBuilder.with(node, resultNodeExpression.`as`(resultNode))
+        val resultNodes = generateUniqueName()
+        val nodes = generateUniqueName()
+        val collectedBuilder = withResultBuilder.with(
+            Functions.collect(resultNode).`as`(resultNodes), Functions.collect(node).`as`(nodes)
+        )
+        val (subPartsBuilder, returnNames) = createPartsSubQueriesRecursive(collectedBuilder, query, nodes, 1)
+        val (statement, returnName) = createRootReturnStatement(
+            subPartsBuilder, resultNodes, returnNames, null
         )
         return StatementWithSymbolicName(statement, returnName)
     }
@@ -129,17 +172,28 @@ class NodeQueryExecutor(
      * @param nodes the nodes for which to execute subqueries
      * @return the generated query and result column name
      */
-    private fun createPartialRootNodeQuery(query: NodeQuery, nodes: Collection<io.github.graphglue.model.Node>): StatementWithSymbolicName {
+    private fun createPartialRootNodeQuery(
+        query: PartialNodeQuery, nodes: Collection<io.github.graphglue.model.Node>
+    ): StatementWithSymbolicName {
         val node = query.definition.node().named(generateUniqueName().value)
         val builder = Cypher.match(node).where(node.property("id").`in`(Cypher.anonParameter(nodes.map { it.rawId })))
         val resultNodeName = generateUniqueName()
-        val resultNodeMap = Cypher.asExpression(mapOf(NODE_KEY to Cypher.listOf(Cypher.asExpression(mapOf("id" to node.property("id")))))).`as`(resultNodeName)
+        val resultNodeMap =
+            Cypher.asExpression(mapOf(NODE_KEY to Cypher.listOf(Cypher.asExpression(mapOf("id" to node.property("id"))))))
+                .`as`(resultNodeName)
         val builderWithResult = builder.with(node, resultNodeMap)
         val allNodesCollected = generateUniqueName()
         val allResultNodesCollected = generateUniqueName()
-        val collectedNodesBuilder = builderWithResult.with(Functions.collect(node).`as`(allNodesCollected), Functions.collect(resultNodeName).`as`(allResultNodesCollected))
-        val (subPartsBuilder, returnNames) = createPartsSubQueriesRecursive(collectedNodesBuilder, query, allNodesCollected, 1)
-        val (statement, returnName) = createPartialRootReturnStatement(subPartsBuilder, allResultNodesCollected, returnNames)
+        val collectedNodesBuilder = builderWithResult.with(
+            Functions.collect(node).`as`(allNodesCollected),
+            Functions.collect(resultNodeName).`as`(allResultNodesCollected)
+        )
+        val (subPartsBuilder, returnNames) = createPartsSubQueriesRecursive(
+            collectedNodesBuilder, query, allNodesCollected, 1
+        )
+        val (statement, returnName) = createPartialRootReturnStatement(
+            subPartsBuilder, allResultNodesCollected, returnNames
+        )
         return StatementWithSymbolicName(statement, returnName)
     }
 
@@ -154,10 +208,7 @@ class NodeQueryExecutor(
      * @return the new statement builder, and a list of all names to return (names of the SubQuery results)
      */
     private fun createPartsSubQueriesRecursive(
-        builder: StatementBuilder.OngoingReading,
-        nodeQuery: NodeQuery,
-        allNodes: SymbolicName,
-        unwindCount: Int
+        builder: StatementBuilder.OngoingReading, nodeQuery: QueryBase<*>, allNodes: SymbolicName, unwindCount: Int
     ): Pair<StatementBuilder.OngoingReading, List<SymbolicName>> {
         var callBuilder = builder
         val returnNames = mutableListOf<SymbolicName>()
@@ -184,7 +235,6 @@ class NodeQueryExecutor(
      * @param builder ongoing statement builder
      * @param resultNodesCollected name for the variable containing a collection of all result nodes
      * @param otherResults names of other results which should be returned, e.g. the names of the SubQuery results
-     * @param options options of the query, defines if totalCount must be fetched
      * @param totalCount name for the variable under which totalCount should be saved
      * @return the generated statement, the result name and the name of a collection with all raw nodes
      */
@@ -192,16 +242,14 @@ class NodeQueryExecutor(
         builder: StatementBuilder.OngoingReading,
         resultNodesCollected: SymbolicName,
         otherResults: List<SymbolicName>,
-        options: NodeQueryOptions,
-        totalCount: SymbolicName,
+        totalCount: SymbolicName?,
     ): StatementWithSymbolicName {
         val returnAlias = generateUniqueName()
         val returnBuilder = builder.returning(
             listOf(
                 Cypher.asExpression(
                     mapOf(
-                        NODES_KEY to resultNodesCollected,
-                        TOTAL_COUNT_KEY to if (options.fetchTotalCount) totalCount else Cypher.literalNull()
+                        NODES_KEY to resultNodesCollected, TOTAL_COUNT_KEY to (totalCount ?: Cypher.literalNull())
                     )
                 ).`as`(returnAlias)
             ) + otherResults
@@ -239,26 +287,48 @@ class NodeQueryExecutor(
     /**
      * Applies all filter conditions to a builder and returns the resulting builder
      *
-     * @param options options which define filters
+     * @param filters list of filter conditions
      * @param builder builder for  Cypher-DSL query
      * @param node the node to generate the filter conditions for
      * @return the resulting builder
      */
     private fun applyFilterConditions(
-        options: NodeQueryOptions, builder: StatementBuilder.OrderableOngoingReadingAndWithWithoutWhere, node: Node
-    ) = if (options.filters.isEmpty()) {
+        filters: List<CypherConditionGenerator>,
+        builder: StatementBuilder.OrderableOngoingReadingAndWithWithoutWhere,
+        node: Node
+    ) = if (filters.isEmpty()) {
         builder
     } else {
-        val filter = options.filters.fold(Conditions.noCondition()) { condition, filter ->
+        val filter = filters.fold(Conditions.noCondition()) { condition, filter ->
             condition.and(filter.generateCondition(node))
         }
         builder.where(filter)
     }
 
     /**
+     * Wraps the builder with `applyTotalCount` if required by the options
+     *
+     * @param options the options for the query
+     * @param builder the builder to wrap
+     * @param allNodesCollected name of the collection containing all nodes
+     * @param additionalNames additional names which should be added to the with statement
+     * @return the new builder and the name of the variable containing the total count
+     */
+    private fun applyTotalCountIfRequired(
+        options: NodeQueryOptions,
+        builder: StatementBuilder.OrderableOngoingReadingAndWithWithoutWhere,
+        allNodesCollected: SymbolicName,
+        additionalNames: List<SymbolicName>
+    ) = if (options.fetchTotalCount) {
+        val totalCountName = generateUniqueName()
+        applyTotalCount(builder, allNodesCollected, additionalNames, totalCountName) to totalCountName
+    } else {
+        builder to null
+    }
+
+    /**
      * If necessary, adds a with statement to the `builder` which fetches totalCount
      *
-     * @param options options of the query, defines if totalCount must be fetched
      * @param builder ongoing statement builder
      * @param allNodesCollected name for the variable containing a collection of all nodes
      * @param additionalNames additional names which should be added to the with statement
@@ -266,20 +336,15 @@ class NodeQueryExecutor(
      * @return the new builder
      */
     private fun applyTotalCount(
-        options: NodeQueryOptions,
         builder: StatementBuilder.OrderableOngoingReadingAndWithWithoutWhere,
         allNodesCollected: SymbolicName,
         additionalNames: List<SymbolicName>,
         totalCount: SymbolicName
-    ) = if (options.fetchTotalCount) {
-        builder.with(
-            listOf(
-                Functions.size(allNodesCollected).`as`(totalCount), allNodesCollected
-            ) + additionalNames
-        )
-    } else {
-        builder
-    }
+    ) = builder.with(
+        listOf(
+            Functions.size(allNodesCollected).`as`(totalCount), allNodesCollected
+        ) + additionalNames
+    )
 
     /**
      * Generates a Cypher SubQuery which gets the list of all nodes,
@@ -322,8 +387,7 @@ class NodeQueryExecutor(
         options: NodeQueryOptions,
         nodeQuery: NodeQuery
     ): StatementWithResultNodesAndNodes {
-        val resultNodeMap = mapOf(NODE_KEY to Cypher.listOf(nodeDefinition.returnExpression)) + generateExtensionFields(nodeQuery, nodeAlias)
-        val resultNodeExpression = Cypher.asExpression(resultNodeMap)
+        val resultNodeExpression = generateResultNodeExpression(nodeDefinition, nodeQuery, nodeAlias)
         val resultNode = generateUniqueName()
         val resultBuilder = builder.with(
             listOf(
@@ -339,6 +403,23 @@ class NodeQueryExecutor(
     }
 
     /**
+     * Generates the expression for the result node, including the node itself and extension fields
+     *
+     * @param nodeDefinition definition for the currently queried node
+     * @param nodeQuery the currently converted query
+     * @param nodeAlias name of the variable containing the node
+     * @return the generated expression
+     */
+    private fun generateResultNodeExpression(
+        nodeDefinition: NodeDefinition, nodeQuery: QueryBase<*>, nodeAlias: SymbolicName
+    ): MapExpression {
+        val resultNodeMap = mapOf(NODE_KEY to Cypher.listOf(nodeDefinition.returnExpression)) + generateExtensionFields(
+            nodeQuery, nodeAlias
+        )
+        return Cypher.asExpression(resultNodeMap)
+    }
+
+    /**
      * Generate a map to fetch extension fields for a NodeQuery.
      * Registers all extension fields in [extensionFieldLookup]
      *
@@ -346,9 +427,9 @@ class NodeQueryExecutor(
      * @param nodeAlias name of the variable containing the node
      * @return a map of extension field names to their expressions
      */
-    private fun generateExtensionFields(nodeQuery: NodeQuery, nodeAlias: SymbolicName): Map<String, Expression> {
+    private fun generateExtensionFields(nodeQuery: QueryBase<*>, nodeAlias: SymbolicName): Map<String, Expression> {
         val extensionFields = mutableMapOf<String, Expression>()
-        nodeQuery.parts.values.forEach {part ->
+        nodeQuery.parts.values.forEach { part ->
             part.extensionFields.entries.forEach {
                 val node = nodeQuery.definition.node().named(nodeAlias.value!!)
                 val labelCondition = generateLabelCondition(node, it)
@@ -405,11 +486,9 @@ class NodeQueryExecutor(
         val firstOrLast = options.first ?: options.last
         return if (firstOrLast != null) {
             val orderedBuilder = if (options.first != null) {
-                builder.orderBy(generateOrderFields(options.orderBy, nodeAlias, false))
-                    .with(nodeAlias)
+                builder.orderBy(generateOrderFields(options.orderBy, nodeAlias, false)).with(nodeAlias)
             } else {
-                builder.orderBy(generateOrderFields(options.orderBy, nodeAlias, true))
-                    .with(nodeAlias)
+                builder.orderBy(generateOrderFields(options.orderBy, nodeAlias, true)).with(nodeAlias)
             }
             val skippedBuilder = if (options.skip != null) {
                 orderedBuilder.skip(options.skip)
@@ -560,17 +639,16 @@ class NodeQueryExecutor(
         parentNode: Node
     ): StatementWithResultNodesAndNodes {
         val options = nodeQuery.options
-        val filteredBuilder = applyFilterConditions(options, builder, node)
+        val filteredBuilder = applyFilterConditions(options.filters, builder, node)
         val allNodesCollected = generateUniqueName()
         val collectedNodesBuilder = filteredBuilder.with(Functions.collect(node).`as`(allNodesCollected), parentNode)
-        val totalCount = generateUniqueName()
-        val totalCountBuilder = applyTotalCount(
-            options, collectedNodesBuilder, allNodesCollected, listOf(parentNode.requiredSymbolicName), totalCount
+        val (totalCountBuilder, totalCount) = applyTotalCountIfRequired(
+            options, collectedNodesBuilder, allNodesCollected, listOf(parentNode.requiredSymbolicName)
         )
         val (mainSubQuery, resultNodes, nodes) = generateMainSubQuery(nodeQuery, node, allNodesCollected)
         val mainSubQueryBuilder = totalCountBuilder.call(mainSubQuery)
         val parentId = parentNode.property("id")
-        return createSubReturnStatement(mainSubQueryBuilder, resultNodes, nodes, parentId, options, totalCount)
+        return createSubReturnStatement(mainSubQueryBuilder, resultNodes, nodes, parentId, totalCount)
     }
 
     /**
@@ -582,7 +660,6 @@ class NodeQueryExecutor(
      * @param resultNodesCollected name for the variable containing a collection of all result nodes
      * @param nodesCollected name for the variable containing all raw nodes, used for parts SubQueries
      * @param parentNodeId statement for parent node id, set to `Cypher.literalNull()` if null
-     * @param options options of the query, defines if totalCount must be fetched
      * @param totalCount name for the variable under which totalCount should be saved
      * @return the generated statement, the result name and the name of a collection with all raw nodes
      */
@@ -591,8 +668,7 @@ class NodeQueryExecutor(
         resultNodesCollected: SymbolicName,
         nodesCollected: SymbolicName,
         parentNodeId: Expression,
-        options: NodeQueryOptions,
-        totalCount: SymbolicName,
+        totalCount: SymbolicName?,
     ): StatementWithResultNodesAndNodes {
         val returnAlias = generateUniqueName()
         val returnBuilder = builder.returning(
@@ -600,7 +676,7 @@ class NodeQueryExecutor(
                 mapOf(
                     PARENT_NODE_ID_KEY to parentNodeId,
                     NODES_KEY to resultNodesCollected,
-                    TOTAL_COUNT_KEY to if (options.fetchTotalCount) totalCount else Cypher.literalNull()
+                    TOTAL_COUNT_KEY to (totalCount ?: Cypher.literalNull())
                 )
             ).`as`(returnAlias), nodesCollected
         )
@@ -622,8 +698,8 @@ class NodeQueryExecutor(
      * @return the generated result
      */
     private fun parseQueryResultInternal(
-        record: org.neo4j.driver.Record, returnNodeName: SymbolicName, nodeQuery: NodeQuery
-    ): NodeQueryResult<*> {
+        record: org.neo4j.driver.Record, returnNodeName: SymbolicName, nodeQuery: QueryBase<*>
+    ): PartialNodeQueryResult {
         val value = record[returnNodeName.value]
         val partsResults = subQueryLookup.mapValues { (_, name) ->
             val entries = record[name]!!.asList { it }
@@ -641,14 +717,14 @@ class NodeQueryExecutor(
      * @param partsResults lookup from sub query and parent node id to related nodes (not parsed yet)
      */
     private fun parseQueryResultInternal(
-        value: Value, nodeQuery: NodeQuery, partsResults: Map<NodeSubQuery, Map<String, Value>>
-    ): NodeQueryResult<*> {
+        value: Value, nodeQuery: QueryBase<*>, partsResults: Map<NodeSubQuery, Map<String, Value>>
+    ): PartialNodeQueryResult {
         val nodesValue = value[NODES_KEY]
         val totalCountValue = value[TOTAL_COUNT_KEY]
         val nodes = nodesValue.asList { parseNode(it, nodeQuery, partsResults) }
         returnedNodesByNodeQuery.getOrPut(nodeQuery) { mutableSetOf() } += nodes
         val totalCount = if (totalCountValue.isNull) null else totalCountValue.asInt()
-        return NodeQueryResult(nodeQuery.options, nodes, totalCount)
+        return PartialNodeQueryResult(nodes, totalCount)
     }
 
     /**
@@ -661,7 +737,7 @@ class NodeQueryExecutor(
      * @return the parsed node
      */
     private fun parseNode(
-        value: Value, nodeQuery: NodeQuery, partsResults: Map<NodeSubQuery, Map<String, Value>>
+        value: Value, nodeQuery: QueryBase<*>, partsResults: Map<NodeSubQuery, Map<String, Value>>
     ): io.github.graphglue.model.Node {
         val nodeId = value[NODE_KEY][0]["id"].asString()!!
         val node = nodeLookup.computeIfAbsent(nodeId) {
@@ -670,13 +746,10 @@ class NodeQueryExecutor(
         for (subQuery in nodeQuery.parts.flatMap { it.value.subQueries.entries }) {
             val nodesValue = partsResults[subQuery]!![nodeId]
             if (nodesValue != null) {
-                val subQueryResult = parseQueryResultInternal(
-                    nodesValue, subQuery.query, partsResults
-                )
+                val partialQueryResult = parseQueryResultInternal(nodesValue, subQuery.query, partsResults)
+                val subQueryResult = partialQueryResult.toCompleteResult(subQuery.query)
                 val relationshipDefinition = subQuery.relationshipDefinition
-                @Suppress("UNCHECKED_CAST") relationshipDefinition.registerQueryResult(
-                    node, subQueryResult as NodeQueryResult<io.github.graphglue.model.Node>
-                )
+                relationshipDefinition.registerQueryResult(node, subQueryResult)
             }
         }
         if (node.extensionFields == null) {
@@ -685,7 +758,7 @@ class NodeQueryExecutor(
         val extensionFields = node.extensionFields!!
         for (extensionField in nodeQuery.parts.flatMap { it.value.extensionFields.entries }) {
             val name = extensionFieldLookup[extensionField]!!
-            val extensionFieldValue =  value[name]
+            val extensionFieldValue = value[name]
             if (!extensionFieldValue.isNull) {
                 val transformedExtensionFieldValue = extensionField.definition.transformResult(extensionFieldValue)
                 extensionFields[extensionField.resultKey] = transformedExtensionFieldValue
@@ -713,3 +786,19 @@ private data class StatementWithSymbolicName(val statement: Statement, val symbo
 private data class StatementWithResultNodesAndNodes(
     val statement: Statement, val allResultNodes: SymbolicName, val allNodes: SymbolicName
 )
+
+/**
+ * Result of a query
+ *
+ * @param nodes the nodes returned by the query
+ * @param totalCount the total count of nodes, if requested
+ */
+private data class PartialNodeQueryResult(val nodes: List<io.github.graphglue.model.Node>, val totalCount: Int?) {
+    /**
+     * Converts the result to a [NodeQueryResult]
+     *
+     * @param nodeQuery the query used to get the result
+     * @return the converted result
+     */
+    fun toCompleteResult(nodeQuery: NodeQuery) = NodeQueryResult(nodeQuery.options, nodes, totalCount)
+}

@@ -8,6 +8,7 @@ import graphql.util.TraverserContext
 import io.github.graphglue.connection.filter.definition.FilterDefinitionCollection
 import io.github.graphglue.connection.filter.definition.SubFilterGenerator
 import io.github.graphglue.connection.generateConnectionFieldDefinition
+import io.github.graphglue.connection.generateSearchFieldDefinition
 import io.github.graphglue.definition.ExtensionFieldDefinition
 import io.github.graphglue.definition.NodeDefinition
 import io.github.graphglue.definition.NodeDefinitionCollection
@@ -257,7 +258,6 @@ class DefaultSchemaTransformer(
      */
     private fun updateQueryType(queryType: GraphQLObjectType, context: SchemaTransformationContext): GraphQLObjectType {
         val newQueryType = queryType.transform {
-            val function = TopLevelQueryProvider::class.memberFunctions.first { it.name == "getFromGraphQL" }
             for ((nodeDefinition, queryName) in topLevelQueries) {
                 val nodeClass = nodeDefinition.nodeType
                 val field = generateConnectionFieldDefinition(
@@ -266,7 +266,19 @@ class DefaultSchemaTransformer(
                 it.field(field)
                 val coordinates = FieldCoordinates.coordinates(queryType.name, queryName)
                 val dataFetcherFactory = dataFetcherFactoryProvider.functionDataFetcherFactory(
-                    TopLevelQueryProvider<Node>(nodeDefinition), function
+                    TopLevelQueryProvider<Node>(nodeDefinition), TopLevelQueryProvider<*>::getNodeQuery
+                )
+                context.codeRegistry.dataFetcher(coordinates, dataFetcherFactory)
+            }
+            for ((nodeDefinition, queryName) in searchQueries) {
+                val nodeClass = nodeDefinition.nodeType
+                val field = generateSearchFieldDefinition(
+                    nodeClass, queryName, "Search for nodes of type ${nodeClass.getSimpleName()}", context
+                )
+                it.field(field)
+                val coordinates = FieldCoordinates.coordinates(queryType.name, queryName)
+                val dataFetcherFactory = dataFetcherFactoryProvider.functionDataFetcherFactory(
+                    TopLevelQueryProvider<Node>(nodeDefinition), TopLevelQueryProvider<*>::getSearchQuery
                 )
                 context.codeRegistry.dataFetcher(coordinates, dataFetcherFactory)
             }
@@ -285,6 +297,22 @@ class DefaultSchemaTransformer(
             val topLevelFunctionName = domainNodeAnnotation?.topLevelQueryName
             if (topLevelFunctionName?.isNotBlank() == true) {
                 it to topLevelFunctionName
+            } else {
+                null
+            }
+        }.toMap()
+
+    /**
+     * Gets all [NodeDefinition] which define a search query
+     * The name of the query is provided as value of the map
+     */
+    private val searchQueries: Map<NodeDefinition, String>
+        get() = nodeDefinitionCollection.mapNotNull {
+            val nodeClass = it.nodeType
+            val domainNodeAnnotation = nodeClass.springFindAnnotation<DomainNode>()
+            val searchFunctionName = domainNodeAnnotation?.searchQueryName
+            if (searchFunctionName?.isNotBlank() == true) {
+                it to searchFunctionName
             } else {
                 null
             }

@@ -3,12 +3,10 @@ package io.github.graphglue.definition
 import io.github.graphglue.authorization.MergedAuthorization
 import io.github.graphglue.definition.extensions.firstTypeArgument
 import io.github.graphglue.graphql.extensions.getSimpleName
+import io.github.graphglue.graphql.extensions.springFindAnnotation
 import io.github.graphglue.graphql.extensions.springFindRepeatableAnnotations
 import io.github.graphglue.graphql.extensions.springGetRepeatableAnnotations
-import io.github.graphglue.model.Authorization
-import io.github.graphglue.model.ExtensionField
-import io.github.graphglue.model.Node
-import io.github.graphglue.model.NodeRelationship
+import io.github.graphglue.model.*
 import io.github.graphglue.model.property.NODE_PROPERTY_TYPE
 import io.github.graphglue.model.property.NODE_SET_PROPERTY_TYPE
 import io.github.graphglue.model.property.NodePropertyDelegate
@@ -116,6 +114,11 @@ class NodeDefinition(
      */
     val name get() = nodeType.getSimpleName()
 
+    /**
+     * The name of the search index, if existing
+     */
+    val searchIndexName: String?
+
     init {
         val expressions = CypherGenerator.INSTANCE.createReturnStatementForMatch(persistentEntity)
         if (expressions.size != 1) {
@@ -123,6 +126,11 @@ class NodeDefinition(
         }
         returnExpression = expressions.first()
         returnNodeName = Constants.NAME_OF_TYPED_ROOT_NODE.apply(persistentEntity)
+        searchIndexName = if (nodeType.springFindAnnotation<DomainNode>()?.searchQueryName?.isNotBlank() == true) {
+            "${name}SearchIndex"
+        } else {
+            null
+        }
     }
 
     /**

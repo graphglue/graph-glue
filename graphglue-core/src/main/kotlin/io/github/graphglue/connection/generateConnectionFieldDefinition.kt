@@ -14,8 +14,7 @@ import io.github.graphglue.model.Node
 import kotlin.reflect.KClass
 
 /**
- * Generates the GraphQL type for the wrapper connection type
- * This type is never directly used in the schema, but provides the `getFromGraphQL`field
+ * Generates the GraphQL connection field
  *
  * @param nodeType the type of the [Node] elements of the connection
  * @param name the name of the field

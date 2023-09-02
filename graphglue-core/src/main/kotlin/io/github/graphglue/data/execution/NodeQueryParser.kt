@@ -155,6 +155,27 @@ class NodeQueryParser(
     }
 
     /**
+     * Generates a [SearchQuery] which loads multiple [Node]s
+     * Can use the `dataFetchingEnvironment` to fetch a subtree of node
+     *
+     * @param definition [NodeDefinition] of the nodes to load
+     * @param dataFetchingEnvironment can optionally be provided to fetch a subtree of nodes
+     * @param requiredPermission optional required permission
+     * @return the generated [SearchQuery] to load the nodes
+     */
+    fun generateSearchQuery(
+        definition: NodeDefinition,
+        dataFetchingEnvironment: DataFetchingEnvironment?,
+        requiredPermission: Permission?
+    ): SearchQuery {
+        val authorizationCondition = getAuthorizationCondition(requiredPermission, definition)
+        val instance = NodeQueryParserInstance(dataFetchingEnvironment)
+        return instance.generateSearchQuery(
+            definition, requiredPermission, authorizationCondition
+        )
+    }
+
+    /**
      * Helper class providing the [DataFetchingEnvironment]
      *
      * @param dataFetchingEnvironment the [DataFetchingEnvironment] to use
@@ -211,6 +232,28 @@ class NodeQueryParser(
         }
 
         /**
+         * Generates a [SearchQuery] which loads multiple [Node]s
+         *
+         * @param definition [NodeDefinition] of the nodes to load
+         * @param requiredPermission optional required permission
+         * @param authorizationCondition optional authorization condition generated for the current query
+         * @return the generated [SearchQuery] to load the nodes
+         */
+        internal fun generateSearchQuery(
+            definition: NodeDefinition,
+            requiredPermission: Permission?,
+            authorizationCondition: CypherConditionGenerator?
+        ): SearchQuery {
+            return generateSearchQuery(
+                definition,
+                dataFetchingEnvironment?.selectionSet,
+                dataFetchingEnvironment?.arguments ?: emptyMap(),
+                listOfNotNull(authorizationCondition),
+                requiredPermission,
+            )
+        }
+
+        /**
          * Generates a NodeQuery for a [NodeDefinition]
          * Creates subqueries for the provided `fieldParts`
          *
@@ -225,6 +268,23 @@ class NodeQueryParser(
             nodeQueryOptions: NodeQueryOptions,
             requiredPermission: Permission?,
         ): NodeQuery {
+            val parts = generateQueryParts(definition, fieldParts, requiredPermission)
+            return NodeQuery(definition, nodeQueryOptions, parts)
+        }
+
+        /**
+         * Generates query parts for all fields in `fieldParts`
+         *
+         * @param definition definition for the [Node] to load
+         * @param fieldParts parts which are used to create subqueries
+         * @param requiredPermission authorization context for subqueries
+         * @return the generated query parts
+         */
+        private fun generateQueryParts(
+            definition: NodeDefinition,
+            fieldParts: Map<String, List<SelectedField>>,
+            requiredPermission: Permission?
+        ): Map<String, NodeQueryPart> {
             val relationshipGraphQLNames = relationshipGraphQLNamesIncludingSubtypes[definition]!!
             val extensionFieldGraphQLNames = extensionFieldGraphQLNamesIncludingSubTypes[definition]!!
             val parts = fieldParts.mapValues { (_, fields) ->
@@ -247,7 +307,7 @@ class NodeQueryParser(
                 }
                 NodeQueryPart(subQueries, extensionFields)
             }
-            return NodeQuery(definition, nodeQueryOptions, parts)
+            return parts
         }
 
         /**
@@ -379,6 +439,44 @@ class NodeQueryParser(
             return generateNodeQuery(
                 nodeDefinition, parts, subNodeQueryOptions, requiredPermission
             )
+        }
+
+        /**
+         * Generates a [SearchQuery] which loads multiple [Node]s
+         *
+         * @param nodeDefinition definition of the nodes to load
+         * @param selectionSet optional, used to generate subqueries
+         * @param arguments used to get pagination arguments
+         * @param additionalConditions list of conditions which are applied to filter the returned node
+         * @param requiredPermission optional required permission
+         * @return the generated [SearchQuery] to load the node
+         */
+        fun generateSearchQuery(
+            nodeDefinition: NodeDefinition,
+            selectionSet: DataFetchingFieldSelectionSet?,
+            arguments: Map<String, Any>,
+            additionalConditions: List<CypherConditionGenerator>,
+            requiredPermission: Permission?,
+        ): SearchQuery {
+            val filterDefinition = filterDefinitionCollection?.getFilterDefinition<Node>(nodeDefinition.nodeType)
+            val filters = ArrayList(additionalConditions)
+            arguments["filter"]?.also {
+                if (filterDefinition == null) {
+                    throw IllegalStateException("Cannot parse filter using only graphglue-core dependency")
+                }
+                filters.add(filterDefinition.parseFilter(it, requiredPermission))
+            }
+            val queryOptions = SearchQueryOptions(
+                filters,
+                arguments["query"] as String,
+                arguments["first"] as Int
+            )
+            val queryParts = generateQueryParts(
+                nodeDefinition,
+                mapOf(DEFAULT_PART_ID to (selectionSet?.immediateFields ?: emptyList())),
+                requiredPermission
+            )
+            return SearchQuery(nodeDefinition, queryOptions, queryParts)
         }
 
         /**

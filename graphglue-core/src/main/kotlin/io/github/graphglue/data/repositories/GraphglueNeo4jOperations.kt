@@ -41,7 +41,7 @@ class GraphglueNeo4jOperations(
      * @return the saved instance.
      */
     @Suppress("UNCHECKED_CAST")
-    override fun <T : Any?> save(instance: T): Mono<T> {
+    override fun <T : Any> save(instance: T): Mono<T> {
         return if (instance is Node) {
             saveNodes(listOf(instance)).next() as Mono<T>
         } else {

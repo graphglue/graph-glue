@@ -13,6 +13,7 @@ import io.github.graphglue.definition.extensions.firstTypeArgument
 import io.github.graphglue.model.Node
 import io.github.graphglue.model.property.NodeSetPropertyDelegate.NodeSetProperty
 import kotlin.reflect.KProperty1
+import kotlin.reflect.KTypeParameter
 import kotlin.reflect.KTypeProjection
 import kotlin.reflect.full.createType
 import kotlin.reflect.jvm.jvmErasure
@@ -52,7 +53,10 @@ class NodePropertyDelegate<T : Node?>(
     /**
      * True if the [T] is marked nullable
      */
-    private val supportsNull get() = property.returnType.firstTypeArgument.isMarkedNullable
+    private val supportsNull: Boolean get() {
+        val type = property.returnType.firstTypeArgument
+        return type.isMarkedNullable || type.classifier is KTypeParameter
+    }
 
     override fun registerQueryResult(nodeQueryResult: NodeQueryResult<T>) {
         super.registerQueryResult(nodeQueryResult)

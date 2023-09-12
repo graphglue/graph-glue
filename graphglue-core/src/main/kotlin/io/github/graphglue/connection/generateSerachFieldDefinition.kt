@@ -36,7 +36,7 @@ fun generateSearchFieldDefinition(
     }.type(GraphQLNonNull(GraphQLList(GraphQLNonNull(GraphQLTypeReference(nodeName)))))
     return if (transformer.includeSkipField) {
         builder.argument {
-            it.name("skip").description("Skips n items. First or last MUST be specified, is otherwise ignored")
+            it.name("skip").description("Skips n items.")
                 .type(Scalars.GraphQLInt)
         }.build()
     } else {

@@ -15,9 +15,9 @@ class FilterDefinitionCollection(private val backingCollection: Map<KClass<out N
      * Gets a [FilterDefinition] by [Node] type
      *
      * @param T the type of node to get the [FilterDefinition] for
-     * @return the found [FilterDefinition]
+     * @return the found [FilterDefinition] or null if none was found
      */
-    inline fun <reified T : Node> getFilterDefinition(): FilterDefinition<T> {
+    inline fun <reified T : Node> getFilterDefinition(): FilterDefinition<T>? {
         return getFilterDefinition(T::class)
     }
 
@@ -25,10 +25,10 @@ class FilterDefinitionCollection(private val backingCollection: Map<KClass<out N
      * Gets a [FilterDefinition] by [Node] type
      *
      * @param nodeType the type of node to get the [FilterDefinition] for
-     * @return the found [FilterDefinition]
+     * @return the found [FilterDefinition] or null if none was found
      */
-    fun <T : Node> getFilterDefinition(nodeType: KClass<out Node>): FilterDefinition<T> {
+    fun <T : Node> getFilterDefinition(nodeType: KClass<out Node>): FilterDefinition<T>? {
         @Suppress("UNCHECKED_CAST")
-        return backingCollection[nodeType] as FilterDefinition<T>
+        return backingCollection[nodeType] as FilterDefinition<T>?
     }
 }

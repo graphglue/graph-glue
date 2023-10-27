@@ -148,7 +148,12 @@ class NodeQueryExecutor(
         ).yield(Cypher.name("node").`as`(nodeAlias), Cypher.name("score").`as`(score))
             .with(node, score)
         val filteredBuilder = applyFilterConditions(query.options.filters, builder, node).with(node, score, nodeAlias.`as`(query.definition.returnNodeName))
-        val limitedBuilder = filteredBuilder.limit(Cypher.anonParameter(query.options.first))
+        val skippedBuilder = if (query.options.skip != null) {
+            filteredBuilder.skip(query.options.skip)
+        } else {
+            filteredBuilder
+        }
+        val limitedBuilder = skippedBuilder.limit(Cypher.anonParameter(query.options.first))
         val resultNode = generateUniqueName()
         val resultNodeExpression = generateResultNodeExpression(query.definition, query, nodeAlias)
         val withResultBuilder = limitedBuilder.with(node, resultNodeExpression.`as`(resultNode))

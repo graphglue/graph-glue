@@ -467,9 +467,10 @@ class NodeQueryParser(
                 filters.add(filterDefinition.parseFilter(it, requiredPermission))
             }
             val queryOptions = SearchQueryOptions(
-                filters,
-                arguments["query"] as String,
-                arguments["first"] as Int
+                filters = filters,
+                query = arguments["query"] as String,
+                first = arguments["first"] as Int,
+                skip = arguments["skip"]?.let { it as Int },
             )
             val queryParts = generateQueryParts(
                 nodeDefinition,

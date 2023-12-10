@@ -540,9 +540,9 @@ class NodeQueryExecutor(
     ): StatementBuilder.OrderableOngoingReadingAndWith {
         val options = query.options
         return if (options.first != null) {
-            builder.orderBy(generateOrderFields(options.orderBy, nodeAlias, false)).with(nodeAlias)
+            builder.orderBy(generateOrderFields(options.orderBy, nodeAlias, false))
         } else if (options.last != null) {
-            builder.orderBy(generateOrderFields(options.orderBy, nodeAlias, true)).with(nodeAlias)
+            builder.orderBy(generateOrderFields(options.orderBy, nodeAlias, true))
         } else {
             builder
         }

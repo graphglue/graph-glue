@@ -116,12 +116,14 @@ class NodeQueryExecutor(
      * @return the generated query and result column name
      */
     private fun createRootNodeQuery(query: NodeQuery): StatementWithSymbolicName {
-        val node = query.definition.node().named(generateUniqueName().value)
+        val nodeAlias = generateUniqueName()
+        val node = query.definition.node().named(nodeAlias)
         val builder = Cypher.match(node).with(node)
         val options = query.options
         val filteredBuilder = applyFilterConditions(options.filters, builder, node)
         val allNodesCollected = generateUniqueName()
-        val collectedNodesBuilder = filteredBuilder.with(Functions.collect(node).`as`(allNodesCollected))
+        val orderedBuilder = applyOrderIfRequired(query, filteredBuilder, nodeAlias)
+        val collectedNodesBuilder = orderedBuilder.with(Functions.collect(node).`as`(allNodesCollected))
         val (totalCountBuilder, totalCount) = applyTotalCountIfRequired(
             options, collectedNodesBuilder, allNodesCollected, emptyList()
         )
@@ -147,7 +149,11 @@ class NodeQueryExecutor(
             Cypher.literalOf<String>(query.definition.searchIndexName!!), Cypher.anonParameter(query.options.query)
         ).yield(Cypher.name("node").`as`(nodeAlias), Cypher.name("score").`as`(score))
             .with(node, score)
-        val filteredBuilder = applyFilterConditions(query.options.filters, builder, node).with(node, score, nodeAlias.`as`(query.definition.returnNodeName))
+        val filteredBuilder = applyFilterConditions(query.options.filters, builder, node).with(
+            node,
+            score,
+            nodeAlias.`as`(query.definition.returnNodeName)
+        )
         val skippedBuilder = if (query.options.skip != null) {
             filteredBuilder.skip(query.options.skip)
         } else {
@@ -363,6 +369,9 @@ class NodeQueryExecutor(
     private fun generateMainSubQuery(
         nodeQuery: NodeQuery, node: Node, allNodesCollected: SymbolicName
     ): StatementWithResultNodesAndNodes {
+        if (nodeQuery.options.ignoreNodes) {
+            return generateEmptyMainSubQueryResultStatement()
+        }
         val options = nodeQuery.options
         val nodeAlias = node.requiredSymbolicName
         val nodeDefinition = nodeQuery.definition
@@ -371,6 +380,21 @@ class NodeQueryExecutor(
         val limitedBuilder = applyResultLimiters(options, afterAndBeforeBuilder, nodeAlias)
         return generateMainSubQueryResultStatement(
             nodeDefinition, limitedBuilder, nodeAlias, options, nodeQuery
+        )
+    }
+
+    /**
+     * Generates a subquery res which return no nodes
+     *
+     * @return the generated statement, and two names referring to empty collections
+     */
+    private fun generateEmptyMainSubQueryResultStatement(): StatementWithResultNodesAndNodes {
+        val collectedResultNodes = generateUniqueName()
+        val collectedNodes = generateUniqueName()
+        val statement = Cypher.with(Cypher.listOf().`as`(collectedResultNodes), Cypher.listOf().`as`(collectedNodes))
+            .returning(collectedResultNodes, collectedNodes).build()
+        return StatementWithResultNodesAndNodes(
+            statement, collectedResultNodes, collectedNodes
         )
     }
 
@@ -476,7 +500,8 @@ class NodeQueryExecutor(
     }
 
     /**
-     * Orders the nodes and adds  first and last filters, and adds skip
+     * Adds first and last filters, and adds skip.
+     * Requires that the nodes are already correctly ordered
      *
      * @param options defines first, last and skip
      * @param builder ongoing statement builder
@@ -490,17 +515,34 @@ class NodeQueryExecutor(
     ): StatementBuilder.OrderableOngoingReadingAndWithWithoutWhere {
         val firstOrLast = options.first ?: options.last
         return if (firstOrLast != null) {
-            val orderedBuilder = if (options.first != null) {
-                builder.orderBy(generateOrderFields(options.orderBy, nodeAlias, false)).with(nodeAlias)
-            } else {
-                builder.orderBy(generateOrderFields(options.orderBy, nodeAlias, true)).with(nodeAlias)
-            }
             val skippedBuilder = if (options.skip != null) {
-                orderedBuilder.skip(options.skip)
+                builder.skip(options.skip)
             } else {
-                orderedBuilder
+                builder
             }
             skippedBuilder.limit(firstOrLast).with(nodeAlias)
+        } else {
+            builder
+        }
+    }
+
+    /**
+     * Applies ordering to a builder if options define `first` or `last`.
+     *
+     * @param query the query due to which the ordering is potentially applied
+     * @param builder the builder to apply ordering to
+     * @param nodeAlias name of the variable containing the node
+     */
+    private fun applyOrderIfRequired(
+        query: NodeQuery,
+        builder: StatementBuilder.OrderableOngoingReadingAndWith,
+        nodeAlias: SymbolicName
+    ): StatementBuilder.OrderableOngoingReadingAndWith {
+        val options = query.options
+        return if (options.first != null) {
+            builder.orderBy(generateOrderFields(options.orderBy, nodeAlias, false)).with(nodeAlias)
+        } else if (options.last != null) {
+            builder.orderBy(generateOrderFields(options.orderBy, nodeAlias, true)).with(nodeAlias)
         } else {
             builder
         }
@@ -645,8 +687,9 @@ class NodeQueryExecutor(
     ): StatementWithResultNodesAndNodes {
         val options = nodeQuery.options
         val filteredBuilder = applyFilterConditions(options.filters, builder, node)
+        val orderedBuilder = applyOrderIfRequired(nodeQuery, filteredBuilder, node.requiredSymbolicName)
         val allNodesCollected = generateUniqueName()
-        val collectedNodesBuilder = filteredBuilder.with(Functions.collect(node).`as`(allNodesCollected), parentNode)
+        val collectedNodesBuilder = orderedBuilder.with(Functions.collect(node).`as`(allNodesCollected), parentNode)
         val (totalCountBuilder, totalCount) = applyTotalCountIfRequired(
             options, collectedNodesBuilder, allNodesCollected, listOf(parentNode.requiredSymbolicName)
         )

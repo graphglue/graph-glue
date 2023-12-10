@@ -424,7 +424,8 @@ class NodeQueryParser(
                 first = arguments["first"]?.let { (it as Int) + NODE_FETCH_OFFSET },
                 last = arguments["last"]?.let { (it as Int) + NODE_FETCH_OFFSET },
                 skip = arguments["skip"]?.let { it as Int },
-                fetchTotalCount = selectionSet?.contains("totalCount") ?: true
+                fetchTotalCount = selectionSet?.contains("totalCount") ?: true,
+                ignoreNodes = selectionSet?.immediateFields?.singleOrNull()?.name == "totalCount"
             )
             val parts = HashMap<String, List<SelectedField>>()
             val nodesParts = selectionSet?.getFields("nodes") ?: emptyList()

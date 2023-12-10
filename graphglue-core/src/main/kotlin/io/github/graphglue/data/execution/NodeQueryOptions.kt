@@ -13,6 +13,7 @@ import io.github.graphglue.connection.order.Order
  * @param first if present, only the first n nodes are fetched
  * @param last if present, only the last n nodes are fetched
  * @param fetchTotalCount totalCount is only fetched if `true`
+ * @param ignoreNodes if `true`, nodes are not fetched, only totalCount is fetched
  */
 data class NodeQueryOptions(
     val filters: List<CypherConditionGenerator> = emptyList(),
@@ -22,7 +23,8 @@ data class NodeQueryOptions(
     val first: Int? = null,
     val last: Int? = null,
     val skip: Int? = null,
-    val fetchTotalCount: Boolean = true
+    val fetchTotalCount: Boolean = true,
+    val ignoreNodes: Boolean = false
 ) {
     init {
         if ((first != null) && (last != null)) {
@@ -39,5 +41,5 @@ data class NodeQueryOptions(
     /**
      * Can be used to check if a node fetches all nodes
      */
-    val isAllQuery get() = (filters.isEmpty()) && (after == null) && (before == null) && (first == null) && (last == null)
+    val isAllQuery get() = (filters.isEmpty()) && (after == null) && (before == null) && (first == null) && (last == null) &&!ignoreNodes
 }

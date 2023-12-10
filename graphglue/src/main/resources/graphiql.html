@@ -54,14 +54,14 @@
     </style>
     <script crossorigin src="https://unpkg.com/react@17/umd/react.development.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@17/umd/react-dom.development.js"></script>
-    <link rel="stylesheet" href="https://unpkg.com/graphiql@3.0.0/graphiql.min.css" />
-    <link rel="stylesheet" href="https://unpkg.com/@graphiql/plugin-explorer@0.3.0/dist/style.css" />
+    <link rel="stylesheet" href="https://unpkg.com/graphiql@3.0.10/graphiql.min.css" />
+    <link rel="stylesheet" href="https://unpkg.com/@graphiql/plugin-explorer@1.0.2/dist/style.css" />
 </head>
 
 <body>
     <div id="graphiql">Loading...</div>
-    <script src="https://unpkg.com/graphiql@3.0.0/graphiql.min.js" type="application/javascript"></script>
-    <script crossorigin src="https://unpkg.com/@graphiql/plugin-explorer@0.3.0/dist/index.umd.js"></script>
+    <script src="https://unpkg.com/graphiql@3.0.10/graphiql.min.js" type="application/javascript"></script>
+    <script crossorigin src="https://unpkg.com/@graphiql/plugin-explorer@1.0.2/dist/index.umd.js"></script>
     <script>
         const gqlFetcher = GraphiQL.createFetcher({
             url: '${graphQLEndpoint}',
@@ -69,9 +69,9 @@
         });
 
         function GraphiQLWithExplorer() {
-            var [query, setQuery] = React.useState(
-                '',
-            );
+            var [query, setQuery] = React.useState('');
+            var [variables, setVariables] = React.useState('');
+            var [headers, setHeaders] = React.useState('');
             var explorerPlugin = GraphiQLPluginExplorer.explorerPlugin()
             return React.createElement(GraphiQL, {
                 fetcher: gqlFetcher,
@@ -80,7 +80,12 @@
                 shouldPersistHeaders: true,
                 plugins: [explorerPlugin],
                 query: query,
-                onEditQuery: setQuery
+                onEditQuery: setQuery,
+                variables: variables,
+                onEditVariables: setVariables,
+                headers: headers,
+                onEditHeaders: setHeaders,
+                defaultHeaders: headers
             })
         }
 

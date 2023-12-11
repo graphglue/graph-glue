@@ -39,7 +39,7 @@ class SchemaTransformationContext(
      */
     fun registerFunctionDataFetcher(type: GraphQLFieldsContainer, fieldName: String, kClass: KClass<*>) {
         val function = kClass.memberFunctions.first { it.name == fieldName }
-        val dataFetcherFactory = dataFetcherFactoryProvider.functionDataFetcherFactory(null, function)
+        val dataFetcherFactory = dataFetcherFactoryProvider.functionDataFetcherFactory(null, kClass, function)
         registerDataFetcher(type, fieldName, dataFetcherFactory)
     }
 

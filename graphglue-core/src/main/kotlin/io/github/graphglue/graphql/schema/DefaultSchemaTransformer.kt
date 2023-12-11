@@ -198,7 +198,7 @@ class DefaultSchemaTransformer(
     ) {
         val kProperty = relationshipDefinition.property
         val functionDataFetcherFactory =
-            dataFetcherFactoryProvider.functionDataFetcherFactory(null, BasePropertyDelegate<*, *>::getFromGraphQL)
+            dataFetcherFactoryProvider.functionDataFetcherFactory(null, BasePropertyDelegate::class, BasePropertyDelegate<*, *>::getFromGraphQL)
         val dataFetcherFactory = DataFetcherFactory { dataFetcherFactoryEnvironment ->
             val functionDataFetcher = functionDataFetcherFactory.get(dataFetcherFactoryEnvironment)
             DataFetcher {
@@ -266,7 +266,9 @@ class DefaultSchemaTransformer(
                 it.field(field)
                 val coordinates = FieldCoordinates.coordinates(queryType.name, queryName)
                 val dataFetcherFactory = dataFetcherFactoryProvider.functionDataFetcherFactory(
-                    TopLevelQueryProvider<Node>(nodeDefinition), TopLevelQueryProvider<*>::getNodeQuery
+                    TopLevelQueryProvider<Node>(nodeDefinition),
+                    TopLevelQueryProvider::class,
+                    TopLevelQueryProvider<*>::getNodeQuery
                 )
                 context.codeRegistry.dataFetcher(coordinates, dataFetcherFactory)
             }
@@ -278,7 +280,9 @@ class DefaultSchemaTransformer(
                 it.field(field)
                 val coordinates = FieldCoordinates.coordinates(queryType.name, queryName)
                 val dataFetcherFactory = dataFetcherFactoryProvider.functionDataFetcherFactory(
-                    TopLevelQueryProvider<Node>(nodeDefinition), TopLevelQueryProvider<*>::getSearchQuery
+                    TopLevelQueryProvider<Node>(nodeDefinition),
+                    TopLevelQueryProvider::class,
+                    TopLevelQueryProvider<*>::getSearchQuery
                 )
                 context.codeRegistry.dataFetcher(coordinates, dataFetcherFactory)
             }

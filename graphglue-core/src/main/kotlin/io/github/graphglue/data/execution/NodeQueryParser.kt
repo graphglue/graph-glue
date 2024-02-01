@@ -499,7 +499,7 @@ class NodeQueryParser(
             requiredPermission: Permission?,
         ): NodeQuery {
             val subNodeQueryOptions =
-                NodeQueryOptions(filters = additionalConditions, first = ONE_NODE_QUERY_LIMIT, fetchTotalCount = false)
+                NodeQueryOptions(filters = additionalConditions, first = ONE_NODE_QUERY_LIMIT, fetchTotalCount = false, orderBy = null)
             return generateNodeQuery(
                 nodeDefinition,
                 mapOf(DEFAULT_PART_ID to (selectionSet?.immediateFields ?: emptyList())),

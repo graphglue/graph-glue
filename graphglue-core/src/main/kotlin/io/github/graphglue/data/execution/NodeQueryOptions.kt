@@ -17,7 +17,7 @@ import io.github.graphglue.connection.order.Order
  */
 data class NodeQueryOptions(
     val filters: List<CypherConditionGenerator> = emptyList(),
-    val orderBy: Order<*> = IdOrder,
+    val orderBy: Order<*>? = IdOrder,
     val after: Map<String, Any?>? = null,
     val before: Map<String, Any?>? = null,
     val first: Int? = null,
@@ -36,10 +36,13 @@ data class NodeQueryOptions(
         if (last != null && last < 0) {
             throw IllegalArgumentException("last must be >= 0")
         }
+        if (orderBy == null && (after != null || before != null)) {
+            throw IllegalArgumentException("orderBy must be present if after or before is present")
+        }
     }
 
     /**
      * Can be used to check if a node fetches all nodes
      */
-    val isAllQuery get() = (filters.isEmpty()) && (after == null) && (before == null) && (first == null) && (last == null) &&!ignoreNodes
+    val isAllQuery get() = (filters.isEmpty()) && (after == null) && (before == null) && (first == null) && (last == null) && !ignoreNodes
 }

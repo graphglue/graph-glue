@@ -425,7 +425,11 @@ class NodeQueryExecutor(
         ).with(listOf(resultNodeExpression.`as`(resultNode)) + nodeAlias)
         val collectedResultNodes = generateUniqueName()
         val collectedNodes = generateUniqueName()
-        val statement = resultBuilder.orderBy(generateOrderFields(options.orderBy, nodeAlias)).with(
+        val statement = if (options.orderBy != null) {
+            resultBuilder.orderBy(generateOrderFields(options.orderBy, nodeAlias))
+        } else {
+            resultBuilder
+        }.with(
             Functions.collect(resultNode).`as`(collectedResultNodes), Functions.collect(nodeAlias).`as`(collectedNodes)
         ).returning(collectedResultNodes, collectedNodes).build()
         return StatementWithResultNodesAndNodes(statement, collectedResultNodes, collectedNodes)
@@ -483,6 +487,9 @@ class NodeQueryExecutor(
     private fun applyAfterAndBefore(
         options: NodeQueryOptions, nodeAlias: SymbolicName, builder: StatementBuilder.OngoingReading
     ) = if (options.after != null || options.before != null) {
+        if (options.orderBy == null) {
+            error("Can't use after/before without orderBy")
+        }
         var filterCondition = Conditions.noCondition()
         if (options.after != null) {
             filterCondition = filterCondition.and(
@@ -539,9 +546,9 @@ class NodeQueryExecutor(
         nodeAlias: SymbolicName
     ): StatementBuilder.OrderableOngoingReadingAndWith {
         val options = query.options
-        return if (options.first != null) {
+        return if (options.first != null && options.orderBy != null) {
             builder.orderBy(generateOrderFields(options.orderBy, nodeAlias, false))
-        } else if (options.last != null) {
+        } else if (options.last != null && options.orderBy != null) {
             builder.orderBy(generateOrderFields(options.orderBy, nodeAlias, true))
         } else {
             builder

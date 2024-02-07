@@ -9,5 +9,6 @@ import org.springframework.boot.context.properties.ConfigurationProperties
  */
 @ConfigurationProperties("graphglue.core")
 class GraphglueCoreConfigurationProperties(
-    val maxQueryCost: Int = 10
+    val maxQueryCost: Int = 10,
+    val useNeo4jPlugin: Boolean = false
 )

@@ -327,13 +327,17 @@ class NodeDefinitionCollection(
         node: org.neo4j.cypherdsl.core.Node,
         permission: Permission
     ): Condition {
+        val procedure = "io.github.graphglue.authorizationPath"
         val pathName = Cypher.name("a__1")
         val nodeName = Cypher.name("a__0")
         val endNode = Cypher.anyNode(nodeName)
         val statement = if (configurationProperties.useNeo4jPlugin) {
-            Cypher.call("io.github.graphglue.authorizationPath")
-                .withArgs(node.requiredSymbolicName, Cypher.anonParameter(permission.name))
-                .yield(Cypher.name("path").`as`(pathName), Cypher.name("node").`as`(nodeName))
+            if (node.symbolicName.isEmpty) {
+                val namedNode = node.named(Cypher.name("a__3"))
+                Cypher.match(namedNode).call(procedure).withArgs(namedNode.requiredSymbolicName, Cypher.anonParameter(permission.name))
+            } else {
+                Cypher.call(procedure).withArgs(node.requiredSymbolicName, Cypher.anonParameter(permission.name))
+            }.yield(Cypher.name("path").`as`(pathName), Cypher.name("node").`as`(nodeName))
         } else {
             val relationshipStart = node.relationshipTo(endNode).min(0)
                 .withProperties(mapOf(permission.name to Cypher.literalTrue()))

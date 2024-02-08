@@ -1,6 +1,10 @@
 package io.github.graphglue.definition
 
-import io.github.graphglue.authorization.*
+import io.github.graphglue.GraphglueCoreConfigurationProperties
+import io.github.graphglue.authorization.AllowRuleGenerator
+import io.github.graphglue.authorization.DisallowRuleGenerator
+import io.github.graphglue.authorization.MergedAuthorization
+import io.github.graphglue.authorization.Permission
 import io.github.graphglue.data.execution.CypherConditionGenerator
 import io.github.graphglue.graphql.extensions.getSimpleName
 import io.github.graphglue.model.Authorization
@@ -19,9 +23,12 @@ import kotlin.reflect.full.isSuperclassOf
  *
  * @param backingCollection the provided list of [NodeDefinition]s
  * @param beanFactory used to get condition defining beans for authorization
+ * @param configurationProperties configuration properties for Graphglue core
  */
 class NodeDefinitionCollection(
-    backingCollection: Map<KClass<out Node>, NodeDefinition>, private val beanFactory: BeanFactory
+    backingCollection: Map<KClass<out Node>, NodeDefinition>,
+    private val beanFactory: BeanFactory,
+    private val configurationProperties: GraphglueCoreConfigurationProperties
 ) : Collection<NodeDefinition> by backingCollection.values {
     /**
      * Defensive copy of provided `backingCollection`, used to store [NodeDefinition]s
@@ -306,35 +313,59 @@ class NodeDefinitionCollection(
         }
     }
 
+    /**
+     * Generates the full authorization condition.
+     * This includes both the [allowRules] and all disallow rules.
+     *
+     * @param allowRules the set of [NodeAllowRule]s to check
+     * @param node the [Node] to apply the condition to
+     * @param permission context for condition generation
+     * @return the generated condition
+     */
     private fun generateFullAuthorizationCondition(
         allowRules: Set<NodeAllowRule>,
         node: org.neo4j.cypherdsl.core.Node,
         permission: Permission
     ): Condition {
-        return allowRules.fold(Conditions.noCondition()) { oldCondition, rule ->
-            val allowEndNode = Cypher.anyNode("a__0")
-            val relationshipStart = node.relationshipTo(allowEndNode).min(0)
+        val procedure = "io.github.graphglue.authorizationPath"
+        val pathName = Cypher.name("a__1")
+        val nodeName = Cypher.name("a__0")
+        val endNode = Cypher.anyNode(nodeName)
+        val statement = if (configurationProperties.useNeo4jPlugin) {
+            if (node.symbolicName.isEmpty) {
+                val namedNode = node.named(Cypher.name("a__3"))
+                Cypher.match(namedNode).call(procedure).withArgs(namedNode.requiredSymbolicName, Cypher.anonParameter(permission.name))
+            } else {
+                Cypher.call(procedure).withArgs(node.requiredSymbolicName, Cypher.anonParameter(permission.name))
+            }.yield(Cypher.name("path").`as`(pathName), Cypher.name("node").`as`(nodeName))
+        } else {
+            val relationshipStart = node.relationshipTo(endNode).min(0)
                 .withProperties(mapOf(permission.name to Cypher.literalTrue()))
+            val namedRelationship = Cypher.path(pathName).definedBy(relationshipStart)
+            Cypher.match(namedRelationship)
+        }
+
+        val nodeInPath = Cypher.name("a__2")
+        val nodeDisallowRule = generateDisallowRule(permission, getNodeDefinition<Node>(), Cypher.anyNode(nodeInPath))
+        val disallowRule = Predicates.all(nodeInPath).`in`(Functions.nodes(pathName)).where(nodeDisallowRule)
+
+        val allowExistRules = allowRules.fold(Conditions.noCondition()) { oldCondition, rule ->
             val nodeDefinitionsCondition =
                 rule.nodeDefinitions.fold(Conditions.noCondition()) { oldNodeCondition, definition ->
-                    oldNodeCondition.or(allowEndNode.hasLabels(definition.primaryLabel))
+                    oldNodeCondition.or(endNode.hasLabels(definition.primaryLabel))
                 }
-            val (relationship, condition) = if (rule.allowRule != null) {
+            val condition = if (rule.allowRule != null) {
                 val ruleGenerator = beanFactory.getBean(rule.allowRule.beanRef, AllowRuleGenerator::class.java)
-                ruleGenerator.generateRule(allowEndNode, relationshipStart, rule.allowRule, permission)
+                ruleGenerator.generateRule(endNode, rule.allowRule, permission)
             } else {
-                relationshipStart to Conditions.noCondition()
+                Conditions.noCondition()
             }
-            val relationshipName = Cypher.name("a__1")
-            val namedRelationship = Cypher.path(relationshipName).definedBy(relationship)
-            val nodeInPath = Cypher.name("a__2")
-            val nodeDisallowRule = generateDisallowRule(permission, getNodeDefinition<Node>(), Cypher.anyNode(nodeInPath))
-            val disallowRule = Predicates.all(nodeInPath).`in`(Functions.nodes(namedRelationship)).where(nodeDisallowRule)
-            oldCondition.or(
-                Cypher.match(namedRelationship).where(nodeDefinitionsCondition.and(condition).and(disallowRule))
-                    .asCondition()
-            )
+            val conditionToApply = nodeDefinitionsCondition.and(condition)
+            oldCondition.or(conditionToApply)
         }
+        return Predicates.exists(
+            statement.where(disallowRule.and(allowExistRules)).returning(Cypher.literalTrue()).build()
+        )
     }
 
     /**

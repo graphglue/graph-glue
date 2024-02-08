@@ -1,7 +1,10 @@
 package io.github.graphglue.definition
 
 import io.github.graphglue.GraphglueCoreConfigurationProperties
-import io.github.graphglue.authorization.*
+import io.github.graphglue.authorization.AllowRuleGenerator
+import io.github.graphglue.authorization.DisallowRuleGenerator
+import io.github.graphglue.authorization.MergedAuthorization
+import io.github.graphglue.authorization.Permission
 import io.github.graphglue.data.execution.CypherConditionGenerator
 import io.github.graphglue.graphql.extensions.getSimpleName
 import io.github.graphglue.model.Authorization
@@ -324,45 +327,41 @@ class NodeDefinitionCollection(
         node: org.neo4j.cypherdsl.core.Node,
         permission: Permission
     ): Condition {
-        val (statement, path, endNode) = if (configurationProperties.useNeo4jPlugin) {
-            val pathName = Cypher.name("a__1")
-            val nodeName = Cypher.name("a__0")
-            val statement = Cypher.call("io.github.graphglue.authorizationPath").withArgs(node.requiredSymbolicName, Cypher.anonParameter(permission.name))
+        val pathName = Cypher.name("a__1")
+        val nodeName = Cypher.name("a__0")
+        val endNode = Cypher.anyNode(nodeName)
+        val statement = if (configurationProperties.useNeo4jPlugin) {
+            Cypher.call("io.github.graphglue.authorizationPath")
+                .withArgs(node.requiredSymbolicName, Cypher.anonParameter(permission.name))
                 .yield(Cypher.name("path").`as`(pathName), Cypher.name("node").`as`(nodeName))
-            Triple(statement, pathName, Cypher.anyNode(nodeName))
         } else {
-            val allowEndNode = Cypher.anyNode("a__0")
-            val relationshipStart = node.relationshipTo(allowEndNode).min(0)
+            val relationshipStart = node.relationshipTo(endNode).min(0)
                 .withProperties(mapOf(permission.name to Cypher.literalTrue()))
-            val relationshipName = Cypher.name("a__1")
-            val namedRelationship = Cypher.path(relationshipName).definedBy(relationshipStart)
-            Triple(Cypher.match(namedRelationship), relationshipName, allowEndNode)
+            val namedRelationship = Cypher.path(pathName).definedBy(relationshipStart)
+            Cypher.match(namedRelationship)
         }
 
         val nodeInPath = Cypher.name("a__2")
         val nodeDisallowRule = generateDisallowRule(permission, getNodeDefinition<Node>(), Cypher.anyNode(nodeInPath))
-        val disallowRule = Predicates.all(nodeInPath).`in`(Functions.nodes(path)).where(nodeDisallowRule)
+        val disallowRule = Predicates.all(nodeInPath).`in`(Functions.nodes(pathName)).where(nodeDisallowRule)
 
-        val allowExistRules =  allowRules.fold(Conditions.noCondition()) { oldCondition, rule ->
+        val allowExistRules = allowRules.fold(Conditions.noCondition()) { oldCondition, rule ->
             val nodeDefinitionsCondition =
                 rule.nodeDefinitions.fold(Conditions.noCondition()) { oldNodeCondition, definition ->
                     oldNodeCondition.or(endNode.hasLabels(definition.primaryLabel))
                 }
-            val (relationship, condition) = if (rule.allowRule != null) {
+            val condition = if (rule.allowRule != null) {
                 val ruleGenerator = beanFactory.getBean(rule.allowRule.beanRef, AllowRuleGenerator::class.java)
                 ruleGenerator.generateRule(endNode, rule.allowRule, permission)
             } else {
-                null to Conditions.noCondition()
+                Conditions.noCondition()
             }
             val conditionToApply = nodeDefinitionsCondition.and(condition)
-            val wrappedCondition = if (relationship != null) {
-                Cypher.match(relationship).where(conditionToApply).asCondition()
-            } else {
-                conditionToApply
-            }
-            oldCondition.or(wrappedCondition)
+            oldCondition.or(conditionToApply)
         }
-        return Predicates.exists(statement.where(disallowRule.and(allowExistRules)).returning(Cypher.literalTrue()).build())
+        return Predicates.exists(
+            statement.where(disallowRule.and(allowExistRules)).returning(Cypher.literalTrue()).build()
+        )
     }
 
     /**

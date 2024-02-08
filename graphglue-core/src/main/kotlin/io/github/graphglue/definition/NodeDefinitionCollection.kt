@@ -325,7 +325,7 @@ class NodeDefinitionCollection(
         permission: Permission
     ): Condition {
         val (statement, path, endNode) = if (configurationProperties.useNeo4jPlugin) {
-            val pathName = Cypher.name("a__0")
+            val pathName = Cypher.name("a__1")
             val nodeName = Cypher.name("a__0")
             val statement = Cypher.call("io.github.graphglue.authorizationPath").withArgs(node.requiredSymbolicName, Cypher.anonParameter(permission.name))
                 .yield(Cypher.name("path").`as`(pathName), Cypher.name("node").`as`(nodeName))
@@ -362,7 +362,7 @@ class NodeDefinitionCollection(
             }
             oldCondition.or(wrappedCondition)
         }
-        return statement.where(disallowRule).and(allowExistRules).asCondition()
+        return Predicates.exists(statement.where(disallowRule.and(allowExistRules)).returning(Cypher.literalTrue()).build())
     }
 
     /**

@@ -1,5 +1,6 @@
 package io.github.graphglue.definition
 
+import io.github.graphglue.GraphglueCoreConfigurationProperties
 import io.github.graphglue.model.Node
 import org.springframework.beans.factory.BeanFactory
 import org.springframework.context.annotation.Bean
@@ -21,7 +22,8 @@ class GraphglueDefinitionConfiguration {
      *
      * @param beanFactory necessary for the [NodeDefinitionCollection]
      * @param neo4jMappingContext used to get all [Node]s
-     *  * @param extensionFieldDefinitions all known [ExtensionFieldDefinition] beans
+     * @param extensionFieldDefinitions all known [ExtensionFieldDefinition] beans
+     * @param configurationProperties the [GraphglueCoreConfigurationProperties]
      *
      * @return the [NodeDefinitionCollection]
      */
@@ -30,12 +32,13 @@ class GraphglueDefinitionConfiguration {
     fun nodeDefinitionCollection(
         beanFactory: BeanFactory,
         neo4jMappingContext: Neo4jMappingContext,
-        extensionFieldDefinitions: Map<String, ExtensionFieldDefinition>
+        extensionFieldDefinitions: Map<String, ExtensionFieldDefinition>,
+        configurationProperties: GraphglueCoreConfigurationProperties
     ): NodeDefinitionCollection {
         val nodeDefinitions =
             neo4jMappingContext.managedTypes.map { it.type.kotlin }.filter { it.isSubclassOf(Node::class) }
                 .map { it as KClass<out Node> }.associateWith { generateNodeDefinition(it, neo4jMappingContext, extensionFieldDefinitions) }
-        return NodeDefinitionCollection(nodeDefinitions, beanFactory)
+        return NodeDefinitionCollection(nodeDefinitions, beanFactory, configurationProperties)
     }
 
 }

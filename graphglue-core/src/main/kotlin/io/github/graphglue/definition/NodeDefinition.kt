@@ -179,7 +179,7 @@ class NodeDefinition(
      * @return the list of found [ExtensionFieldDefinition]s
      */
     private fun generateExtensionFieldDefinitions(extensionFieldGenerators: Map<String, ExtensionFieldDefinition>): List<ExtensionFieldDefinition> {
-        val allExtensionFields = nodeType.springGetRepeatableAnnotations<ExtensionField>()
+        val allExtensionFields = nodeType.springFindRepeatableAnnotations<ExtensionField>()
         return allExtensionFields.mapNotNull {
             extensionFieldGenerators[it.beanName]
         }

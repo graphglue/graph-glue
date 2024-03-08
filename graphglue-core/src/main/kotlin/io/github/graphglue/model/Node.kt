@@ -171,6 +171,10 @@ abstract class Node {
             super.hashCode()
         }
     }
+
+    override fun toString(): String {
+        return "${this::class.simpleName}(id=$id)"
+    }
 }
 
 /**

@@ -35,9 +35,12 @@ const val TOTAL_COUNT_KEY = "total_count"
  *
  * @param client used to execute the query
  * @param mappingContext used to transform the result into a node
+ * @param renderer used to render the Cypher-DSL queries
  */
 class NodeQueryExecutor(
-    private val client: ReactiveNeo4jClient, private val mappingContext: Neo4jMappingContext
+    private val client: ReactiveNeo4jClient,
+    private val mappingContext: Neo4jMappingContext,
+    private val renderer: Renderer
 ) {
     /**
      * Counter for unique name generation
@@ -71,7 +74,7 @@ class NodeQueryExecutor(
      */
     suspend fun execute(query: NodeQuery): NodeQueryResult<*> {
         val (statement, returnName) = createRootNodeQuery(query)
-        return client.query(Renderer.getDefaultRenderer().render(statement)).bindAll(statement.catalog.parameters)
+        return client.query(renderer.render(statement)).bindAll(statement.catalog.parameters)
             .fetchAs(NodeQueryResult::class.java).mappedBy { _, record ->
                 parseQueryResultInternal(record, returnName, query).toCompleteResult(query)
             }.one().awaitSingle()
@@ -84,7 +87,7 @@ class NodeQueryExecutor(
      */
     suspend fun execute(query: SearchQuery): SearchQueryResult<*> {
         val (statement, returnName) = createSearchRootQuery(query)
-        return client.query(Renderer.getDefaultRenderer().render(statement)).bindAll(statement.catalog.parameters)
+        return client.query(renderer.render(statement)).bindAll(statement.catalog.parameters)
             .fetchAs(SearchQueryResult::class.java).mappedBy { _, record ->
                 val partialResult = parseQueryResultInternal(record, returnName, query)
                 SearchQueryResult(query.options, partialResult.nodes)
@@ -103,7 +106,7 @@ class NodeQueryExecutor(
         }
         val (statement, returnName) = createPartialRootNodeQuery(query, nodes)
         nodes.forEach { nodeLookup[it.rawId!!] = it }
-        client.query(Renderer.getDefaultRenderer().render(statement)).bindAll(statement.catalog.parameters)
+        client.query(renderer.render(statement)).bindAll(statement.catalog.parameters)
             .fetchAs(PartialNodeQueryResult::class.java).mappedBy { _, record ->
                 parseQueryResultInternal(record, returnName, query)
             }.one().awaitSingle()

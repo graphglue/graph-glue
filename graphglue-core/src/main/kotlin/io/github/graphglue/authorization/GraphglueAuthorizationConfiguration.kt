@@ -1,6 +1,7 @@
 package io.github.graphglue.authorization
 
 import io.github.graphglue.definition.NodeDefinitionCollection
+import org.neo4j.cypherdsl.core.renderer.Renderer
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.data.neo4j.core.ReactiveNeo4jClient
@@ -16,11 +17,13 @@ class GraphglueAuthorizationConfiguration {
      *
      * @param collection collection in which the node is defined
      * @param client client used to execute queries
+     * @param renderer renderer used to render queries
      * @return the created [AuthorizationChecker] which supports checking if a certain permission is given
      */
     @Bean
     fun authorizationChecker(
         collection: NodeDefinitionCollection,
-        client: ReactiveNeo4jClient
-    ): AuthorizationChecker = AuthorizationChecker(collection, client)
+        client: ReactiveNeo4jClient,
+        renderer: Renderer
+    ): AuthorizationChecker = AuthorizationChecker(collection, client, renderer)
 }

@@ -5,20 +5,23 @@ import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import org.neo4j.cypherdsl.core.renderer.Renderer
 import org.springframework.data.neo4j.core.ReactiveNeo4jClient
 import org.springframework.data.neo4j.core.mapping.Neo4jMappingContext
 
 /**
  * Engine for executing [NodeQuery]s
  *
- * @param configurationProperties the configuration properties, used for getting the maxium cost of a query
+ * @param configurationProperties the configuration properties, used for getting the maximum cost of a query
  * @param client the neo4j client used to execute the queries
  * @param mappingContext the neo4j mapping context used to map the results
+ * @param renderer the renderer used to render the queries
  */
 class NodeQueryEngine(
     private val configurationProperties: GraphglueCoreConfigurationProperties,
     private val client: ReactiveNeo4jClient,
-    private val mappingContext: Neo4jMappingContext
+    private val mappingContext: Neo4jMappingContext,
+    private val renderer: Renderer
 ) {
 
     /**
@@ -31,7 +34,7 @@ class NodeQueryEngine(
     suspend fun execute(query: NodeQuery): NodeQueryResult<*> {
         val instance = NodeQueryEngineInstance()
         val newQuery = instance.splitNodeQuery(query)
-        val executor = NodeQueryExecutor(client, mappingContext)
+        val executor = NodeQueryExecutor(client, mappingContext, renderer)
         val result = executor.execute(newQuery)
         instance.executeAdditionalQueries(executor)
         return result
@@ -47,7 +50,7 @@ class NodeQueryEngine(
     suspend fun execute(query: SearchQuery): SearchQueryResult<*> {
         val instance = NodeQueryEngineInstance()
         val newQuery = instance.splitNodeQuery(query)
-        val executor = NodeQueryExecutor(client, mappingContext)
+        val executor = NodeQueryExecutor(client, mappingContext, renderer)
         val result = executor.execute(newQuery)
         instance.executeAdditionalQueries(executor)
         return result
@@ -143,7 +146,7 @@ class NodeQueryEngine(
                     if (nodeQuery in additionalQueries) {
                         val queries = additionalQueries.remove(nodeQuery)!!
                         for (query in queries) {
-                            val newExecutor = NodeQueryExecutor(client, mappingContext)
+                            val newExecutor = NodeQueryExecutor(client, mappingContext, renderer)
                             val affectedNodes = nodes.filter { query.affectsNode(it) }
                             if (affectedNodes.isNotEmpty()) {
                                 executingQueries += async {

@@ -30,6 +30,7 @@ import io.github.graphglue.graphql.schema.DefaultSchemaTransformer
 import io.github.graphglue.model.Node
 import io.github.graphglue.model.NodeRelationship
 import io.github.graphglue.util.CacheMap
+import org.neo4j.cypherdsl.core.renderer.Renderer
 import org.slf4j.LoggerFactory
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
 import org.springframework.context.annotation.Bean
@@ -101,6 +102,7 @@ class GraphglueGraphQLConfiguration {
      * @param nodeFilterGenerators used to create
      * @param neo4jMappingContext necessary for [DefaultSchemaTransformer]
      * @param reactiveNeo4jClient necessary for [DefaultSchemaTransformer]
+     * @param renderer necessary for [DefaultSchemaTransformer]
      * @return both the generated [GraphQLSchema] and [NodeDefinitionCollection]
      */
     @Bean
@@ -118,7 +120,8 @@ class GraphglueGraphQLConfiguration {
         nodeDefinitionCollection: NodeDefinitionCollection,
         nodeFilterGenerators: List<NodeFilterGenerator>,
         neo4jMappingContext: Neo4jMappingContext,
-        reactiveNeo4jClient: ReactiveNeo4jClient
+        reactiveNeo4jClient: ReactiveNeo4jClient,
+        renderer: Renderer
     ): GraphglueSchema {
         val generator = SchemaGenerator(schemaConfig)
         val nodeDefinition = nodeDefinitionCollection.getNodeDefinition<Node>()
@@ -136,7 +139,7 @@ class GraphglueGraphQLConfiguration {
         val schemaTransformer = DefaultSchemaTransformer(
             schema, neo4jMappingContext, nodeDefinitionCollection, dataFetcherFactoryProvider, SubFilterGenerator(
                 filters, CacheMap(), nodeDefinitionCollection, additionalFilterBeans, nodeFilterGenerators
-            ), graphglueConfig.includeSkipField, reactiveNeo4jClient
+            ), graphglueConfig.includeSkipField, reactiveNeo4jClient, renderer
         )
         if (config.printSchema) {
             logger.info("\n${schemaTransformer.schema.print()}")

@@ -11,6 +11,7 @@ import io.github.graphglue.definition.NodeDefinition
 import io.github.graphglue.definition.NodeDefinitionCollection
 import io.github.graphglue.model.Node
 import io.github.graphglue.model.property.BasePropertyDelegate
+import org.neo4j.cypherdsl.core.renderer.Renderer
 import org.neo4j.driver.types.MapAccessor
 import org.springframework.beans.factory.BeanFactory
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
@@ -27,6 +28,7 @@ import org.springframework.data.neo4j.core.mapping.PersistentPropertyCharacteris
 import org.springframework.data.neo4j.core.mapping.callback.AfterConvertCallback
 import java.util.*
 import kotlin.reflect.full.isSuperclassOf
+import org.neo4j.cypherdsl.core.renderer.Configuration as CypherDslConfiguration
 
 /**
  * Name for the bean which provides an instance of  [GraphglueNeo4jOperations]
@@ -67,14 +69,16 @@ class GraphglueDataConfiguration {
      * @param configurationProperties properties used to configure the engine
      * @param client client used to execute queries
      * @param mappingContext context used to get mapping functions
+     * @param renderer used to render Cypher queries
      * @return the created [NodeQueryEngine]
      */
     @Bean
     fun nodeQueryEngine(
         configurationProperties: GraphglueCoreConfigurationProperties,
         client: ReactiveNeo4jClient,
-        mappingContext: Neo4jMappingContext
-    ): NodeQueryEngine = NodeQueryEngine(configurationProperties, client, mappingContext)
+        mappingContext: Neo4jMappingContext,
+        renderer: Renderer
+    ): NodeQueryEngine = NodeQueryEngine(configurationProperties, client, mappingContext, renderer)
 
     /**
      * Creates a new [LazyLoadingContext]
@@ -96,12 +100,16 @@ class GraphglueDataConfiguration {
      * @param neo4jTemplate template which provides base operation functionality
      * @param neo4jClient client used to execute queries
      * @param beanFactory used to get the [NodeDefinitionCollection]
+     * @param renderer used to render Cypher queries
      * @return the created [GraphglueNeo4jOperations] which supports save of lazy loaded relations
      */
     @Bean(GRAPHGLUE_NEO4J_OPERATIONS_BEAN_NAME)
     fun graphGlueNeo4jOperations(
-        neo4jTemplate: ReactiveNeo4jTemplate, neo4jClient: ReactiveNeo4jClient, beanFactory: BeanFactory
-    ) = GraphglueNeo4jOperations(neo4jTemplate, neo4jClient, beanFactory)
+        neo4jTemplate: ReactiveNeo4jTemplate,
+        neo4jClient: ReactiveNeo4jClient,
+        beanFactory: BeanFactory,
+        renderer: Renderer
+    ) = GraphglueNeo4jOperations(neo4jTemplate, neo4jClient, beanFactory, renderer)
 
     /**
      * Parser for incoming GraphQL queries
@@ -148,4 +156,19 @@ class GraphglueDataConfiguration {
     fun defaultIndexCreator(
         nodeDefinitionCollection: NodeDefinitionCollection, neo4jClient: Neo4jClient
     ) = DefaultIndexCreator(nodeDefinitionCollection, neo4jClient)
+
+    /**
+     * Provides a CypherDSL renderer which respects the CypherDSL configuration bean
+     *
+     * @param beanFactory used to get the [CypherDslConfiguration]
+     * @return the created [Renderer]
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    fun renderer(beanFactory: BeanFactory): Renderer {
+        val cypherDslConfiguration = beanFactory
+            .getBeanProvider(CypherDslConfiguration::class.java)
+            .getIfAvailable(CypherDslConfiguration::defaultConfig)
+        return Renderer.getRenderer(cypherDslConfiguration)
+    }
 }

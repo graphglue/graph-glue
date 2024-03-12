@@ -41,6 +41,7 @@ import kotlin.reflect.full.memberFunctions
  * @param subFilterGenerator used to generate the filter entries
  * @param includeSkipField if true, connections provide the non-standard skip field
  * @param reactiveNeo4jClient used to execute Cypher queries
+ * @param renderer used to render Cypher queries
  */
 class DefaultSchemaTransformer(
     private val oldSchema: GraphQLSchema,
@@ -49,7 +50,8 @@ class DefaultSchemaTransformer(
     override val dataFetcherFactoryProvider: KotlinDataFetcherFactoryProvider,
     override val subFilterGenerator: SubFilterGenerator,
     override val includeSkipField: Boolean,
-    private val reactiveNeo4jClient: ReactiveNeo4jClient
+    private val reactiveNeo4jClient: ReactiveNeo4jClient,
+    private val renderer: Renderer
 ) : SchemaTransformer {
 
     override val inputTypeCache = CacheMap<String, GraphQLInputType>()
@@ -237,7 +239,7 @@ class DefaultSchemaTransformer(
                         extensionFieldDefinition.generateFetcher(it, it.arguments, cypherNode, nodeDefinition)
                     val resultName = "a_result"
                     val statement = Cypher.match(cypherNode).returning(expression.`as`(resultName)).build()
-                    val queryResult = reactiveNeo4jClient.query(Renderer.getDefaultRenderer().render(statement))
+                    val queryResult = reactiveNeo4jClient.query(renderer.render(statement))
                         .bindAll(statement.catalog.parameters)
                     return@DataFetcher queryResult.fetchAs(Any::class.java).mappedBy { _, record ->
                         extensionFieldDefinition.transformResult(record[resultName])

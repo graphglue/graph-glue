@@ -20,11 +20,13 @@ import reactor.core.publisher.Mono
  * @param delegate provides [ReactiveNeo4jOperations] functionality
  * @param neo4jClient used to execute Cypher queries
  * @param beanFactory used to get [NodeDefinitionCollection]
+ * @param renderer used to render Cypher queries
  */
 class GraphglueNeo4jOperations(
     private val delegate: ReactiveNeo4jOperations,
     private val neo4jClient: ReactiveNeo4jClient,
-    private val beanFactory: BeanFactory
+    private val beanFactory: BeanFactory,
+    private val renderer: Renderer
 ) : ReactiveNeo4jOperations by delegate {
     /**
      * used to get [NodeDefinition] by type
@@ -276,7 +278,7 @@ class GraphglueNeo4jOperations(
      * @return an empty [Mono] to wait for the end of the operation
      */
     private fun executeStatement(statement: Statement): Mono<Void> {
-        return neo4jClient.query(Renderer.getDefaultRenderer().render(statement)).bindAll(statement.catalog.parameters).run()
+        return neo4jClient.query(renderer.render(statement)).bindAll(statement.catalog.parameters).run()
             .then()
     }
 

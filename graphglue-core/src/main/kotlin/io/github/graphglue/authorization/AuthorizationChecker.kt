@@ -12,10 +12,12 @@ import reactor.core.publisher.Mono
  * Check if a node allows a certain permission
  * @param collection collection in which the node is defined
  * @param client client used to execute queries
+ * @param renderer renderer used to render queries
  */
 class AuthorizationChecker(
     private val collection: NodeDefinitionCollection,
-    private val client: ReactiveNeo4jClient
+    private val client: ReactiveNeo4jClient,
+    private val renderer: Renderer
 ) {
     /**
      * Check if a node is authorized given a permission
@@ -32,7 +34,7 @@ class AuthorizationChecker(
         val condition = conditionGenerator.generateCondition(cypherNode)
         val statement = Cypher.match(cypherNode).where(condition)
             .returning(Functions.count(Cypher.asterisk()).gt(Cypher.literalOf<Int>(0))).build()
-        val queryResult = client.query(Renderer.getDefaultRenderer().render(statement)).bindAll(statement.catalog.parameters)
+        val queryResult = client.query(renderer.render(statement)).bindAll(statement.catalog.parameters)
         return queryResult.fetchAs(Boolean::class.java).one()
     }
 }

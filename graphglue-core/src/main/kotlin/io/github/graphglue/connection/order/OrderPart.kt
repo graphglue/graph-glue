@@ -1,6 +1,8 @@
 package io.github.graphglue.connection.order
 
 import io.github.graphglue.model.Node
+import org.neo4j.cypherdsl.core.Expression
+import org.neo4j.cypherdsl.core.SymbolicName
 
 /**
  * Part of a complete order
@@ -8,15 +10,15 @@ import io.github.graphglue.model.Node
  *
  * @param T the type of [Node] for which the order is defined
  * @param name name of the field in the cursor JSON
- * @param neo4jPropertyName name of the property on the database node
  * @param isNullable if true, this part can be null
  */
-abstract class OrderPart<in T : Node>(val name: String, val neo4jPropertyName: String, val isNullable: Boolean) {
+abstract class OrderPart<in T : Node>(val name: String, val isNullable: Boolean) {
+
     /**
-     * Gets the value of the field of a [Node]
+     * Gets the expression for the property on the database node
      *
-     * @param node the instance of the [Node] to get the value from
-     * @return the value of the node used in cursor generation
+     * @param node the [SymbolicName] of the node in the query
+     * @return the expression for the property on the database node
      */
-    abstract fun getValue(node: T): Any?
+    abstract fun getExpression(node: SymbolicName): Expression
 }

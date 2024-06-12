@@ -408,7 +408,7 @@ class NodeQueryExecutor(
      * @param nodeDefinition definition for the currently queried node
      * @param builder ongoing statement builder
      * @param nodeAlias name of the variable containing the node
-     * @param options options for the query, defines order
+     * @param order order to sort by with associated variables
      * @param nodeQuery the currently converted query
      * @return the generated statement, the result name and the name of a collection with all raw nodes
      */
@@ -416,7 +416,7 @@ class NodeQueryExecutor(
         nodeDefinition: NodeDefinition,
         builder: StatementBuilder.OngoingReading,
         nodeAlias: SymbolicName,
-        options: NodeQueryOptions,
+        order: OrderWithVariables?,
         nodeQuery: NodeQuery
     ): StatementWithResultNodesAndNodes {
         val resultNodeExpression = generateResultNodeExpression(nodeDefinition, nodeQuery, nodeAlias)
@@ -428,8 +428,8 @@ class NodeQueryExecutor(
         ).with(listOf(resultNodeExpression.`as`(resultNode)) + nodeAlias)
         val collectedResultNodes = generateUniqueName()
         val collectedNodes = generateUniqueName()
-        val statement = if (options.orderBy != null) {
-            resultBuilder.orderBy(generateOrderFields(options.orderBy, nodeAlias))
+        val statement = if (order != null) {
+            resultBuilder.orderBy(generateOrderFields(order, nodeAlias))
         } else {
             resultBuilder
         }.with(
@@ -542,17 +542,19 @@ class NodeQueryExecutor(
      * @param query the query due to which the ordering is potentially applied
      * @param builder the builder to apply ordering to
      * @param nodeAlias name of the variable containing the node
+     * @param order order with variables if required
      */
     private fun applyOrderIfRequired(
         query: NodeQuery,
         builder: StatementBuilder.OrderableOngoingReadingAndWith,
-        nodeAlias: SymbolicName
+        nodeAlias: SymbolicName,
+        order: OrderWithVariables?
     ): StatementBuilder.OrderableOngoingReadingAndWith {
         val options = query.options
         return if (options.first != null && options.orderBy != null) {
-            builder.orderBy(generateOrderFields(options.orderBy, nodeAlias, false))
+            builder.orderBy(generateOrderFields(order!!, nodeAlias, false))
         } else if (options.last != null && options.orderBy != null) {
-            builder.orderBy(generateOrderFields(options.orderBy, nodeAlias, true))
+            builder.orderBy(generateOrderFields(order!!, nodeAlias, true))
         } else {
             builder
         }
@@ -562,36 +564,37 @@ class NodeQueryExecutor(
      * Generates a [Condition] which can be used to filter for items before/after a specific cursor
      *
      * @param cursor the parsed cursor
-     * @param order order in which the nodes will be sorted, necessary to interpret cursor
+     * @param order order in which the nodes will be sorted with variables, necessary to interpret cursor
      * @param node the name of the variable storing the node to filter
      * @param forwards if `true`, filters for items after the cursor, otherwise for items before the cursor
      *                 (both inclusive)
      * @return an [Expression] which can be used to filter for items after/before the provided `cursor`
      */
     private fun generateCursorFilterExpression(
-        cursor: Map<String, Any?>, order: Order<*>, node: SymbolicName, forwards: Boolean
+        cursor: Map<String, Any?>, order: OrderWithVariables, node: SymbolicName, forwards: Boolean
     ): Condition {
-        val realForwards = if (order.direction == OrderDirection.ASC) forwards else !forwards
-        return order.field.parts.asReversed().foldIndexed(Conditions.noCondition()) { index, filterExpression, part ->
+        return order.order.fields.asReversed().foldIndexed(Conditions.noCondition()) { index, filterExpression, field ->
+            val part = field.part
+            val realForwards = if (field.direction == OrderDirection.ASC) forwards else !forwards
             var newFilterExpression = filterExpression
-            val property = node.property(part.neo4jPropertyName)
+            val expression = order.variables[part.name]!!
             val value = cursor[part.name]
             val propertyValue = Cypher.anonParameter<Any?>(value)
             if (index > 0) {
-                val eqCondition = if (value != null) property.eq(propertyValue) else property.isNull
+                val eqCondition = if (value != null) expression.eq(propertyValue) else expression.isNull
                 newFilterExpression = eqCondition.and(newFilterExpression)
             }
             val neqCondition = if (value == null) {
-                property.isNotNull
+                expression.isNotNull
             } else {
-                if (realForwards) property.gt(propertyValue) else property.lt(propertyValue)
+                if (realForwards) expression.gt(propertyValue) else expression.lt(propertyValue)
             }
             if (!part.isNullable || !realForwards) {
                 neqCondition.or(newFilterExpression)
             } else if (value == null) {
                 newFilterExpression
             } else {
-                neqCondition.or(property.isNull).or(newFilterExpression)
+                neqCondition.or(expression.isNull).or(newFilterExpression)
             }
         }
     }
@@ -599,18 +602,20 @@ class NodeQueryExecutor(
     /**
      * Transforms an [Order] into  a list of [SortItem]
      *
-     * @param order the [Order] to  transform
+     * @param order the [Order] to transform
      * @param node name of the variable containing the node
      * @param reversed if `true`, the direction defined by `order` is reversed
      * @return the list of generated [SortItem]
      */
-    private fun generateOrderFields(order: Order<*>, node: SymbolicName, reversed: Boolean = false): List<SortItem> {
-        val direction = if ((order.direction == OrderDirection.ASC) != reversed) {
-            SortItem.Direction.ASC
-        } else {
-            SortItem.Direction.DESC
+    private fun generateOrderFields(order: OrderWithVariables, node: SymbolicName, reversed: Boolean = false): List<SortItem> {
+        return order.order.fields.map {
+            val direction = if ((it.direction == OrderDirection.ASC) != reversed) {
+                SortItem.Direction.ASC
+            } else {
+                SortItem.Direction.DESC
+            }
+            Cypher.sort(order.variables[it.part.name]!!, direction)
         }
-        return order.field.parts.map { Cypher.sort(node.property(it.neo4jPropertyName), direction) }
     }
 
     /**
@@ -860,3 +865,11 @@ private data class PartialNodeQueryResult(val nodes: List<io.github.graphglue.mo
      */
     fun toCompleteResult(nodeQuery: NodeQuery) = NodeQueryResult(nodeQuery.options, nodes, totalCount)
 }
+
+/**
+ * Wrapper for an [Order] and the variables used in it
+ *
+ * @param order the order to generate
+ * @param variables the variables used in the order
+ */
+private data class OrderWithVariables(val order: Order<*>, val variables: Map<String, SymbolicName>)

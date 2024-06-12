@@ -27,7 +27,9 @@ fun generateConnectionFieldDefinition(
 ): GraphQLFieldDefinition {
     val nodeName = nodeType.getSimpleName()
     val filter = generateFilterDefinition(nodeType, transformer.subFilterGenerator)
-    val orders = generateOrders(nodeType, transformer.mappingContext.getPersistentEntity(nodeType.java)!!)
+    val orders = generateOrders(
+        nodeType, transformer.mappingContext.getPersistentEntity(nodeType.java)!!, transformer.additionalOrderBeans
+    )
     val builder = GraphQLFieldDefinition.newFieldDefinition().name(name).description(description).argument {
         it.name("filter").description("Filter for specific items in the connection")
             .type(filter.toGraphQLType(transformer.inputTypeCache))

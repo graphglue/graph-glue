@@ -88,6 +88,12 @@ abstract class Node {
     internal var extensionFields: MutableMap<String, Any>? = null
 
     /**
+     * Order fields for sorting and cursor generation fetched from the database
+     */
+    @Transient
+    internal var orderFields: MutableMap<String, Any?>? = null
+
+    /**
      * Creates a new node property used for many sides
      *
      * @param T value type

@@ -16,6 +16,11 @@ import org.springframework.data.neo4j.core.mapping.Neo4jMappingContext
 const val NODE_KEY = "node"
 
 /**
+ * Name for the order map entry
+ */
+const val ORDER_KEY = "order"
+
+/**
  * Name for the node list map entry
  */
 const val NODES_KEY = "nodes"
@@ -125,8 +130,7 @@ class NodeQueryExecutor(
         val options = query.options
         val filteredBuilder = applyFilterConditions(options.filters, builder, node)
         val allNodesCollected = generateUniqueName()
-        val orderedBuilder = applyOrderIfRequired(query, filteredBuilder, nodeAlias)
-        val collectedNodesBuilder = orderedBuilder.with(Functions.collect(node).`as`(allNodesCollected))
+        val collectedNodesBuilder = filteredBuilder.with(Functions.collect(node).`as`(allNodesCollected))
         val (totalCountBuilder, totalCount) = applyTotalCountIfRequired(
             options, collectedNodesBuilder, allNodesCollected, emptyList()
         )
@@ -150,12 +154,9 @@ class NodeQueryExecutor(
         val score = generateUniqueName()
         val builder = Cypher.call("db.index.fulltext.queryNodes").withArgs(
             Cypher.literalOf<String>(query.definition.searchIndexName!!), Cypher.anonParameter(query.options.query)
-        ).yield(Cypher.name("node").`as`(nodeAlias), Cypher.name("score").`as`(score))
-            .with(node, score)
+        ).yield(Cypher.name("node").`as`(nodeAlias), Cypher.name("score").`as`(score)).with(node, score)
         val filteredBuilder = applyFilterConditions(query.options.filters, builder, node).with(
-            node,
-            score,
-            nodeAlias.`as`(query.definition.returnNodeName)
+            node, score, nodeAlias.`as`(query.definition.returnNodeName)
         )
         val skippedBuilder = if (query.options.skip != null) {
             filteredBuilder.skip(query.options.skip)
@@ -164,7 +165,7 @@ class NodeQueryExecutor(
         }
         val limitedBuilder = skippedBuilder.limit(Cypher.anonParameter(query.options.first))
         val resultNode = generateUniqueName()
-        val resultNodeExpression = generateResultNodeExpression(query.definition, query, nodeAlias)
+        val resultNodeExpression = generateResultNodeExpression(query.definition, query, nodeAlias, null)
         val withResultBuilder = limitedBuilder.with(node, resultNodeExpression.`as`(resultNode))
         val resultNodes = generateUniqueName()
         val nodes = generateUniqueName()
@@ -379,10 +380,10 @@ class NodeQueryExecutor(
         val nodeAlias = node.requiredSymbolicName
         val nodeDefinition = nodeQuery.definition
         val subQueryBuilder = Cypher.with(allNodesCollected).unwind(allNodesCollected).`as`(nodeAlias)
-        val afterAndBeforeBuilder = applyAfterAndBefore(options, nodeAlias, subQueryBuilder)
-        val limitedBuilder = applyResultLimiters(options, afterAndBeforeBuilder, nodeAlias)
+        val (afterAndBeforeBuilder, orderContext) = applyAfterAndBefore(options, nodeAlias, subQueryBuilder)
+        val limitedBuilder = applyResultLimiters(orderContext, options, afterAndBeforeBuilder, nodeAlias)
         return generateMainSubQueryResultStatement(
-            nodeDefinition, limitedBuilder, nodeAlias, options, nodeQuery
+            nodeDefinition, limitedBuilder, nodeAlias, orderContext, nodeQuery
         )
     }
 
@@ -408,7 +409,7 @@ class NodeQueryExecutor(
      * @param nodeDefinition definition for the currently queried node
      * @param builder ongoing statement builder
      * @param nodeAlias name of the variable containing the node
-     * @param order order to sort by with associated variables
+     * @param orderContext order to sort by with associated variables
      * @param nodeQuery the currently converted query
      * @return the generated statement, the result name and the name of a collection with all raw nodes
      */
@@ -416,20 +417,21 @@ class NodeQueryExecutor(
         nodeDefinition: NodeDefinition,
         builder: StatementBuilder.OngoingReading,
         nodeAlias: SymbolicName,
-        order: OrderWithVariables?,
+        orderContext: OrderContext?,
         nodeQuery: NodeQuery
     ): StatementWithResultNodesAndNodes {
-        val resultNodeExpression = generateResultNodeExpression(nodeDefinition, nodeQuery, nodeAlias)
+        val resultNodeExpression = generateResultNodeExpression(nodeDefinition, nodeQuery, nodeAlias, orderContext)
         val resultNode = generateUniqueName()
+        val orderVariables = orderContext?.variables?.values ?: emptyList()
         val resultBuilder = builder.with(
             listOf(
                 nodeAlias.`as`(nodeDefinition.returnNodeName), nodeAlias
-            )
-        ).with(listOf(resultNodeExpression.`as`(resultNode)) + nodeAlias)
+            ) + orderVariables
+        ).with(listOf(resultNodeExpression.`as`(resultNode), nodeAlias) + orderVariables)
         val collectedResultNodes = generateUniqueName()
         val collectedNodes = generateUniqueName()
-        val statement = if (order != null) {
-            resultBuilder.orderBy(generateOrderFields(order, nodeAlias))
+        val statement = if (orderContext != null) {
+            resultBuilder.orderBy(generateOrderFields(orderContext))
         } else {
             resultBuilder
         }.with(
@@ -444,14 +446,16 @@ class NodeQueryExecutor(
      * @param nodeDefinition definition for the currently queried node
      * @param nodeQuery the currently converted query
      * @param nodeAlias name of the variable containing the node
+     * @param orderContext order to sort by with associated variables
      * @return the generated expression
      */
     private fun generateResultNodeExpression(
-        nodeDefinition: NodeDefinition, nodeQuery: QueryBase<*>, nodeAlias: SymbolicName
+        nodeDefinition: NodeDefinition, nodeQuery: QueryBase<*>, nodeAlias: SymbolicName, orderContext: OrderContext?
     ): MapExpression {
-        val resultNodeMap = mapOf(NODE_KEY to Cypher.listOf(nodeDefinition.returnExpression)) + generateExtensionFields(
-            nodeQuery, nodeAlias
-        )
+        val resultNodeMap = mapOf(
+            NODE_KEY to Cypher.listOf(nodeDefinition.returnExpression),
+            ORDER_KEY to Cypher.asExpression(orderContext?.variables ?: emptyMap())
+        ) + generateExtensionFields(nodeQuery, nodeAlias)
         return Cypher.asExpression(resultNodeMap)
     }
 
@@ -493,68 +497,56 @@ class NodeQueryExecutor(
         if (options.orderBy == null) {
             error("Can't use after/before without orderBy")
         }
+        val orderContext =
+            OrderContext(options.orderBy, options.orderBy.fields.associate { it.part.name to generateUniqueName() })
+        val builderWithOrderVariables = builder.with(orderContext.order.fields.map {
+            it.part.getExpression(nodeAlias).`as`(orderContext.variables[it.part.name])
+        } + nodeAlias)
         var filterCondition = Conditions.noCondition()
         if (options.after != null) {
             filterCondition = filterCondition.and(
-                generateCursorFilterExpression(options.after, options.orderBy, nodeAlias, true)
+                generateCursorFilterExpression(options.after, orderContext, true)
             )
         }
         if (options.before != null) {
             filterCondition = filterCondition.and(
-                generateCursorFilterExpression(options.before, options.orderBy, nodeAlias, false)
+                generateCursorFilterExpression(options.before, orderContext, false)
             )
         }
-        builder.with(nodeAlias).where(filterCondition).with(nodeAlias)
+        builderWithOrderVariables.where(filterCondition).with(orderContext.variables.values + nodeAlias) to orderContext
     } else {
-        builder.with(nodeAlias)
+        builder.with(nodeAlias) to null
     }
 
     /**
      * Adds first and last filters, and adds skip.
      * Requires that the nodes are already correctly ordered
      *
+     * @param orderContext order with variables
      * @param options defines first, last and skip
      * @param builder ongoing statement builder
      * @param nodeAlias name of the variable containing the node
      * @return the builder with first/last/skip applied
      */
     private fun applyResultLimiters(
+        orderContext: OrderContext?,
         options: NodeQueryOptions,
         builder: StatementBuilder.OrderableOngoingReadingAndWithWithoutWhere,
         nodeAlias: SymbolicName
     ): StatementBuilder.OrderableOngoingReadingAndWithWithoutWhere {
         val firstOrLast = options.first ?: options.last
         return if (firstOrLast != null) {
-            val skippedBuilder = if (options.skip != null) {
-                builder.skip(options.skip)
+            val orderedBuilder = if (options.first != null) {
+                builder.orderBy(generateOrderFields(orderContext!!, false))
             } else {
-                builder
+                builder.orderBy(generateOrderFields(orderContext!!, true))
             }
-            skippedBuilder.limit(firstOrLast).with(nodeAlias)
-        } else {
-            builder
-        }
-    }
-
-    /**
-     * Applies ordering to a builder if options define `first` or `last`.
-     *
-     * @param query the query due to which the ordering is potentially applied
-     * @param builder the builder to apply ordering to
-     * @param nodeAlias name of the variable containing the node
-     * @param order order with variables if required
-     */
-    private fun applyOrderIfRequired(
-        query: NodeQuery,
-        builder: StatementBuilder.OrderableOngoingReadingAndWith,
-        nodeAlias: SymbolicName,
-        order: OrderWithVariables?
-    ): StatementBuilder.OrderableOngoingReadingAndWith {
-        val options = query.options
-        return if (options.first != null && options.orderBy != null) {
-            builder.orderBy(generateOrderFields(order!!, nodeAlias, false))
-        } else if (options.last != null && options.orderBy != null) {
-            builder.orderBy(generateOrderFields(order!!, nodeAlias, true))
+            val skippedBuilder = if (options.skip != null) {
+                orderedBuilder.skip(options.skip)
+            } else {
+                orderedBuilder
+            }
+            skippedBuilder.limit(firstOrLast).with(orderContext.variables.values + nodeAlias)
         } else {
             builder
         }
@@ -564,57 +556,58 @@ class NodeQueryExecutor(
      * Generates a [Condition] which can be used to filter for items before/after a specific cursor
      *
      * @param cursor the parsed cursor
-     * @param order order in which the nodes will be sorted with variables, necessary to interpret cursor
-     * @param node the name of the variable storing the node to filter
+     * @param orderContext order in which the nodes will be sorted with variables, necessary to interpret cursor
      * @param forwards if `true`, filters for items after the cursor, otherwise for items before the cursor
      *                 (both inclusive)
      * @return an [Expression] which can be used to filter for items after/before the provided `cursor`
      */
     private fun generateCursorFilterExpression(
-        cursor: Map<String, Any?>, order: OrderWithVariables, node: SymbolicName, forwards: Boolean
+        cursor: Map<String, Any?>, orderContext: OrderContext, forwards: Boolean
     ): Condition {
-        return order.order.fields.asReversed().foldIndexed(Conditions.noCondition()) { index, filterExpression, field ->
-            val part = field.part
-            val realForwards = if (field.direction == OrderDirection.ASC) forwards else !forwards
-            var newFilterExpression = filterExpression
-            val expression = order.variables[part.name]!!
-            val value = cursor[part.name]
-            val propertyValue = Cypher.anonParameter<Any?>(value)
-            if (index > 0) {
-                val eqCondition = if (value != null) expression.eq(propertyValue) else expression.isNull
-                newFilterExpression = eqCondition.and(newFilterExpression)
+        return orderContext.order.fields.asReversed()
+            .foldIndexed(Conditions.noCondition()) { index, filterExpression, field ->
+                val part = field.part
+                val realForwards = if (field.direction == OrderDirection.ASC) forwards else !forwards
+                var newFilterExpression = filterExpression
+                val expression = orderContext.variables[part.name]!!
+                val value = cursor[part.name]
+                val propertyValue = Cypher.anonParameter<Any?>(value)
+                if (index > 0) {
+                    val eqCondition = if (value != null) expression.eq(propertyValue) else expression.isNull
+                    newFilterExpression = eqCondition.and(newFilterExpression)
+                }
+                val neqCondition = if (value == null) {
+                    expression.isNotNull
+                } else {
+                    if (realForwards) expression.gt(propertyValue) else expression.lt(propertyValue)
+                }
+                if (!part.isNullable || !realForwards) {
+                    neqCondition.or(newFilterExpression)
+                } else if (value == null) {
+                    newFilterExpression
+                } else {
+                    neqCondition.or(expression.isNull).or(newFilterExpression)
+                }
             }
-            val neqCondition = if (value == null) {
-                expression.isNotNull
-            } else {
-                if (realForwards) expression.gt(propertyValue) else expression.lt(propertyValue)
-            }
-            if (!part.isNullable || !realForwards) {
-                neqCondition.or(newFilterExpression)
-            } else if (value == null) {
-                newFilterExpression
-            } else {
-                neqCondition.or(expression.isNull).or(newFilterExpression)
-            }
-        }
     }
 
     /**
      * Transforms an [Order] into  a list of [SortItem]
      *
-     * @param order the [Order] to transform
-     * @param node name of the variable containing the node
+     * @param orderContext the [Order] to transform
      * @param reversed if `true`, the direction defined by `order` is reversed
      * @return the list of generated [SortItem]
      */
-    private fun generateOrderFields(order: OrderWithVariables, node: SymbolicName, reversed: Boolean = false): List<SortItem> {
-        return order.order.fields.map {
+    private fun generateOrderFields(
+        orderContext: OrderContext, reversed: Boolean = false
+    ): List<SortItem> {
+        return orderContext.order.fields.map {
             val direction = if ((it.direction == OrderDirection.ASC) != reversed) {
                 SortItem.Direction.ASC
             } else {
                 SortItem.Direction.DESC
             }
-            Cypher.sort(order.variables[it.part.name]!!, direction)
+            Cypher.sort(orderContext.variables[it.part.name]!!, direction)
         }
     }
 
@@ -702,9 +695,8 @@ class NodeQueryExecutor(
     ): StatementWithResultNodesAndNodes {
         val options = nodeQuery.options
         val filteredBuilder = applyFilterConditions(options.filters, builder, node)
-        val orderedBuilder = applyOrderIfRequired(nodeQuery, filteredBuilder, node.requiredSymbolicName)
         val allNodesCollected = generateUniqueName()
-        val collectedNodesBuilder = orderedBuilder.with(Functions.collect(node).`as`(allNodesCollected), parentNode)
+        val collectedNodesBuilder = filteredBuilder.with(Functions.collect(node).`as`(allNodesCollected), parentNode)
         val (totalCountBuilder, totalCount) = applyTotalCountIfRequired(
             options, collectedNodesBuilder, allNodesCollected, listOf(parentNode.requiredSymbolicName)
         )
@@ -827,6 +819,7 @@ class NodeQueryExecutor(
                 extensionFields[extensionField.resultKey] = transformedExtensionFieldValue
             }
         }
+        node.orderFields = value[ORDER_KEY].asMap { it.asObject() }
         return node
     }
 }
@@ -872,4 +865,4 @@ private data class PartialNodeQueryResult(val nodes: List<io.github.graphglue.mo
  * @param order the order to generate
  * @param variables the variables used in the order
  */
-private data class OrderWithVariables(val order: Order<*>, val variables: Map<String, SymbolicName>)
+private data class OrderContext(val order: Order<*>, val variables: Map<String, SymbolicName>)

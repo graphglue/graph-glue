@@ -11,32 +11,31 @@ import kotlin.reflect.full.hasAnnotation
 import kotlin.reflect.full.memberProperties
 
 /**
- * Generates a map from order field name (enum casing) to [OrderField].
- * The [OrderField]s are detected based on the [OrderProperty] annotation.
+ * Generates a map from order field name (enum casing) to [OrderPart].
+ * The [OrderPart]s are detected based on the [OrderProperty] annotation.
  *
- * @param T the type of [Node] for which the [OrderField]s should be generated
+ * @param T the type of [Node] for which the [OrderPart]s should be generated
  * @param type the class of [T]
  * @param persistentEntity used to get the name of the property in the database
  * @param additionalOrderBeans lookup for additional order parts
- * @return a map from order field enum name to  [OrderField]
+ * @return a map from order field enum name to  [OrderPart]
  */
 @Suppress("UNCHECKED_CAST")
 fun <T : Node> generateOrders(
     type: KClass<T>,
     persistentEntity: Neo4jPersistentEntity<*>,
     additionalOrderBeans: Map<String, OrderPart<*>>
-): Map<String, OrderField<T>> {
+): Map<String, OrderPart<T>> {
     val generatedOrders = type.memberProperties.filter { it.hasAnnotation<OrderProperty>() }
         .map {
             val neo4jPropertyName = persistentEntity.getPersistentProperty(it.name)!!.propertyName
-            OrderField(it.getPropertyName(type), listOf(PropertyOrderPart(it, neo4jPropertyName), IdOrderPart))
+            PropertyOrderPart<T>(it, neo4jPropertyName)
         }
     val additionalOrderAnnotations = type.springFindRepeatableAnnotations<AdditionalOrder>()
     val additionalOrders = additionalOrderAnnotations.map {
-        val part = additionalOrderBeans[it.beanName]!! as OrderPart<Node>
-        OrderField(part.name, listOf(part, IdOrderPart))
+        additionalOrderBeans[it.beanName]!! as OrderPart<Node>
     }
-    val allOrders = generatedOrders + IdOrderField + additionalOrders
+    val allOrders = additionalOrders + generatedOrders + IdOrderPart
     return allOrders.associateBy { it.name.toEnumNameCase() }
 }
 

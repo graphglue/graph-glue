@@ -7,12 +7,27 @@ package io.github.graphglue.connection.order
  * @return the parsed [Order]
  */
 fun parseOrder(value: Any): Order<*> {
-    value as Map<*, *>
-    val directionName = value["direction"] as String?
-    val direction = if (directionName != null) {
-        OrderDirection.valueOf(directionName)
-    } else {
-        OrderDirection.ASC
+    val fields = (value as List<*>).map {
+        it as Map<*, *>
+        val directionName = it["direction"] as String?
+        val direction = if (directionName != null) {
+            OrderDirection.valueOf(directionName)
+        } else {
+            OrderDirection.ASC
+        }
+        OrderField(it["field"] as OrderPart<*>? ?: IdOrderPart, direction)
     }
-    return Order(direction, value["field"] as OrderField<*>? ?: IdOrderField)
+    val resultingFields = mutableListOf<OrderField<*>>()
+    val foundParts = mutableSetOf<OrderPart<*>>()
+    for (field in fields) {
+        if (foundParts.contains(field.part)) {
+            continue
+        }
+        resultingFields += field
+        foundParts += field.part
+    }
+    if (IdOrderPart !in foundParts) {
+        resultingFields += IdOrderField
+    }
+    return Order(resultingFields.reversed())
 }

@@ -21,7 +21,8 @@ class Order<in T : Node>(val fields: List<OrderField<T>>) {
      * @return the cursor as base64 encoded JSON
      */
     fun generateCursor(node: T, objectMapper: ObjectMapper): String {
-        return Base64.getEncoder().encodeToString(objectMapper.writeValueAsBytes(node.orderFields))
+        val properties = this.fields.associate { it.part.name to node.orderFields!![it.part.name] }
+        return Base64.getEncoder().encodeToString(objectMapper.writeValueAsBytes(properties))
     }
 
     /**

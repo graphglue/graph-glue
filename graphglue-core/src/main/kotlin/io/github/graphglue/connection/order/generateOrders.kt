@@ -1,6 +1,5 @@
 package io.github.graphglue.connection.order
 
-import io.github.graphglue.graphql.extensions.getPropertyName
 import io.github.graphglue.graphql.extensions.springFindRepeatableAnnotations
 import io.github.graphglue.model.AdditionalOrder
 import io.github.graphglue.model.Node

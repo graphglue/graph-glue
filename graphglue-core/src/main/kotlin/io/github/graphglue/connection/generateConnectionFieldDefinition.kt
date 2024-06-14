@@ -130,7 +130,7 @@ private fun generateOrderGraphQLType(
     nodeName: String, orders: Map<String, OrderPart<*>>, transformer: SchemaTransformationContext
 ): GraphQLInputType {
     val name = "${nodeName}Order"
-    return transformer.inputTypeCache.computeIfAbsent(name, GraphQLTypeReference(name)) {
+    val inputType = transformer.inputTypeCache.computeIfAbsent(name, GraphQLTypeReference(name)) {
         GraphQLInputObjectType.newInputObject().name(name).description("Defines the order of a $nodeName list").field {
             it.name("field").description("The field to order by, defaults to ID")
                 .type(generateOrderPartGraphQLType(nodeName, orders, transformer)).defaultValueLiteral(EnumValue("ID"))
@@ -139,6 +139,7 @@ private fun generateOrderGraphQLType(
                 .type(GraphQLTypeReference("OrderDirection")).defaultValueLiteral(EnumValue("ASC"))
         }.build()
     }
+    return GraphQLList(inputType)
 }
 
 /**

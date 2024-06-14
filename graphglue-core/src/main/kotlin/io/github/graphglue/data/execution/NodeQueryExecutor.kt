@@ -493,29 +493,33 @@ class NodeQueryExecutor(
      */
     private fun applyAfterAndBefore(
         options: NodeQueryOptions, nodeAlias: SymbolicName, builder: StatementBuilder.OngoingReading
-    ) = if (options.after != null || options.before != null) {
-        if (options.orderBy == null) {
-            error("Can't use after/before without orderBy")
-        }
-        val orderContext =
+    ) : Pair<StatementBuilder. OrderableOngoingReadingAndWithWithoutWhere, OrderContext?> {
+        val orderContext = if (options.orderBy != null) {
             OrderContext(options.orderBy, options.orderBy.fields.associate { it.part.name to generateUniqueName() })
-        val builderWithOrderVariables = builder.with(orderContext.order.fields.map {
+        } else {
+            null
+        }
+        val orderVariables = orderContext?.order?.fields?.map {
             it.part.getExpression(nodeAlias).`as`(orderContext.variables[it.part.name])
-        } + nodeAlias)
-        var filterCondition = Conditions.noCondition()
-        if (options.after != null) {
-            filterCondition = filterCondition.and(
-                generateCursorFilterExpression(options.after, orderContext, true)
-            )
+        } ?: emptyList()
+        val builderWithOrderVariables = builder.with(orderVariables + nodeAlias)
+        if (options.after != null || options.before != null) {
+            require(orderContext != null) { "Can't use after/before without orderBy"}
+            var filterCondition = Conditions.noCondition()
+            if (options.after != null) {
+                filterCondition = filterCondition.and(
+                    generateCursorFilterExpression(options.after, orderContext, true)
+                )
+            }
+            if (options.before != null) {
+                filterCondition = filterCondition.and(
+                    generateCursorFilterExpression(options.before, orderContext, false)
+                )
+            }
+            return builderWithOrderVariables.where(filterCondition).with(orderContext.variables.values + nodeAlias) to orderContext
+        } else {
+            return builderWithOrderVariables to orderContext
         }
-        if (options.before != null) {
-            filterCondition = filterCondition.and(
-                generateCursorFilterExpression(options.before, orderContext, false)
-            )
-        }
-        builderWithOrderVariables.where(filterCondition).with(orderContext.variables.values + nodeAlias) to orderContext
-    } else {
-        builder.with(nodeAlias) to null
     }
 
     /**
@@ -536,17 +540,22 @@ class NodeQueryExecutor(
     ): StatementBuilder.OrderableOngoingReadingAndWithWithoutWhere {
         val firstOrLast = options.first ?: options.last
         return if (firstOrLast != null) {
-            val orderedBuilder = if (options.first != null) {
-                builder.orderBy(generateOrderFields(orderContext!!, false))
+            val orderedBuilder = if (orderContext != null) {
+                if (options.first != null) {
+                    builder.orderBy(generateOrderFields(orderContext, false))
+                } else {
+                    builder.orderBy(generateOrderFields(orderContext, true))
+                }
             } else {
-                builder.orderBy(generateOrderFields(orderContext!!, true))
+                builder
             }
             val skippedBuilder = if (options.skip != null) {
                 orderedBuilder.skip(options.skip)
             } else {
                 orderedBuilder
             }
-            skippedBuilder.limit(firstOrLast).with(orderContext.variables.values + nodeAlias)
+            val allVariables = (orderContext?.variables?.values ?: emptyList()) + nodeAlias
+            skippedBuilder.limit(firstOrLast).with(allVariables)
         } else {
             builder
         }
@@ -819,7 +828,15 @@ class NodeQueryExecutor(
                 extensionFields[extensionField.resultKey] = transformedExtensionFieldValue
             }
         }
-        node.orderFields = value[ORDER_KEY].asMap { it.asObject() }
+        if (node.orderFields == null) {
+            node.orderFields = mutableMapOf()
+        }
+        val orderFields = node.orderFields!!
+        for ((fieldName, fieldValue) in value[ORDER_KEY].asMap ()) {
+            if (fieldName !in orderFields) {
+                orderFields[fieldName] = fieldValue
+            }
+        }
         return node
     }
 }

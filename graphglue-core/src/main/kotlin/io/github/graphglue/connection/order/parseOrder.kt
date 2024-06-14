@@ -26,8 +26,9 @@ fun parseOrder(value: Any): Order<*> {
         resultingFields += field
         foundParts += field.part
     }
+    resultingFields.reverse()
     if (IdOrderPart !in foundParts) {
         resultingFields += IdOrderField
     }
-    return Order(resultingFields.reversed())
+    return Order(resultingFields)
 }

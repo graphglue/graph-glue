@@ -6,7 +6,6 @@ import graphql.schema.*
 import io.github.graphglue.connection.filter.definition.generateFilterDefinition
 import io.github.graphglue.connection.model.Connection
 import io.github.graphglue.connection.model.Edge
-import io.github.graphglue.connection.order.OrderField
 import io.github.graphglue.connection.order.OrderPart
 import io.github.graphglue.connection.order.generateOrders
 import io.github.graphglue.graphql.extensions.getSimpleName
@@ -29,7 +28,7 @@ fun generateConnectionFieldDefinition(
     val nodeName = nodeType.getSimpleName()
     val filter = generateFilterDefinition(nodeType, transformer.subFilterGenerator)
     val orders = generateOrders(
-        nodeType, transformer.mappingContext.getPersistentEntity(nodeType.java)!!, transformer.additionalOrderBeans
+        nodeType, transformer.additionalOrderBeans, transformer.nodeDefinitionCollection
     )
     val builder = GraphQLFieldDefinition.newFieldDefinition().name(name).description(description).argument {
         it.name("filter").description("Filter for specific items in the connection")

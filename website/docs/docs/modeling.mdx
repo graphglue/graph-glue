@@ -118,6 +118,7 @@ The direction is considered an implementation detail and not exposed in the Grap
 To actually get the content of a property, you have to use the call operator on the property (e.g. `node.manyProperty().add(addedNode)`).
 This is necessary, as lazy loading is done asynchronous, and properties cannot be marked currently with `suspend`.
 Therefore, on invoking, the property is - if necessary - loaded from the database.
+
 :::
 
 On save, all relationships are saved. Save cascades down added entities, but removed ones.
@@ -198,8 +199,18 @@ For more information on how to use ordering and filtering in GraphQL, see [Conne
 ### Ordering
 
 All nodes can be ordered by id.
-Additionally, nodes of a specific type can also be ordered by all properties annotated with `@OrderProperty`. As those might not be unique, the `id` is used to create a strict total order.
+Additionally, nodes of a specific type can also be ordered by all properties annotated with `@OrderProperty`.
+As those might not be unique, the `id` is used to create a strict total order.
 By default, all data types which are [comparable in Cypher](https://neo4j.com/docs/cypher-manual/current/syntax/operators/#cypher-ordering) are supported.
+Furthermore, `NodeProperty<*>` backed properties allow ordering by all orderable properties of the related node type, excluding `NodeProperty<*>` backed properties.
+
+:::caution
+
+Ordering on `NodeProperty<*>` does **NOT** take the authorization system into account.
+By making such a property orderable, it is possible to leak information about non-visible nodes.
+Only use when access to the related node is automatically granted!
+
+:::
 
 #### Additional orders
 

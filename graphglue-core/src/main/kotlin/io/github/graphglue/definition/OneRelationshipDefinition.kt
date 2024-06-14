@@ -51,4 +51,11 @@ class OneRelationshipDefinition(
         return GraphQLFieldDefinition.newFieldDefinition().name(graphQLName).description(graphQLDescription)
             .type(graphQLType).build()
     }
+
+    /**
+     * Whether the property is nullable in the database
+     * Does NOT consider the [GraphQLNullable] annotation
+     */
+    val isNullable: Boolean
+        get() = property.returnType.isMarkedNullable
 }

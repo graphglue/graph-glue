@@ -11,8 +11,9 @@ import org.neo4j.cypherdsl.core.SymbolicName
  * @param T the type of [Node] for which the order is defined
  * @param name name of the field in the cursor JSON
  * @param isNullable if true, this part can be null
+ * @param isComplex if true, this order part is ignored when generating relationship-based order parts
  */
-abstract class OrderPart<in T : Node>(val name: String, val isNullable: Boolean) {
+abstract class OrderPart<in T : Node>(val name: String, val isNullable: Boolean, val isComplex: Boolean) {
 
     /**
      * Gets the expression for the property on the database node

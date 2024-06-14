@@ -96,7 +96,7 @@ private fun <T : Node> generateOrderPartsForRelationshipProperty(
     additionalOrderBeans: Map<String, OrderPart<*>>
 ): List<OrderPart<T>> {
     require(relationshipDefinition is OneRelationshipDefinition) {
-        "Only one relationships are supported for ordering"
+        "Properties backed by NodeSetProperty are not supported for ordering"
     }
     val relatedNodeDefinition = nodeDefinitionCollection.getNodeDefinition(relationshipDefinition.nodeKClass)
     val relatedOrderParts = generateOrders(

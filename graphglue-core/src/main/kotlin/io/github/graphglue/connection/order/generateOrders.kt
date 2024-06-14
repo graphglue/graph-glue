@@ -3,6 +3,7 @@ package io.github.graphglue.connection.order
 import io.github.graphglue.definition.NodeDefinition
 import io.github.graphglue.definition.NodeDefinitionCollection
 import io.github.graphglue.definition.OneRelationshipDefinition
+import io.github.graphglue.definition.RelationshipDefinition
 import io.github.graphglue.graphql.extensions.springFindRepeatableAnnotations
 import io.github.graphglue.model.AdditionalOrder
 import io.github.graphglue.model.Node
@@ -54,6 +55,7 @@ fun <T : Node> generateOrders(
  * @param includeComplex whether to include complex properties (relationships) in the order
  * @param nodeDefinitionCollection the collection of all node definitions
  * @param additionalOrderBeans lookup for additional order parts
+ * @return the [OrderPart]s for the property (might be multiple for relationships)
  */
 private fun <T : Node> generateOrderPartsForProperty(
     nodeDefinition: NodeDefinition,
@@ -64,24 +66,12 @@ private fun <T : Node> generateOrderPartsForProperty(
 ): List<OrderPart<T>> {
     val relationshipDefinition = nodeDefinition.getRelationshipDefinitionOfPropertyOrNull(property)
     return if (relationshipDefinition != null) {
-        require(relationshipDefinition is OneRelationshipDefinition) {
-            "Only one relationships are supported for ordering"
-        }
-        if (!includeComplex) {
+        if (includeComplex) {
             emptyList()
         } else {
-            val relatedNodeDefinition = nodeDefinitionCollection.getNodeDefinition(relationshipDefinition.nodeKClass)
-            val relatedOrderParts = generateOrders(
-                relationshipDefinition.nodeKClass,
-                additionalOrderBeans,
-                nodeDefinitionCollection,
-                includeComplex = false
+            generateOrderPartsForRelationshipProperty(
+                relationshipDefinition, nodeDefinitionCollection, additionalOrderBeans
             )
-            relatedOrderParts.values.map { relatedOrderPart ->
-                RelationshipOrderPart(
-                    relationshipDefinition, relatedOrderPart, relatedNodeDefinition
-                )
-            }
         }
     } else {
         val neo4jProperty = nodeDefinition.persistentEntity.getPersistentProperty(property.name)
@@ -89,6 +79,33 @@ private fun <T : Node> generateOrderPartsForProperty(
             "Property $property has no corresponding Neo4j property"
         }
         listOf(PropertyOrderPart<T>(property, neo4jProperty.name))
+    }
+}
+
+/**
+ * Generates the [OrderPart]s for a relationship property
+ *
+ * @param relationshipDefinition the relationship definition
+ * @param nodeDefinitionCollection the collection of all node definitions
+ * @param additionalOrderBeans lookup for additional order parts
+ * @return the [OrderPart]s for the relationship property
+ */
+private fun <T : Node> generateOrderPartsForRelationshipProperty(
+    relationshipDefinition: RelationshipDefinition?,
+    nodeDefinitionCollection: NodeDefinitionCollection,
+    additionalOrderBeans: Map<String, OrderPart<*>>
+): List<OrderPart<T>> {
+    require(relationshipDefinition is OneRelationshipDefinition) {
+        "Only one relationships are supported for ordering"
+    }
+    val relatedNodeDefinition = nodeDefinitionCollection.getNodeDefinition(relationshipDefinition.nodeKClass)
+    val relatedOrderParts = generateOrders(
+        relationshipDefinition.nodeKClass, additionalOrderBeans, nodeDefinitionCollection, includeComplex = false
+    )
+    return relatedOrderParts.values.map { relatedOrderPart ->
+        RelationshipOrderPart(
+            relationshipDefinition, relatedOrderPart, relatedNodeDefinition
+        )
     }
 }
 

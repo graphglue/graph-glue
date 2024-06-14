@@ -28,7 +28,6 @@ import org.springframework.data.neo4j.core.mapping.Neo4jMappingContext
 import kotlin.reflect.full.allSuperclasses
 import kotlin.reflect.full.hasAnnotation
 import kotlin.reflect.full.isSubclassOf
-import kotlin.reflect.full.memberFunctions
 
 /**
  * Default implementation of [SchemaTransformer]

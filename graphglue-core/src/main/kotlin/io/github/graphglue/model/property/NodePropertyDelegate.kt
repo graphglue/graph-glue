@@ -16,7 +16,6 @@ import kotlin.reflect.KProperty1
 import kotlin.reflect.KTypeParameter
 import kotlin.reflect.KTypeProjection
 import kotlin.reflect.full.createType
-import kotlin.reflect.jvm.jvmErasure
 
 /**
  * Property for the one side of a relation

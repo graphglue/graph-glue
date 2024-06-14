@@ -1,8 +1,8 @@
 package io.github.graphglue.connection.filter.definition
 
 import io.github.graphglue.connection.filter.NodeFilterGenerator
-import io.github.graphglue.definition.NodeDefinition
 import io.github.graphglue.connection.filter.TypeFilterDefinitionEntry
+import io.github.graphglue.definition.NodeDefinition
 import io.github.graphglue.definition.NodeDefinitionCollection
 import io.github.graphglue.graphql.extensions.getPropertyName
 import io.github.graphglue.model.AdditionalFilter

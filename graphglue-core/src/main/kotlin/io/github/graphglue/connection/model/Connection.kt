@@ -3,8 +3,8 @@ package io.github.graphglue.connection.model
 import com.fasterxml.jackson.databind.ObjectMapper
 import graphql.execution.DataFetcherResult
 import graphql.schema.DataFetchingEnvironment
-import io.github.graphglue.data.execution.NodeQueryResult
 import io.github.graphglue.connection.order.Order
+import io.github.graphglue.data.execution.NodeQueryResult
 import io.github.graphglue.graphql.extensions.getDataFetcherResult
 import io.github.graphglue.model.Node
 

@@ -7,7 +7,6 @@ import com.expediagroup.graphql.generator.scalars.ID
 import graphql.schema.DataFetchingEnvironment
 import io.github.graphglue.data.LazyLoadingContext
 import io.github.graphglue.data.execution.NodeQuery
-import io.github.graphglue.data.execution.NodeQueryExecutor
 import io.github.graphglue.data.execution.NodeQueryOptions
 import io.github.graphglue.data.execution.NodeQueryResult
 import io.github.graphglue.graphql.extensions.requiredPermission
@@ -15,11 +14,8 @@ import io.github.graphglue.model.property.BasePropertyDelegate
 import io.github.graphglue.model.property.NodePropertyDelegate
 import io.github.graphglue.model.property.NodeSetPropertyDelegate
 import org.springframework.data.annotation.Transient
-import org.springframework.data.neo4j.core.convert.ConvertWith
 import org.springframework.data.neo4j.core.schema.GeneratedValue
 import org.springframework.data.neo4j.core.schema.Id
-import org.springframework.data.neo4j.core.schema.Property
-import java.util.*
 import kotlin.properties.PropertyDelegateProvider
 import kotlin.reflect.KProperty
 import kotlin.reflect.KProperty1

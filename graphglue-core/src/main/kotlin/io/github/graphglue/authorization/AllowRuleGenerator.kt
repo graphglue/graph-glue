@@ -1,7 +1,8 @@
 package io.github.graphglue.authorization
 
 import io.github.graphglue.model.Rule
-import org.neo4j.cypherdsl.core.*
+import org.neo4j.cypherdsl.core.Condition
+import org.neo4j.cypherdsl.core.Node
 
 /**
  * Interface for beans which can create allow authorization conditions for rules

@@ -2,8 +2,8 @@ package io.github.graphglue.connection.model
 
 import com.expediagroup.graphql.generator.annotations.GraphQLDescription
 import com.fasterxml.jackson.databind.ObjectMapper
-import io.github.graphglue.data.execution.NodeQueryOptions
 import io.github.graphglue.connection.order.Order
+import io.github.graphglue.data.execution.NodeQueryOptions
 import io.github.graphglue.model.Node
 
 /**

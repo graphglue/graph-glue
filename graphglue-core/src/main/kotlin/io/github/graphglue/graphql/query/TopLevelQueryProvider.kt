@@ -4,10 +4,10 @@ import com.expediagroup.graphql.generator.annotations.GraphQLIgnore
 import com.fasterxml.jackson.databind.ObjectMapper
 import graphql.execution.DataFetcherResult
 import graphql.schema.DataFetchingEnvironment
-import io.github.graphglue.definition.NodeDefinition
-import io.github.graphglue.graphql.extensions.requiredPermission
 import io.github.graphglue.connection.model.Connection
 import io.github.graphglue.data.execution.*
+import io.github.graphglue.definition.NodeDefinition
+import io.github.graphglue.graphql.extensions.requiredPermission
 import io.github.graphglue.model.Node
 import org.springframework.beans.factory.annotation.Autowired
 

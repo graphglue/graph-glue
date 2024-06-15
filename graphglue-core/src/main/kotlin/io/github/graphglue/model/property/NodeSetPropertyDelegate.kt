@@ -10,7 +10,6 @@ import io.github.graphglue.definition.NodeDefinition
 import io.github.graphglue.definition.NodeDefinitionCollection
 import io.github.graphglue.definition.RelationshipDefinition
 import io.github.graphglue.model.Node
-import org.neo4j.cypherdsl.core.Cypher
 import java.util.*
 import kotlin.reflect.KProperty1
 import kotlin.reflect.KTypeProjection

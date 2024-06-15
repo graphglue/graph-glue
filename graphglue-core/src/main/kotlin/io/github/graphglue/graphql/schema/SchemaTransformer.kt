@@ -1,9 +1,12 @@
 package io.github.graphglue.graphql.schema
 
 import com.expediagroup.graphql.generator.execution.KotlinDataFetcherFactoryProvider
-import graphql.schema.*
+import graphql.schema.GraphQLInputType
+import graphql.schema.GraphQLOutputType
+import graphql.schema.GraphQLSchema
 import io.github.graphglue.connection.filter.definition.FilterDefinitionCollection
 import io.github.graphglue.connection.filter.definition.SubFilterGenerator
+import io.github.graphglue.connection.order.OrderPart
 import io.github.graphglue.definition.NodeDefinition
 import io.github.graphglue.definition.NodeDefinitionCollection
 import io.github.graphglue.model.DomainNode
@@ -61,5 +64,10 @@ interface SchemaTransformer {
      * Whether to include the skip field in the connection
      */
     val includeSkipField: Boolean
+
+    /**
+     * Additional order beans
+     */
+    val additionalOrderBeans: Map<String, OrderPart<*>>
 }
 

@@ -3,8 +3,8 @@ package io.github.graphglue.definition
 import graphql.schema.DataFetchingEnvironment
 import graphql.schema.GraphQLFieldDefinition
 import org.neo4j.cypherdsl.core.Expression
-import org.neo4j.driver.Value
 import org.neo4j.cypherdsl.core.Node
+import org.neo4j.driver.Value
 
 /**
  * Definition of an extension field on a [Node]

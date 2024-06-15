@@ -4,7 +4,6 @@ import graphql.schema.GraphQLInputObjectType
 import graphql.schema.GraphQLInputType
 import io.github.graphglue.connection.filter.definition.FilterEntryDefinition
 import org.neo4j.cypherdsl.core.Condition
-import org.neo4j.cypherdsl.core.Expression
 import org.neo4j.cypherdsl.core.Parameter
 import org.neo4j.cypherdsl.core.Property
 

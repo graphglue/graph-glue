@@ -6,7 +6,7 @@ import graphql.schema.*
 import io.github.graphglue.connection.filter.definition.generateFilterDefinition
 import io.github.graphglue.connection.model.Connection
 import io.github.graphglue.connection.model.Edge
-import io.github.graphglue.connection.order.OrderField
+import io.github.graphglue.connection.order.OrderPart
 import io.github.graphglue.connection.order.generateOrders
 import io.github.graphglue.graphql.extensions.getSimpleName
 import io.github.graphglue.graphql.schema.SchemaTransformationContext
@@ -27,7 +27,9 @@ fun generateConnectionFieldDefinition(
 ): GraphQLFieldDefinition {
     val nodeName = nodeType.getSimpleName()
     val filter = generateFilterDefinition(nodeType, transformer.subFilterGenerator)
-    val orders = generateOrders(nodeType, transformer.mappingContext.getPersistentEntity(nodeType.java)!!)
+    val orders = generateOrders(
+        nodeType, transformer.additionalOrderBeans, transformer.nodeDefinitionCollection
+    )
     val builder = GraphQLFieldDefinition.newFieldDefinition().name(name).description(description).argument {
         it.name("filter").description("Filter for specific items in the connection")
             .type(filter.toGraphQLType(transformer.inputTypeCache))
@@ -119,33 +121,34 @@ private fun generateEdgeGraphQLType(nodeName: String, transformer: SchemaTransfo
  * [Node] type
  *
  * @param nodeName the name of the [Node]
- * @param orders the possible [OrderField]s for the [Node] type with the enum name as key
+ * @param orders the possible [OrderPart]s for the [Node] type with the enum name as key
  * @return the generated [GraphQLInputType] used to specific the order in which the nodes of a connection are
  *         returned
  */
 private fun generateOrderGraphQLType(
-    nodeName: String, orders: Map<String, OrderField<*>>, transformer: SchemaTransformationContext
+    nodeName: String, orders: Map<String, OrderPart<*>>, transformer: SchemaTransformationContext
 ): GraphQLInputType {
     val name = "${nodeName}Order"
-    return transformer.inputTypeCache.computeIfAbsent(name, GraphQLTypeReference(name)) {
+    val inputType = transformer.inputTypeCache.computeIfAbsent(name, GraphQLTypeReference(name)) {
         GraphQLInputObjectType.newInputObject().name(name).description("Defines the order of a $nodeName list").field {
             it.name("field").description("The field to order by, defaults to ID")
-                .type(generateOrderFieldGraphQLType(nodeName, orders, transformer)).defaultValueLiteral(EnumValue("ID"))
+                .type(generateOrderPartGraphQLType(nodeName, orders, transformer)).defaultValueLiteral(EnumValue("ID"))
         }.field {
             it.name("direction").description("The direction to order by, defaults to ASC")
                 .type(GraphQLTypeReference("OrderDirection")).defaultValueLiteral(EnumValue("ASC"))
         }.build()
     }
+    return GraphQLList(inputType)
 }
 
 /**
  * Generates the enum which defines all possible order fields
  *
  * @param nodeName the name of the [Node]
- * @param orders the possible [OrderField]s for the [Node] type with the enum name as key
+ * @param orders the possible [OrderPart]s for the [Node] type with the enum name as key
  */
-private fun generateOrderFieldGraphQLType(
-    nodeName: String, orders: Map<String, OrderField<*>>, transformer: SchemaTransformationContext
+private fun generateOrderPartGraphQLType(
+    nodeName: String, orders: Map<String, OrderPart<*>>, transformer: SchemaTransformationContext
 ): GraphQLInputType {
     val name = "${nodeName}OrderField"
     return transformer.inputTypeCache.computeIfAbsent(name, GraphQLTypeReference(name)) {

@@ -5,8 +5,8 @@ import com.expediagroup.graphql.generator.annotations.GraphQLIgnore
 import graphql.schema.GraphQLFieldDefinition
 import io.github.graphglue.data.execution.NodeQueryResult
 import io.github.graphglue.data.repositories.RelationshipDiff
-import io.github.graphglue.graphql.schema.SchemaTransformationContext
 import io.github.graphglue.graphql.extensions.getPropertyName
+import io.github.graphglue.graphql.schema.SchemaTransformationContext
 import io.github.graphglue.model.Direction
 import io.github.graphglue.model.Node
 import io.github.graphglue.model.NodeRelationship

@@ -26,7 +26,7 @@ type Query {
         filter: TypeFilterInput,
         first: Int,
         last: Int,
-        orderBy: TypeOrder
+        orderBy: [TypeOrder]
     ): TypeConnection
 }
 

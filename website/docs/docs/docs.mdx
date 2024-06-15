@@ -82,6 +82,14 @@ If you want to use Spring Data Repositories, please make sure to annotate your `
 
 :::
 
+## Database setup
+
+GraphGlue needs a Neo4j database to work.
+Only the latest 5.x version is officially supported, however older 5.x versions might work as well.
+Due to how we check permissions, we recommend using the [Graphglue Neo4j authorization plugin](https://github.com/graphglue/authorization-procedure).
+Additionally, due to a memory reporting bug in Neo4j when using `UNWIND` in combination with `ORDER BY` and `LIMIT`, we recommend setting `dbms.memory.transaction.total.max` to `0`, disabling the limit.
+A docker image based on the community edition of the official Neo4j image is available at `ghcr.io/graphglue/neo4j:main`. 
+
 ## Features
 
 - Declare relations in Kotlin

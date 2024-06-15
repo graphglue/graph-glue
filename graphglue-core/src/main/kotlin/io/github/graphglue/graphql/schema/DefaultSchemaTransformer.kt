@@ -9,6 +9,7 @@ import io.github.graphglue.connection.filter.definition.FilterDefinitionCollecti
 import io.github.graphglue.connection.filter.definition.SubFilterGenerator
 import io.github.graphglue.connection.generateConnectionFieldDefinition
 import io.github.graphglue.connection.generateSearchFieldDefinition
+import io.github.graphglue.connection.order.OrderPart
 import io.github.graphglue.definition.ExtensionFieldDefinition
 import io.github.graphglue.definition.NodeDefinition
 import io.github.graphglue.definition.NodeDefinitionCollection
@@ -27,7 +28,6 @@ import org.springframework.data.neo4j.core.mapping.Neo4jMappingContext
 import kotlin.reflect.full.allSuperclasses
 import kotlin.reflect.full.hasAnnotation
 import kotlin.reflect.full.isSubclassOf
-import kotlin.reflect.full.memberFunctions
 
 /**
  * Default implementation of [SchemaTransformer]
@@ -42,6 +42,7 @@ import kotlin.reflect.full.memberFunctions
  * @param includeSkipField if true, connections provide the non-standard skip field
  * @param reactiveNeo4jClient used to execute Cypher queries
  * @param renderer used to render Cypher queries
+ * @param additionalOrderBeans lookup for additional order parts
  */
 class DefaultSchemaTransformer(
     private val oldSchema: GraphQLSchema,
@@ -51,7 +52,8 @@ class DefaultSchemaTransformer(
     override val subFilterGenerator: SubFilterGenerator,
     override val includeSkipField: Boolean,
     private val reactiveNeo4jClient: ReactiveNeo4jClient,
-    private val renderer: Renderer
+    private val renderer: Renderer,
+    override val additionalOrderBeans: Map<String, OrderPart<*>>
 ) : SchemaTransformer {
 
     override val inputTypeCache = CacheMap<String, GraphQLInputType>()

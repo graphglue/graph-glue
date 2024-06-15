@@ -8,21 +8,20 @@ import java.util.*
  * Order defined by an [OrderField] and an [OrderDirection]
  *
  * @param T the type of [Node] to which this order is applied
- * @param direction defines the direction of the order, e.g. ascending or descending
- * @param field defines how to order, e.g. by which properties of the node
+ * @param fields defines how to order, e.g. by which properties of the node
  */
-class Order<in T : Node>(val direction: OrderDirection, val field: OrderField<T>) {
+class Order<in T : Node>(val fields: List<OrderField<T>>) {
 
     /**
      * Generates a cursor for a [node], e.g. a unique identifier for the provided node based on the properties
-     * specified by [field]
+     * specified by [fields]
      *
      * @param node the [Node] to generate the cursor for
      * @param objectMapper necessary for JSON encoding
      * @return the cursor as base64 encoded JSON
      */
     fun generateCursor(node: T, objectMapper: ObjectMapper): String {
-        val properties = this.field.parts.associate { it.name to it.getValue(node) }
+        val properties = this.fields.associate { it.part.name to node.orderFields!![it.part.name] }
         return Base64.getEncoder().encodeToString(objectMapper.writeValueAsBytes(properties))
     }
 
@@ -37,7 +36,7 @@ class Order<in T : Node>(val direction: OrderDirection, val field: OrderField<T>
     fun parseCursor(cursor: String, objectMapper: ObjectMapper): Map<String, Any?> {
         val decoded = Base64.getDecoder().decode(cursor)
         val result = objectMapper.readValue<Map<String, Any?>>(decoded, objectMapper.constructType(Map::class.java))
-        if (result.keys.toSet() != field.parts.map { it.name }.toSet()) {
+        if (result.keys.toSet() != fields.map { it.part.name }.toSet()) {
             throw IllegalArgumentException("Invalid cursor: $cursor")
         }
         return result

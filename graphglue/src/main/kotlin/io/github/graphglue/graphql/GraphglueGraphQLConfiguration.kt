@@ -22,6 +22,7 @@ import io.github.graphglue.connection.filter.definition.FilterEntryDefinition
 import io.github.graphglue.connection.filter.definition.SubFilterGenerator
 import io.github.graphglue.connection.model.PageInfo
 import io.github.graphglue.connection.order.OrderDirection
+import io.github.graphglue.connection.order.OrderPart
 import io.github.graphglue.definition.NodeDefinition
 import io.github.graphglue.definition.NodeDefinitionCollection
 import io.github.graphglue.graphql.extensions.toTopLevelObjects
@@ -98,6 +99,7 @@ class GraphglueGraphQLConfiguration {
      * @param filters type based definitions for filters, necessary for [SubFilterGenerator]
      * @param dataFetcherFactoryProvider provides property and function data fetchers
      * @param additionalFilterBeans filters defined by bean name instead of type, by bean name
+     * @param additionalOrderBeans order parts defined by bean name instead of type, by bean name
      * @param nodeDefinitionCollection used to get [NodeDefinition]s
      * @param nodeFilterGenerators used to create
      * @param neo4jMappingContext necessary for [DefaultSchemaTransformer]
@@ -117,6 +119,7 @@ class GraphglueGraphQLConfiguration {
         dataFetcherFactoryProvider: KotlinDataFetcherFactoryProvider,
         filters: List<TypeFilterDefinitionEntry>,
         additionalFilterBeans: Map<String, FilterEntryDefinition>,
+        additionalOrderBeans: Map<String, OrderPart<*>>,
         nodeDefinitionCollection: NodeDefinitionCollection,
         nodeFilterGenerators: List<NodeFilterGenerator>,
         neo4jMappingContext: Neo4jMappingContext,
@@ -139,7 +142,7 @@ class GraphglueGraphQLConfiguration {
         val schemaTransformer = DefaultSchemaTransformer(
             schema, neo4jMappingContext, nodeDefinitionCollection, dataFetcherFactoryProvider, SubFilterGenerator(
                 filters, CacheMap(), nodeDefinitionCollection, additionalFilterBeans, nodeFilterGenerators
-            ), graphglueConfig.includeSkipField, reactiveNeo4jClient, renderer
+            ), graphglueConfig.includeSkipField, reactiveNeo4jClient, renderer, additionalOrderBeans
         )
         if (config.printSchema) {
             logger.info("\n${schemaTransformer.schema.print()}")

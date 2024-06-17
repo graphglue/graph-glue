@@ -5,7 +5,6 @@ import io.github.graphglue.definition.OneRelationshipDefinition
 import io.github.graphglue.model.Node
 import org.neo4j.cypherdsl.core.Cypher
 import org.neo4j.cypherdsl.core.Expression
-import org.neo4j.cypherdsl.core.Functions
 import org.neo4j.cypherdsl.core.SymbolicName
 
 /**
@@ -27,7 +26,7 @@ class RelationshipOrderPart<T : Node>(
 
     override fun getExpression(node: SymbolicName): Expression {
         val relatedNode = relatedNodeDefinition.node().named(node.value + "_")
-        return Functions.head(
+        return Cypher.head(
             Cypher.listBasedOn(
                 relationshipDefinition.generateRelationship(
                     Cypher.anyNode(node), relatedNode

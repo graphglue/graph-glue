@@ -2,7 +2,7 @@ package io.github.graphglue.connection.filter.model
 
 import io.github.graphglue.connection.filter.definition.FilterEntryDefinition
 import org.neo4j.cypherdsl.core.Condition
-import org.neo4j.cypherdsl.core.Conditions
+import org.neo4j.cypherdsl.core.Cypher
 import org.neo4j.cypherdsl.core.Node
 
 /**
@@ -15,9 +15,9 @@ open class SimpleObjectFilter(definition: FilterEntryDefinition, val entries: Li
     FilterEntry(definition) {
     override fun generateCondition(node: Node): Condition {
         return if (entries.isEmpty()) {
-            Conditions.isTrue()
+            Cypher.isTrue()
         } else {
-            entries.fold(Conditions.noCondition()) { condition, entry ->
+            entries.fold(Cypher.noCondition()) { condition, entry ->
                 condition.and(entry.generateCondition(node))
             }
         }

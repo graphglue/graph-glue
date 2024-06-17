@@ -2,7 +2,7 @@ package io.github.graphglue.connection.filter.model
 
 import io.github.graphglue.data.execution.CypherConditionGenerator
 import org.neo4j.cypherdsl.core.Condition
-import org.neo4j.cypherdsl.core.Conditions
+import org.neo4j.cypherdsl.core.Cypher
 import org.neo4j.cypherdsl.core.Node
 
 /**
@@ -23,7 +23,7 @@ data class AndMetaFilter(val subNodeFilters: List<NodeFilter>) : MetaFilter() {
     }
 
     override fun generateCondition(node: Node): Condition {
-        return subNodeFilters.fold(Conditions.noCondition()) { condition, subNodeFilter ->
+        return subNodeFilters.fold(Cypher.noCondition()) { condition, subNodeFilter ->
             condition.and(subNodeFilter.generateCondition(node))
         }
     }
@@ -42,7 +42,7 @@ data class OrMetaFilter(val subNodeFilters: List<NodeFilter>) : MetaFilter() {
     }
 
     override fun generateCondition(node: Node): Condition {
-        return subNodeFilters.fold(Conditions.noCondition()) { condition, subNodeFilter ->
+        return subNodeFilters.fold(Cypher.noCondition()) { condition, subNodeFilter ->
             condition.or(subNodeFilter.generateCondition(node))
         }
     }

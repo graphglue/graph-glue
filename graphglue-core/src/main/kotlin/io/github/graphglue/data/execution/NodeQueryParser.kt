@@ -11,9 +11,7 @@ import io.github.graphglue.connection.order.IdOrder
 import io.github.graphglue.connection.order.parseOrder
 import io.github.graphglue.definition.*
 import io.github.graphglue.model.Node
-import org.neo4j.cypherdsl.core.Conditions
 import org.neo4j.cypherdsl.core.Cypher
-import org.neo4j.cypherdsl.core.Predicates
 import kotlin.reflect.full.isSubclassOf
 
 /**
@@ -86,10 +84,10 @@ class NodeQueryParser(
         val idParameter = Cypher.anonParameter(parentNode.rawId)
         val rootCypherNode = parentDefinition.node().named("a_related").withProperties(mapOf("id" to idParameter))
         val additionalConditions = listOf(CypherConditionGenerator { node ->
-            Predicates.any(Cypher.name("a_related_alias")).`in`(
+            Cypher.any(Cypher.name("a_related_alias")).`in`(
                 Cypher.listBasedOn(relationshipDefinition.generateRelationship(rootCypherNode, node))
                     .returning(rootCypherNode)
-            ).where(Conditions.isTrue())
+            ).where(Cypher.isTrue())
         })
         val authorizationCondition = getAuthorizationConditionWithRelationshipDefinition(
             requiredPermission, relationshipDefinition

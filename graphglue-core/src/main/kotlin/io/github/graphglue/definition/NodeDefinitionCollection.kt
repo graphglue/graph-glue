@@ -304,7 +304,7 @@ class NodeDefinitionCollection(
         } else {
             val allowRules = authorizationAllowRules[permission.name]!![nodeDefinition]!!
             if (allowRules.isEmpty()) {
-                CypherConditionGenerator { Conditions.isFalse() }
+                CypherConditionGenerator { Cypher.isFalse() }
             } else {
                 CypherConditionGenerator { node ->
                     generateFullAuthorizationCondition(allowRules, node, permission)
@@ -347,23 +347,23 @@ class NodeDefinitionCollection(
 
         val nodeInPath = Cypher.name("a__2")
         val nodeDisallowRule = generateDisallowRule(permission, getNodeDefinition<Node>(), Cypher.anyNode(nodeInPath))
-        val disallowRule = Predicates.all(nodeInPath).`in`(Functions.nodes(pathName)).where(nodeDisallowRule)
+        val disallowRule = Cypher.all(nodeInPath).`in`(Cypher.nodes(pathName)).where(nodeDisallowRule)
 
-        val allowExistRules = allowRules.fold(Conditions.noCondition()) { oldCondition, rule ->
+        val allowExistRules = allowRules.fold(Cypher.noCondition()) { oldCondition, rule ->
             val nodeDefinitionsCondition =
-                rule.nodeDefinitions.fold(Conditions.noCondition()) { oldNodeCondition, definition ->
+                rule.nodeDefinitions.fold(Cypher.noCondition()) { oldNodeCondition, definition ->
                     oldNodeCondition.or(endNode.hasLabels(definition.primaryLabel))
                 }
             val condition = if (rule.allowRule != null) {
                 val ruleGenerator = beanFactory.getBean(rule.allowRule.beanRef, AllowRuleGenerator::class.java)
                 ruleGenerator.generateRule(endNode, rule.allowRule, permission)
             } else {
-                Conditions.noCondition()
+                Cypher.noCondition()
             }
             val conditionToApply = nodeDefinitionsCondition.and(condition)
             oldCondition.or(conditionToApply)
         }
-        return Predicates.exists(
+        return Cypher.exists(
             statement.where(disallowRule.and(allowExistRules)).returning(Cypher.literalTrue()).build()
         )
     }
@@ -416,10 +416,10 @@ class NodeDefinitionCollection(
         val nodeDefinitions = nodeDefinitionHierarchyLookup[nodeDefinition]!! intersect disallowRules.keys
         val rules = nodeDefinitions.map { it to disallowRules[it]!! }
         return if (rules.isEmpty()) {
-            Conditions.isTrue()
+            Cypher.isTrue()
         } else {
-            rules.fold(Conditions.noCondition()) { oldCondition, (definition, nodeDisallowRules) ->
-                val disallowCondition = nodeDisallowRules.fold(Conditions.noCondition()) { oldDisallowCondition, rule ->
+            rules.fold(Cypher.noCondition()) { oldCondition, (definition, nodeDisallowRules) ->
+                val disallowCondition = nodeDisallowRules.fold(Cypher.noCondition()) { oldDisallowCondition, rule ->
                     val ruleGenerator = beanFactory.getBean(rule.beanRef, DisallowRuleGenerator::class.java)
                     oldDisallowCondition.and(
                         ruleGenerator.generateRule(

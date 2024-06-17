@@ -60,7 +60,7 @@ abstract class NodeRelationshipFilterEntry(
 class AllNodeRelationshipFilterEntry(
     definition: NodeSubFilterDefinition, filter: NodeSubFilter, permission: Permission?
 ) : NodeRelationshipFilterEntry(definition, filter, permission) {
-    override fun generatePredicate(variable: SymbolicName) = Predicates.all(variable)
+    override fun generatePredicate(variable: SymbolicName) = Cypher.all(variable)
 }
 
 /**
@@ -73,7 +73,7 @@ class AllNodeRelationshipFilterEntry(
 class AnyNodeRelationshipFilterEntry(
     definition: NodeSubFilterDefinition, filter: NodeSubFilter, permission: Permission?
 ) : NodeRelationshipFilterEntry(definition, filter, permission) {
-    override fun generatePredicate(variable: SymbolicName) = Predicates.any(variable)
+    override fun generatePredicate(variable: SymbolicName) = Cypher.any(variable)
 }
 
 /**
@@ -86,5 +86,5 @@ class AnyNodeRelationshipFilterEntry(
 class NoneNodeRelationshipFilterEntry(
     definition: NodeSubFilterDefinition, filter: NodeSubFilter, permission: Permission?
 ) : NodeRelationshipFilterEntry(definition, filter, permission) {
-    override fun generatePredicate(variable: SymbolicName) = Predicates.none(variable)
+    override fun generatePredicate(variable: SymbolicName) = Cypher.none(variable)
 }

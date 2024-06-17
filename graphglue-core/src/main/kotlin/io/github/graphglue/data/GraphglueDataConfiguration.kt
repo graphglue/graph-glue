@@ -12,20 +12,19 @@ import io.github.graphglue.definition.NodeDefinitionCollection
 import io.github.graphglue.model.Node
 import io.github.graphglue.model.property.BasePropertyDelegate
 import org.neo4j.cypherdsl.core.renderer.Renderer
+import org.neo4j.driver.Driver
 import org.neo4j.driver.types.MapAccessor
 import org.springframework.beans.factory.BeanFactory
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
-import org.springframework.data.neo4j.core.Neo4jClient
-import org.springframework.data.neo4j.core.Neo4jOperations
-import org.springframework.data.neo4j.core.ReactiveNeo4jClient
-import org.springframework.data.neo4j.core.ReactiveNeo4jTemplate
+import org.springframework.data.neo4j.core.*
 import org.springframework.data.neo4j.core.mapping.Neo4jMappingContext
 import org.springframework.data.neo4j.core.mapping.Neo4jPersistentEntity
 import org.springframework.data.neo4j.core.mapping.PersistentPropertyCharacteristics
 import org.springframework.data.neo4j.core.mapping.PersistentPropertyCharacteristicsProvider
 import org.springframework.data.neo4j.core.mapping.callback.AfterConvertCallback
+import org.springframework.data.neo4j.repository.config.Neo4jRepositoryConfigurationExtension
 import java.util.*
 import kotlin.reflect.full.isSuperclassOf
 import org.neo4j.cypherdsl.core.renderer.Configuration as CypherDslConfiguration
@@ -143,6 +142,20 @@ class GraphglueDataConfiguration {
                 PersistentPropertyCharacteristics.useDefaults()
             }
         }
+    }
+
+    /**
+     * Creates the [Neo4jClient]
+     * For some reason, the one provided by the autoconfiguration does not exist
+     *
+     * @param driver driver used to connect to the database
+     * @param databaseNameProvider provider used to get the database name
+     * @return the created [Neo4jClient]
+     */
+    @Bean(Neo4jRepositoryConfigurationExtension.DEFAULT_NEO4J_CLIENT_BEAN_NAME)
+    @ConditionalOnMissingBean
+    fun neo4jClient(driver: Driver, databaseNameProvider: DatabaseSelectionProvider): Neo4jClient {
+        return Neo4jClient.create(driver, databaseNameProvider)
     }
 
     /**

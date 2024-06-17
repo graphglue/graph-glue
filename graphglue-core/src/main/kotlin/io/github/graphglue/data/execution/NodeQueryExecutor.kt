@@ -130,7 +130,7 @@ class NodeQueryExecutor(
         val options = query.options
         val filteredBuilder = applyFilterConditions(options.filters, builder, node)
         val allNodesCollected = generateUniqueName()
-        val collectedNodesBuilder = filteredBuilder.with(Functions.collect(node).`as`(allNodesCollected))
+        val collectedNodesBuilder = filteredBuilder.with(Cypher.collect(node).`as`(allNodesCollected))
         val (totalCountBuilder, totalCount) = applyTotalCountIfRequired(
             options, collectedNodesBuilder, allNodesCollected, emptyList()
         )
@@ -170,7 +170,7 @@ class NodeQueryExecutor(
         val resultNodes = generateUniqueName()
         val nodes = generateUniqueName()
         val collectedBuilder = withResultBuilder.with(
-            Functions.collect(resultNode).`as`(resultNodes), Functions.collect(node).`as`(nodes)
+            Cypher.collect(resultNode).`as`(resultNodes), Cypher.collect(node).`as`(nodes)
         )
         val (subPartsBuilder, returnNames) = createPartsSubQueriesRecursive(collectedBuilder, query, nodes, 1)
         val (statement, returnName) = createRootReturnStatement(
@@ -200,8 +200,8 @@ class NodeQueryExecutor(
         val allNodesCollected = generateUniqueName()
         val allResultNodesCollected = generateUniqueName()
         val collectedNodesBuilder = builderWithResult.with(
-            Functions.collect(node).`as`(allNodesCollected),
-            Functions.collect(resultNodeName).`as`(allResultNodesCollected)
+            Cypher.collect(node).`as`(allNodesCollected),
+            Cypher.collect(resultNodeName).`as`(allResultNodesCollected)
         )
         val (subPartsBuilder, returnNames) = createPartsSubQueriesRecursive(
             collectedNodesBuilder, query, allNodesCollected, 1
@@ -314,7 +314,7 @@ class NodeQueryExecutor(
     ) = if (filters.isEmpty()) {
         builder
     } else {
-        val filter = filters.fold(Conditions.noCondition()) { condition, filter ->
+        val filter = filters.fold(Cypher.noCondition()) { condition, filter ->
             condition.and(filter.generateCondition(node))
         }
         builder.where(filter)
@@ -357,7 +357,7 @@ class NodeQueryExecutor(
         totalCount: SymbolicName
     ) = builder.with(
         listOf(
-            Functions.size(allNodesCollected).`as`(totalCount), allNodesCollected
+            Cypher.size(allNodesCollected).`as`(totalCount), allNodesCollected
         ) + additionalNames
     )
 
@@ -435,7 +435,7 @@ class NodeQueryExecutor(
         } else {
             resultBuilder
         }.with(
-            Functions.collect(resultNode).`as`(collectedResultNodes), Functions.collect(nodeAlias).`as`(collectedNodes)
+            Cypher.collect(resultNode).`as`(collectedResultNodes), Cypher.collect(nodeAlias).`as`(collectedNodes)
         ).returning(collectedResultNodes, collectedNodes).build()
         return StatementWithResultNodesAndNodes(statement, collectedResultNodes, collectedNodes)
     }
@@ -505,7 +505,7 @@ class NodeQueryExecutor(
         val builderWithOrderVariables = builder.with(orderVariables + nodeAlias)
         if (options.after != null || options.before != null) {
             require(orderContext != null) { "Can't use after/before without orderBy"}
-            var filterCondition = Conditions.noCondition()
+            var filterCondition = Cypher.noCondition()
             if (options.after != null) {
                 filterCondition = filterCondition.and(
                     generateCursorFilterExpression(options.after, orderContext, true)
@@ -574,7 +574,7 @@ class NodeQueryExecutor(
         cursor: Map<String, Any?>, orderContext: OrderContext, forwards: Boolean
     ): Condition {
         return orderContext.order.fields.asReversed()
-            .foldIndexed(Conditions.noCondition()) { index, filterExpression, field ->
+            .foldIndexed(Cypher.noCondition()) { index, filterExpression, field ->
                 val part = field.part
                 val realForwards = if (field.direction == OrderDirection.ASC) forwards else !forwards
                 var newFilterExpression = filterExpression
@@ -646,7 +646,7 @@ class NodeQueryExecutor(
         val nodes = generateUniqueName()
         return StatementWithResultNodesAndNodes(
             builder.with(node).call(innerStatement).returning(
-                Functions.collect(innerResultNodes).`as`(resultNodes), Functions.collect(innerNodes).`as`(nodes)
+                Cypher.collect(innerResultNodes).`as`(resultNodes), Cypher.collect(innerNodes).`as`(nodes)
             ).build(), resultNodes, nodes
         )
     }
@@ -659,7 +659,7 @@ class NodeQueryExecutor(
      * @return the generated condition
      */
     private fun generateLabelCondition(node: Node, entry: NodeQueryPartEntry): Condition {
-        return entry.onlyOnTypes.fold(Conditions.noCondition()) { condition, nodeDefinition ->
+        return entry.onlyOnTypes.fold(Cypher.noCondition()) { condition, nodeDefinition ->
             condition.or(node.hasLabels(nodeDefinition.primaryLabel))
         }
     }
@@ -705,7 +705,7 @@ class NodeQueryExecutor(
         val options = nodeQuery.options
         val filteredBuilder = applyFilterConditions(options.filters, builder, node)
         val allNodesCollected = generateUniqueName()
-        val collectedNodesBuilder = filteredBuilder.with(Functions.collect(node).`as`(allNodesCollected), parentNode)
+        val collectedNodesBuilder = filteredBuilder.with(Cypher.collect(node).`as`(allNodesCollected), parentNode)
         val (totalCountBuilder, totalCount) = applyTotalCountIfRequired(
             options, collectedNodesBuilder, allNodesCollected, listOf(parentNode.requiredSymbolicName)
         )

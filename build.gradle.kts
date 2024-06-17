@@ -1,5 +1,6 @@
 import org.jetbrains.dokka.gradle.DokkaTask
 import org.jetbrains.dokka.gradle.DokkaTaskPartial
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
@@ -23,11 +24,9 @@ allprojects {
         mavenCentral()
     }
     tasks.withType<KotlinCompile> {
-        kotlinOptions.jvmTarget = javaVersion
-    }
-    tasks.withType<JavaCompile> {
-        sourceCompatibility = javaVersion
-        targetCompatibility = javaVersion
+        compilerOptions {
+            jvmTarget.set(JvmTarget.JVM_17)
+        }
     }
 }
 

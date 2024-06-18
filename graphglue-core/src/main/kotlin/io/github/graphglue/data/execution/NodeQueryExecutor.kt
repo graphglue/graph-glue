@@ -834,7 +834,7 @@ class NodeQueryExecutor(
         val orderFields = node.orderFields!!
         val orderValue = value[ORDER_KEY]
         if (!orderValue.isNull) {
-            for ((fieldName, fieldValue) in value[ORDER_KEY].asMap ()) {
+            for ((fieldName, fieldValue) in orderValue.asMap ()) {
                 if (fieldName !in orderFields) {
                     orderFields[fieldName] = fieldValue
                 }

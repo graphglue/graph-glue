@@ -67,11 +67,11 @@ private fun <T : Node> generateOrderPartsForProperty(
     val relationshipDefinition = nodeDefinition.getRelationshipDefinitionOfPropertyOrNull(property)
     return if (relationshipDefinition != null) {
         if (includeComplex) {
-            emptyList()
-        } else {
             generateOrderPartsForRelationshipProperty(
                 relationshipDefinition, nodeDefinitionCollection, additionalOrderBeans
             )
+        } else {
+            emptyList()
         }
     } else {
         val neo4jProperty = nodeDefinition.persistentEntity.getPersistentProperty(property.name)

@@ -138,7 +138,7 @@ private fun generateOrderGraphQLType(
                 .type(GraphQLTypeReference("OrderDirection")).defaultValueLiteral(EnumValue("ASC"))
         }.build()
     }
-    return GraphQLList(inputType)
+    return GraphQLList(GraphQLNonNull(inputType))
 }
 
 /**

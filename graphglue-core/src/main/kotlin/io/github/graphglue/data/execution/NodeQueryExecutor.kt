@@ -832,9 +832,12 @@ class NodeQueryExecutor(
             node.orderFields = mutableMapOf()
         }
         val orderFields = node.orderFields!!
-        for ((fieldName, fieldValue) in value[ORDER_KEY].asMap ()) {
-            if (fieldName !in orderFields) {
-                orderFields[fieldName] = fieldValue
+        val orderValue = value[ORDER_KEY]
+        if (!orderValue.isNull) {
+            for ((fieldName, fieldValue) in value[ORDER_KEY].asMap ()) {
+                if (fieldName !in orderFields) {
+                    orderFields[fieldName] = fieldValue
+                }
             }
         }
         return node

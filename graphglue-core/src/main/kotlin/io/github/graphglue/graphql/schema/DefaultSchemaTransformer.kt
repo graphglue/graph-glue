@@ -160,9 +160,11 @@ class DefaultSchemaTransformer(
     ): GraphQLInterfaceType {
         return type.transform {
             for (relationshipDefinition in nodeDefinition.relationshipDefinitions.values) {
-                val field = relationshipDefinition.generateFieldDefinition(context)
-                it.field(field)
-                registerRelationshipDataFetcher(relationshipDefinition, context, nodeDefinition)
+                if (relationshipDefinition.isGraphQLVisible) {
+                    val field = relationshipDefinition.generateFieldDefinition(context)
+                    it.field(field)
+                    registerRelationshipDataFetcher(relationshipDefinition, context, nodeDefinition)
+                }
             }
             for (extensionFieldDefinition in nodeDefinition.extensionFieldDefinitions.values) {
                 it.field(extensionFieldDefinition.field)

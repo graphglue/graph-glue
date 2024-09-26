@@ -208,7 +208,7 @@ class DefaultSchemaTransformer(
         val dataFetcherFactory = DataFetcherFactory { dataFetcherFactoryEnvironment ->
             val functionDataFetcher = functionDataFetcherFactory.get(dataFetcherFactoryEnvironment)
             DataFetcher {
-                val node = it.getSource<Node>()
+                val node = it.getSource<Node>()!!
                 val environment = DelegateDataFetchingEnvironment(it, node.getProperty<Node>(kProperty))
                 functionDataFetcher.get(environment)
             }
@@ -231,7 +231,7 @@ class DefaultSchemaTransformer(
     ) {
         val dataFetcherFactory = DataFetcherFactory { _ ->
             DataFetcher {
-                val node = it.getSource<Node>()
+                val node = it.getSource<Node>()!!
                 val extensionFields = node.extensionFields
                 if (extensionFields != null) {
                     return@DataFetcher extensionFields[it.field.resultKey]

@@ -27,7 +27,7 @@ class DefaultIndexCreator(val nodeDefinitionCollection: NodeDefinitionCollection
                     subNodeDefinition.nodeType.memberProperties.filter { it.hasAnnotation<SearchProperty>() }.map {
                         nodeDefinition.persistentEntity.getPersistentProperty(it.name)!!.propertyName
                     }
-                }
+                }.toSet()
                 val primaryLabel = nodeDefinition.primaryLabel
                 neo4jClient.query("CREATE FULLTEXT INDEX $searchIndexName IF NOT EXISTS FOR (n:$primaryLabel) ON EACH [${
                     searchProperties.joinToString(", ") { "n.$it" }

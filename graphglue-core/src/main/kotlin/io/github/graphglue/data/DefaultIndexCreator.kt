@@ -4,6 +4,7 @@ import io.github.graphglue.definition.NodeDefinitionCollection
 import io.github.graphglue.model.SearchProperty
 import org.springframework.data.neo4j.core.Neo4jClient
 import kotlin.reflect.full.hasAnnotation
+import kotlin.reflect.full.isSubclassOf
 import kotlin.reflect.full.memberProperties
 
 /**
@@ -21,10 +22,12 @@ class DefaultIndexCreator(val nodeDefinitionCollection: NodeDefinitionCollection
         for (nodeDefinition in nodeDefinitionCollection) {
             val searchIndexName = nodeDefinition.searchIndexName
             if (searchIndexName != null) {
-                val searchProperties =
-                    nodeDefinition.nodeType.memberProperties.filter { it.hasAnnotation<SearchProperty>() }.map {
-                        nodeDefinition.persistentEntity.getPersistentProperty(it.name)!!.propertyName
+                val subNodeDefinitions = nodeDefinitionCollection.filter { it.nodeType.isSubclassOf(nodeDefinition.nodeType) }
+                val searchProperties = subNodeDefinitions.flatMap { subNodeDefinition ->
+                    subNodeDefinition.nodeType.memberProperties.filter { it.hasAnnotation<SearchProperty>() }.map {
+                        subNodeDefinition.persistentEntity.getPersistentProperty(it.name)!!.propertyName
                     }
+                }.toSet()
                 val primaryLabel = nodeDefinition.primaryLabel
                 neo4jClient.query("CREATE FULLTEXT INDEX $searchIndexName IF NOT EXISTS FOR (n:$primaryLabel) ON EACH [${
                     searchProperties.joinToString(", ") { "n.$it" }

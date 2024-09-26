@@ -25,7 +25,7 @@ class DefaultIndexCreator(val nodeDefinitionCollection: NodeDefinitionCollection
                 val subNodeDefinitions = nodeDefinitionCollection.filter { it.nodeType.isSubclassOf(nodeDefinition.nodeType) }
                 val searchProperties = subNodeDefinitions.flatMap { subNodeDefinition ->
                     subNodeDefinition.nodeType.memberProperties.filter { it.hasAnnotation<SearchProperty>() }.map {
-                        nodeDefinition.persistentEntity.getPersistentProperty(it.name)!!.propertyName
+                        subNodeDefinition.persistentEntity.getPersistentProperty(it.name)!!.propertyName
                     }
                 }.toSet()
                 val primaryLabel = nodeDefinition.primaryLabel

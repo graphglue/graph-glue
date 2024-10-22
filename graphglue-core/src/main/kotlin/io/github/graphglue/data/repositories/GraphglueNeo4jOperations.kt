@@ -9,6 +9,7 @@ import org.neo4j.cypherdsl.core.Cypher
 import org.neo4j.cypherdsl.core.Statement
 import org.neo4j.cypherdsl.core.renderer.Renderer
 import org.springframework.beans.factory.BeanFactory
+import org.springframework.dao.OptimisticLockingFailureException
 import org.springframework.data.neo4j.core.ReactiveNeo4jClient
 import org.springframework.data.neo4j.core.ReactiveNeo4jOperations
 import reactor.core.publisher.Flux
@@ -93,7 +94,13 @@ class GraphglueNeo4jOperations(
         val nodesToSave = getNodesToSaveRecursive(entities)
         validateNodes(nodesToSave)
         return Flux.fromIterable(nodesToSave).flatMap { nodeToSave ->
-            delegate.save(nodeToSave).map { nodeToSave to it }
+            delegate.save(nodeToSave).onErrorMap {
+                if (it is OptimisticLockingFailureException) {
+                    OptimisticLockingFailureException("The node ${nodeToSave::class.simpleName} with id ${nodeToSave.rawId} was modified by another transaction")
+                } else {
+                    it
+                }
+            }.map { nodeToSave to it }
         }.collectList().flatMapMany { saveResult ->
             val savedNodeLookup = saveResult.associate { (nodeToSave, savedNode) ->
                 nodeToSave to savedNode

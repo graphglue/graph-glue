@@ -222,7 +222,7 @@ class NodeDefinitionCollection(
      * Gets the list of [NodeDefinition]s associated with names
      * If a common supertype is found (and the provided names include all subtypes),
      * returns that supertype
-     * Otherwise the provied list is mapped to [NodeDefinition]s
+     * Otherwise the provided list is mapped to [NodeDefinition]s
      *
      * @param names the list of GraphQL names
      * @return the found [NodeDefinition]s

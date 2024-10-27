@@ -83,10 +83,11 @@ class NodeSetPropertyDelegate<T : Node>(
      * Ensures that this [NodeSetProperty] is loaded
      *
      * @param cache used to load nodes from, if provided, not loading deleted nodes
+     * @param loader if provided used to define nested nodes to load
      */
-    private suspend fun ensureLoaded(cache: NodeCache?) {
+    private suspend fun ensureLoaded(cache: NodeCache?, loader: (LazyLoadingSubqueryGenerator<T>.() -> Unit)?) {
         if (!isLoaded) {
-            val (result, _) = parent.loadNodesOfRelationship<T>(property)
+            val (result, _) = parent.loadNodesOfRelationship(property, loader)
             currentNodes = result.nodes.toMutableSet()
         }
         if (cache != null && nodeCache != cache) {
@@ -95,8 +96,8 @@ class NodeSetPropertyDelegate<T : Node>(
         }
     }
 
-    override suspend fun getLoadedProperty(cache: NodeCache?): NodeSetProperty {
-        ensureLoaded(cache)
+    override suspend fun getLoadedProperty(cache: NodeCache?, loader: (LazyLoadingSubqueryGenerator<T>.() -> Unit)?): NodeSetProperty {
+        ensureLoaded(cache, loader)
         return nodeSetProperty
     }
 

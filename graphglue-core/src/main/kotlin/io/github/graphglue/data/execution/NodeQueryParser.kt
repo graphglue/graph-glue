@@ -11,6 +11,7 @@ import io.github.graphglue.connection.order.IdOrder
 import io.github.graphglue.connection.order.parseOrder
 import io.github.graphglue.definition.*
 import io.github.graphglue.model.Node
+import io.github.graphglue.model.property.LazyLoadingSubqueryGenerator
 import org.neo4j.cypherdsl.core.Cypher
 import kotlin.reflect.full.isSubclassOf
 
@@ -28,7 +29,7 @@ private const val NODE_FETCH_OFFSET = 1
  * Amount of nodes which are fetched when fetching a one-side of a query
  * Fetches two nodes to detect an inconsistent state in the database
  */
-private const val ONE_NODE_QUERY_LIMIT = 2
+const val ONE_NODE_QUERY_LIMIT = 2
 
 /**
  * Parser to get [NodeQuery]s
@@ -67,7 +68,7 @@ class NodeQueryParser(
      * Can use the `dataFetchingEnvironment` to fetch a subtree of node
      *
      * @param definition the [NodeDefinition] of the related nodes to load
-     * @param dataFetchingEnvironment can optionally be provided to fetch a subtree of nodes
+     * @param dataFetchingEnvironment provided to fetch a subtree of nodes
      * @param relationshipDefinition defines the relationship to load related nodes of
      * @param parentNode root [Node] of the relationship to load related nodes of
      * @param requiredPermission optional required permission
@@ -76,19 +77,14 @@ class NodeQueryParser(
     fun generateRelationshipNodeQuery(
         definition: NodeDefinition,
         parentDefinition: NodeDefinition,
-        dataFetchingEnvironment: DataFetchingEnvironment?,
+        dataFetchingEnvironment: DataFetchingEnvironment,
         relationshipDefinition: RelationshipDefinition,
         parentNode: Node,
         requiredPermission: Permission?
     ): NodeQuery {
-        val idParameter = Cypher.anonParameter(parentNode.rawId)
-        val rootCypherNode = parentDefinition.node().named("a_related").withProperties(mapOf("id" to idParameter))
-        val additionalConditions = listOf(CypherConditionGenerator { node ->
-            Cypher.any(Cypher.name("a_related_alias")).`in`(
-                Cypher.listBasedOn(relationshipDefinition.generateRelationship(rootCypherNode, node))
-                    .returning(rootCypherNode)
-            ).where(Cypher.isTrue())
-        })
+        val additionalConditions = generateRelationshipCondition(
+            parentDefinition, relationshipDefinition, parentNode
+        )
         val authorizationCondition = getAuthorizationConditionWithRelationshipDefinition(
             requiredPermission, relationshipDefinition
         )
@@ -107,6 +103,65 @@ class NodeQueryParser(
     }
 
     /**
+     * Generates a [NodeQuery] for a specific relationship
+     * Can use the `loader` to fetch a subtree of node
+     *
+     * @param definition the [NodeDefinition] of the related nodes to load
+     * @param loader used to fetch a subtree of nodes
+     * @param relationshipDefinition defines the relationship to load related nodes of
+     * @param parentNode root [Node] of the relationship to load related nodes of
+     * @return the generated [NodeQuery] to load related nodes of `rootNode`
+     */
+    fun <T : Node?> generateRelationshipNodeQuery(
+        definition: NodeDefinition,
+        parentDefinition: NodeDefinition,
+        loader: (LazyLoadingSubqueryGenerator<T>.() -> Unit)?,
+        relationshipDefinition: RelationshipDefinition,
+        parentNode: Node,
+    ): NodeQuery {
+        val additionalConditions = generateRelationshipCondition(
+            parentDefinition, relationshipDefinition, parentNode
+        )
+        val parts = if (loader != null) {
+            val generator = LazyLoadingSubqueryGenerator<T>(nodeDefinitionCollection)
+            loader.invoke(generator)
+            generator.toQueryParts()
+        } else {
+            emptyMap()
+        }
+        return NodeQuery(
+            definition, NodeQueryOptions(
+                filters = additionalConditions,
+                orderBy = null,
+                fetchTotalCount = false,
+                first = if (relationshipDefinition is OneRelationshipDefinition) ONE_NODE_QUERY_LIMIT else null,
+                overrideIsAllQuery = true
+            ), parts
+        )
+    }
+
+    /**
+     * Generates the conditions to load only nodes of a relationship
+     *
+     * @param parentDefinition the [NodeDefinition] of the parent node
+     * @param relationshipDefinition defines the relationship to load related nodes of
+     * @param parentNode root [Node] of the relationship to load related nodes of
+     * @return the generated conditions to load only nodes of the relationship
+     */
+    private fun generateRelationshipCondition(
+        parentDefinition: NodeDefinition, relationshipDefinition: RelationshipDefinition, parentNode: Node
+    ): List<CypherConditionGenerator> {
+        val idParameter = Cypher.anonParameter(parentNode.rawId)
+        val rootCypherNode = parentDefinition.node().named("a_related").withProperties(mapOf("id" to idParameter))
+        return listOf(CypherConditionGenerator { node ->
+            Cypher.any(Cypher.name("a_related_alias")).`in`(
+                Cypher.listBasedOn(relationshipDefinition.generateRelationship(rootCypherNode, node))
+                    .returning(rootCypherNode)
+            ).where(Cypher.isTrue())
+        })
+    }
+
+    /**
      * Generates a [NodeQuery] which loads a single [Node]
      * Can use the `dataFetchingEnvironment` to fetch a subtree of node
      *
@@ -118,7 +173,7 @@ class NodeQueryParser(
      */
     fun generateOneNodeQuery(
         definition: NodeDefinition,
-        dataFetchingEnvironment: DataFetchingEnvironment?,
+        dataFetchingEnvironment: DataFetchingEnvironment,
         additionalConditions: List<CypherConditionGenerator>,
         requiredPermission: Permission?
     ): NodeQuery {
@@ -141,7 +196,7 @@ class NodeQueryParser(
      */
     fun generateManyNodeQuery(
         definition: NodeDefinition,
-        dataFetchingEnvironment: DataFetchingEnvironment?,
+        dataFetchingEnvironment: DataFetchingEnvironment,
         additionalConditions: List<CypherConditionGenerator>,
         requiredPermission: Permission?
     ): NodeQuery {
@@ -162,9 +217,7 @@ class NodeQueryParser(
      * @return the generated [SearchQuery] to load the nodes
      */
     fun generateSearchQuery(
-        definition: NodeDefinition,
-        dataFetchingEnvironment: DataFetchingEnvironment?,
-        requiredPermission: Permission?
+        definition: NodeDefinition, dataFetchingEnvironment: DataFetchingEnvironment, requiredPermission: Permission?
     ): SearchQuery {
         val authorizationCondition = getAuthorizationCondition(requiredPermission, definition)
         val instance = NodeQueryParserInstance(dataFetchingEnvironment)
@@ -178,7 +231,7 @@ class NodeQueryParser(
      *
      * @param dataFetchingEnvironment the [DataFetchingEnvironment] to use
      */
-    internal inner class NodeQueryParserInstance(private val dataFetchingEnvironment: DataFetchingEnvironment?) {
+    internal inner class NodeQueryParserInstance(private val dataFetchingEnvironment: DataFetchingEnvironment) {
 
         /**
          * Generates a [NodeQuery] which loads a single [Node]
@@ -198,7 +251,7 @@ class NodeQueryParser(
         ): NodeQuery {
             return generateOneNodeQuery(
                 definition,
-                dataFetchingEnvironment?.selectionSet,
+                dataFetchingEnvironment.selectionSet,
                 additionalConditions + listOfNotNull(authorizationCondition),
                 requiredPermission
             )
@@ -222,8 +275,8 @@ class NodeQueryParser(
         ): NodeQuery {
             return generateManyNodeQuery(
                 definition,
-                dataFetchingEnvironment?.selectionSet,
-                dataFetchingEnvironment?.arguments ?: emptyMap(),
+                dataFetchingEnvironment.selectionSet,
+                dataFetchingEnvironment.arguments,
                 additionalConditions + listOfNotNull(authorizationCondition),
                 requiredPermission,
             )
@@ -244,8 +297,8 @@ class NodeQueryParser(
         ): SearchQuery {
             return generateSearchQuery(
                 definition,
-                dataFetchingEnvironment?.selectionSet,
-                dataFetchingEnvironment?.arguments ?: emptyMap(),
+                dataFetchingEnvironment.selectionSet,
+                dataFetchingEnvironment.arguments,
                 listOfNotNull(authorizationCondition),
                 requiredPermission,
             )
@@ -279,9 +332,7 @@ class NodeQueryParser(
          * @return the generated query parts
          */
         private fun generateQueryParts(
-            definition: NodeDefinition,
-            fieldParts: Map<String, List<SelectedField>>,
-            requiredPermission: Permission?
+            definition: NodeDefinition, fieldParts: Map<String, List<SelectedField>>, requiredPermission: Permission?
         ): Map<String, NodeQueryPart> {
             val relationshipGraphQLNames = relationshipGraphQLNamesIncludingSubtypes[definition]!!
             val extensionFieldGraphQLNames = extensionFieldGraphQLNamesIncludingSubTypes[definition]!!
@@ -295,12 +346,11 @@ class NodeQueryParser(
                         )?.let { subQueries.add(it) }
 
                         in extensionFieldGraphQLNames -> {
-                            if (dataFetchingEnvironment != null) {
-                                generateExtensionFieldForField(
-                                    field,
-                                )?.let { extensionFields.add(it) }
-                            }
+                            generateExtensionFieldForField(
+                                field,
+                            )?.let { extensionFields.add(it) }
                         }
+
                     }
                 }
                 NodeQueryPart(subQueries, extensionFields)
@@ -339,7 +389,7 @@ class NodeQueryParser(
             val firstPossibleType = onlyOnTypes.first()
             return firstPossibleType.extensionFieldDefinitions[field.name]?.let { extensionFieldDefinition ->
                 NodeExtensionField(
-                    extensionFieldDefinition, dataFetchingEnvironment!!, field, onlyOnTypes, field.resultKey
+                    extensionFieldDefinition, dataFetchingEnvironment, field, onlyOnTypes, field.resultKey
                 )
             }
         }
@@ -400,7 +450,7 @@ class NodeQueryParser(
          */
         private fun generateManyNodeQuery(
             nodeDefinition: NodeDefinition,
-            selectionSet: DataFetchingFieldSelectionSet?,
+            selectionSet: DataFetchingFieldSelectionSet,
             arguments: Map<String, Any>,
             additionalConditions: List<CypherConditionGenerator>,
             requiredPermission: Permission?,
@@ -422,15 +472,15 @@ class NodeQueryParser(
                 first = arguments["first"]?.let { (it as Int) + NODE_FETCH_OFFSET },
                 last = arguments["last"]?.let { (it as Int) + NODE_FETCH_OFFSET },
                 skip = arguments["skip"]?.let { it as Int },
-                fetchTotalCount = selectionSet?.contains("totalCount") ?: true,
-                ignoreNodes = selectionSet?.immediateFields?.singleOrNull()?.name == "totalCount"
+                fetchTotalCount = selectionSet.contains("totalCount"),
+                ignoreNodes = selectionSet.immediateFields?.singleOrNull()?.name == "totalCount"
             )
             val parts = HashMap<String, List<SelectedField>>()
-            val nodesParts = selectionSet?.getFields("nodes") ?: emptyList()
+            val nodesParts = selectionSet.getFields("nodes")
             for (nodesPart in nodesParts) {
                 parts[nodesPart.resultKey] = nodesPart.selectionSet.immediateFields
             }
-            for (edgesPart in selectionSet?.getFields("edges") ?: emptyList()) {
+            for (edgesPart in selectionSet.getFields("edges")) {
                 for (nodePart in edgesPart.selectionSet.getFields("node")) {
                     parts["${edgesPart.resultKey}/${nodePart.resultKey}"] = nodePart.selectionSet.immediateFields
                 }
@@ -452,7 +502,7 @@ class NodeQueryParser(
          */
         fun generateSearchQuery(
             nodeDefinition: NodeDefinition,
-            selectionSet: DataFetchingFieldSelectionSet?,
+            selectionSet: DataFetchingFieldSelectionSet,
             arguments: Map<String, Any>,
             additionalConditions: List<CypherConditionGenerator>,
             requiredPermission: Permission?,
@@ -472,9 +522,7 @@ class NodeQueryParser(
                 skip = arguments["skip"]?.let { it as Int },
             )
             val queryParts = generateQueryParts(
-                nodeDefinition,
-                mapOf(DEFAULT_PART_ID to (selectionSet?.immediateFields ?: emptyList())),
-                requiredPermission
+                nodeDefinition, mapOf(DEFAULT_PART_ID to (selectionSet.immediateFields)), requiredPermission
             )
             return SearchQuery(nodeDefinition, queryOptions, queryParts)
         }
@@ -492,15 +540,16 @@ class NodeQueryParser(
          */
         private fun generateOneNodeQuery(
             nodeDefinition: NodeDefinition,
-            selectionSet: DataFetchingFieldSelectionSet?,
+            selectionSet: DataFetchingFieldSelectionSet,
             additionalConditions: List<CypherConditionGenerator>,
             requiredPermission: Permission?,
         ): NodeQuery {
-            val subNodeQueryOptions =
-                NodeQueryOptions(filters = additionalConditions, first = ONE_NODE_QUERY_LIMIT, fetchTotalCount = false, orderBy = null)
+            val subNodeQueryOptions = NodeQueryOptions(
+                filters = additionalConditions, first = ONE_NODE_QUERY_LIMIT, fetchTotalCount = false, orderBy = null
+            )
             return generateNodeQuery(
                 nodeDefinition,
-                mapOf(DEFAULT_PART_ID to (selectionSet?.immediateFields ?: emptyList())),
+                mapOf(DEFAULT_PART_ID to (selectionSet.immediateFields)),
                 subNodeQueryOptions,
                 requiredPermission,
             )

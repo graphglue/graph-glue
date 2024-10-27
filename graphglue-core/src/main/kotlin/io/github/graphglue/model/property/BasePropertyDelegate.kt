@@ -47,11 +47,11 @@ abstract class BasePropertyDelegate<T : Node?, R>(
     protected val propertyName = "${parent::class.qualifiedName}.${property.name}"
 
     private val lazyLoadingDelegate = object : LazyLoadingDelegate<T, R> {
-        override suspend fun invoke(cache: NodeCache?): R {
+        override suspend fun invoke(cache: NodeCache?, loader: (LazyLoadingSubqueryGenerator<T>.() -> Unit)?): R {
             if (nodeCache != null && cache != null && nodeCache != cache) {
                 throw IllegalStateException("This property was already loaded with another cache")
             }
-            return getLoadedProperty(cache)
+            return getLoadedProperty(cache, loader)
         }
     }
 
@@ -143,9 +143,10 @@ abstract class BasePropertyDelegate<T : Node?, R>(
      * Gets the loaded property which is returned by the lazy loading delegate
      *
      * @param cache used to load nodes from, if provided, not loading deleted nodes
+     * @param loader if provided used to define nested nodes to load
      * @return the loaded property
      */
-    internal abstract suspend fun getLoadedProperty(cache: NodeCache?): R
+    internal abstract suspend fun getLoadedProperty(cache: NodeCache?, loader: (LazyLoadingSubqueryGenerator<T>.() -> Unit)?): R
 
     /**
      * Gets the lazy loading delegate which is used to get the value of the property

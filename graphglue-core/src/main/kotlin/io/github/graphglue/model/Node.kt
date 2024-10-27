@@ -11,6 +11,7 @@ import io.github.graphglue.data.execution.NodeQueryOptions
 import io.github.graphglue.data.execution.NodeQueryResult
 import io.github.graphglue.graphql.extensions.requiredPermission
 import io.github.graphglue.model.property.BasePropertyDelegate
+import io.github.graphglue.model.property.LazyLoadingSubqueryGenerator
 import io.github.graphglue.model.property.NodePropertyDelegate
 import io.github.graphglue.model.property.NodeSetPropertyDelegate
 import org.springframework.data.annotation.Transient
@@ -111,15 +112,15 @@ abstract class Node {
 
     /**
      * Loads all nodes of a relationship
-     * If the `dataFetchingEnvironment` is provided, required nested nodes are loaded too
+     * Required nested nodes are loaded too
      *
      * @param property defines the relation to load the nodes of
-     * @param dataFetchingEnvironment if provided used to define nested nodes to load
+     * @param dataFetchingEnvironment used to define nested nodes to load
      * @return the result of the query and the query itself
      */
     internal suspend fun <T : Node?> loadNodesOfRelationship(
         property: KProperty1<*, *>,
-        dataFetchingEnvironment: DataFetchingEnvironment? = null
+        dataFetchingEnvironment: DataFetchingEnvironment
     ): Pair<NodeQueryResult<T>, NodeQuery?> {
         val lazyLoadingContext = lazyLoadingContext
         if (lazyLoadingContext == null) {
@@ -137,7 +138,41 @@ abstract class Node {
                 dataFetchingEnvironment,
                 relationshipDefinition,
                 this,
-                dataFetchingEnvironment?.requiredPermission
+                dataFetchingEnvironment.requiredPermission
+            )
+            @Suppress("UNCHECKED_CAST")
+            return lazyLoadingContext.nodeQueryEngine.execute(query) as NodeQueryResult<T> to query
+        }
+    }
+
+    /**
+     * Loads all nodes of a relationship
+     * If the `loader` is provided, specified nested nodes are loaded too
+     *
+     * @param property defines the relation to load the nodes of
+     * @param loader if provided used to define nested nodes to load
+     * @return the result of the query and the query itself
+     */
+    internal suspend fun <T : Node?> loadNodesOfRelationship(
+        property: KProperty1<*, *>,
+        loader: (LazyLoadingSubqueryGenerator<T>.() -> Unit)?
+    ): Pair<NodeQueryResult<T>, NodeQuery?> {
+        val lazyLoadingContext = lazyLoadingContext
+        if (lazyLoadingContext == null) {
+            return NodeQueryResult<T>(NodeQueryOptions(), emptyList(), null) to null
+        } else {
+            val queryParser = lazyLoadingContext.nodeQueryParser
+            val parentNodeDefinition = queryParser.nodeDefinitionCollection.getNodeDefinition(this::class)
+            val relationshipDefinition = parentNodeDefinition.getRelationshipDefinitionOfProperty(property)
+            val nodeDefinition = queryParser.nodeDefinitionCollection.getNodeDefinition(
+                relationshipDefinition.nodeKClass
+            )
+            val query = queryParser.generateRelationshipNodeQuery(
+                nodeDefinition,
+                parentNodeDefinition,
+                loader,
+                relationshipDefinition,
+                this,
             )
             @Suppress("UNCHECKED_CAST")
             return lazyLoadingContext.nodeQueryEngine.execute(query) as NodeQueryResult<T> to query

@@ -52,10 +52,11 @@ class NodePropertyDelegate<T : Node?>(
     /**
      * True if the [T] is marked nullable
      */
-    private val supportsNull: Boolean get() {
-        val type = property.returnType.firstTypeArgument
-        return type.isMarkedNullable || type.classifier is KTypeParameter
-    }
+    private val supportsNull: Boolean
+        get() {
+            val type = property.returnType.firstTypeArgument
+            return type.isMarkedNullable || type.classifier is KTypeParameter
+        }
 
     override fun registerQueryResult(nodeQueryResult: NodeQueryResult<T>) {
         super.registerQueryResult(nodeQueryResult)
@@ -110,10 +111,11 @@ class NodePropertyDelegate<T : Node?>(
      * Ensures that this property is loaded
      *
      * @param cache used to load nodes from, if provided, not loading deleted nodes
+     * @param loader if provided used to define nested nodes to load
      */
-    private suspend fun ensureLoaded(cache: NodeCache?) {
+    private suspend fun ensureLoaded(cache: NodeCache?, loader: (LazyLoadingSubqueryGenerator<T>.() -> Unit)?) {
         if (!isLoaded) {
-            val (result, _) = parent.loadNodesOfRelationship<T>(property)
+            val (result, _) = parent.loadNodesOfRelationship(property, loader)
             if (result.nodes.size > 1) {
                 throw IllegalArgumentException("Too many nodes for one side of relation $propertyName")
             }
@@ -145,8 +147,10 @@ class NodePropertyDelegate<T : Node?>(
         }
     }
 
-    override suspend fun getLoadedProperty(cache: NodeCache?): NodeProperty {
-        ensureLoaded(cache)
+    override suspend fun getLoadedProperty(
+        cache: NodeCache?, loader: (LazyLoadingSubqueryGenerator<T>.() -> Unit)?
+    ): NodeProperty {
+        ensureLoaded(cache, loader)
         return nodeProperty
     }
 
@@ -159,12 +163,12 @@ class NodePropertyDelegate<T : Node?>(
             val neverSetInitialRelationship = currentNode == null && parent.rawId == null
             val removedRequiredRelationship = currentNode == null && persistedNode != null
             if (neverSetInitialRelationship || removedRequiredRelationship) {
-                val setByOtherSide = savingNodes.filter { relationshipDefinition.nodeKClass.isInstance(it) }
-                    .any {
-                        val relatedNodeDefinition = nodeDefinitionCollection.getNodeDefinition(it::class)
-                        val inverseRelationshipDefinition = relatedNodeDefinition.getRelationshipDefinitionByInverse(relationshipDefinition)
-                        inverseRelationshipDefinition?.getLoadedRelatedNodes(it)?.contains(parent) ?: false
-                    }
+                val setByOtherSide = savingNodes.filter { relationshipDefinition.nodeKClass.isInstance(it) }.any {
+                    val relatedNodeDefinition = nodeDefinitionCollection.getNodeDefinition(it::class)
+                    val inverseRelationshipDefinition =
+                        relatedNodeDefinition.getRelationshipDefinitionByInverse(relationshipDefinition)
+                    inverseRelationshipDefinition?.getLoadedRelatedNodes(it)?.contains(parent) ?: false
+                }
                 if (!setByOtherSide) {
                     throw IllegalStateException(
                         "Non-nullable property $propertyName cannot be saved, as it has value null and is not set by other side."

@@ -8,15 +8,15 @@ import io.github.graphglue.model.Node
  *
  * @param definition defines which type of [Node] is fetched
  * @param options options for the query, e.g. pagination
- * @param parts subqueries partitioned into parts
+ * @param entries parts of the query to execute with this query
  */
 class NodeQuery(
     definition: NodeDefinition,
     val options: NodeQueryOptions,
-    parts: Map<String, NodeQueryPart>
-) : QueryBase<NodeQuery>(definition, parts) {
+    entries: List<NodeQueryEntry<*>>
+) : QueryBase<NodeQuery>(definition, entries) {
 
-    override fun copyWithParts(parts: Map<String, NodeQueryPart>): NodeQuery {
-        return NodeQuery(definition, options, parts)
+    override fun copyWithEntries(entries: List<NodeQueryEntry<*>>): NodeQuery {
+        return NodeQuery(definition, options, entries)
     }
 }

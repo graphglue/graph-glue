@@ -129,7 +129,7 @@ class GraphglueNeo4jOperations(
     private fun validateNodes(nodes: Set<Node>) {
         for (node in nodes) {
             val nodeDefinition = nodeDefinitionCollection.getNodeDefinition(node::class)
-            for (relationshipDefinition in nodeDefinition.relationshipDefinitions.values) {
+            for (relationshipDefinition in nodeDefinition.relationshipDefinitions) {
                 relationshipDefinition.validate(node, nodes, nodeDefinitionCollection)
             }
         }
@@ -145,7 +145,7 @@ class GraphglueNeo4jOperations(
      */
     private fun saveAllRelationships(
         nodeDefinition: NodeDefinition, nodeToSave: Node, nodeIdLookup: Map<Node, String>
-    ) = Flux.fromIterable(nodeDefinition.relationshipDefinitions.values).flatMap { relationshipDefinition ->
+    ) = Flux.fromIterable(nodeDefinition.relationshipDefinitions).flatMap { relationshipDefinition ->
         val relatedNodeDefinition = nodeDefinitionCollection.getNodeDefinition(relationshipDefinition.nodeKClass)
         val diffToSave = relationshipDefinition.getRelationshipDiff(nodeToSave, relatedNodeDefinition)
         val deleteMono = Flux.fromIterable(diffToSave.nodesToRemove).flatMap {
@@ -317,7 +317,7 @@ class GraphglueNeo4jOperations(
      */
     private fun getNodesToSave(node: Node): Collection<Node> {
         val nodeDefinition = nodeDefinitionCollection.getNodeDefinition(node::class)
-        return nodeDefinition.relationshipDefinitions.values.flatMap {
+        return nodeDefinition.relationshipDefinitions.flatMap {
             it.getRelatedNodesToSave(node)
         }
     }

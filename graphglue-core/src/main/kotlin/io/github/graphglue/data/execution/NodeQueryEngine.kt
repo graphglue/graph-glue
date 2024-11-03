@@ -1,6 +1,7 @@
 package io.github.graphglue.data.execution
 
 import io.github.graphglue.GraphglueCoreConfigurationProperties
+import io.github.graphglue.model.Node
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -57,6 +58,21 @@ class NodeQueryEngine(
     }
 
     /**
+     * Executes the given query
+     * May perform multiple requests to the database if the query is too complex.
+     * Does not provide any results, instead results are directly registered in the affected [nodes]
+     *
+     * @param query the query to execute
+     * @param nodes the nodes for which the subqueries should be executed
+     */
+    suspend fun execute(query: PartialNodeQuery, nodes: Collection<Node>) {
+        val instance = NodeQueryEngineInstance()
+        val newQuery = instance.splitNodeQuery(query)
+        val executor = NodeQueryExecutor(client, mappingContext, renderer)
+        executor.executePartial(newQuery, nodes)
+    }
+
+    /**
      * Instance of the query engine, used for executing a single query
      */
     private inner class NodeQueryEngineInstance {
@@ -77,25 +93,25 @@ class NodeQueryEngine(
             if (query.cost <= configurationProperties.maxQueryCost) {
                 return query
             }
-            val parts = query.parts.entries.flatMap { (key, part) ->
-                splitNodeQueryPart(part).map { key to it }
-            }
-            val groupedParts = mutableListOf<Map<String, NodeQueryPart>>()
-            var currentPart = mutableMapOf<String, NodeQueryPart>()
-            for ((key, subPart) in parts) {
-                if (currentPart.values.sumOf { it.cost } + subPart.cost > configurationProperties.maxQueryCost || key in currentPart) {
-                    groupedParts.add(currentPart)
-                    currentPart = mutableMapOf()
+            val groupedEntries = mutableListOf<List<NodeQueryEntry<*>>>()
+            var currentEntries = mutableListOf<NodeQueryEntry<*>>()
+            var currentCost = 0
+            for (entry in query.entries) {
+                val splitEntry = splitNodeQueryEntry(entry)
+                val entryCost = splitEntry.cost
+                if (currentCost + entryCost >= configurationProperties.maxQueryCost) {
+                    groupedEntries.add(currentEntries)
+                    currentEntries = mutableListOf()
+                    currentCost = 0
                 }
-                currentPart[key] = subPart
+                currentEntries.add(splitEntry)
+                currentCost += entryCost
             }
-            if (currentPart.isNotEmpty()) {
-                groupedParts.add(currentPart)
+            if (currentEntries.isNotEmpty()) {
+                groupedEntries.add(currentEntries)
             }
-            val extensionFieldParts = query.parts.filterValues { it.extensionFields.entries.isNotEmpty() }
-                .mapValues { NodeQueryPart(emptyList(), it.value.extensionFields.entries) }
-            val initialQuery = query.copyWithParts(extensionFieldParts)
-            val queries = groupedParts.map {
+            val initialQuery = query.copyWithEntries(groupedEntries.firstOrNull() ?: emptyList())
+            val queries = groupedEntries.drop(1).map {
                 PartialNodeQuery(query.definition, it)
             }
             if (queries.isNotEmpty()) {
@@ -105,32 +121,22 @@ class NodeQueryEngine(
         }
 
         /**
-         * Splits up a query part into multiple smaller parts if necessary
-         * Does NOT split up extension fields
+         * Splits up a node query entry into multiple smaller entries if possible
          *
-         * @param part the part to split up
-         * @return the initial part if it is small enough, otherwise a list of parts that can be executed
-         */
-        private fun splitNodeQueryPart(part: NodeQueryPart): List<NodeQueryPart> {
-            return if (part.cost > configurationProperties.maxQueryCost) {
-                part.subQueries.entries.map {
-                    NodeQueryPart(listOf(splitNodeSubQuery(it)), emptyList())
-                }
-            } else {
-                listOf(part)
-            }
-        }
-
-        /**
-         * Splits up a subquery into multiple smaller subqueries
-         *
-         * @param subQuery the subquery to split up
+         * @param entry the entry to split
          * @return the split up subquery
          */
-        private fun splitNodeSubQuery(subQuery: NodeSubQuery): NodeSubQuery {
-            val newQuery = splitNodeQuery(subQuery.query)
+        private fun splitNodeQueryEntry(entry: NodeQueryEntry<*>): NodeQueryEntry<*> {
+            if (entry !is NodeSubQuery || entry.cost <= configurationProperties.maxQueryCost) {
+                return entry
+            }
+            val newQuery = splitNodeQuery(entry.query)
             return NodeSubQuery(
-                newQuery, subQuery.onlyOnTypes, subQuery.relationshipDefinition, subQuery.resultKey
+                entry.fieldDefinition,
+                newQuery,
+                entry.onlyOnTypes,
+                entry.relationshipDefinitions,
+                entry.resultKeyPath
             )
         }
 

@@ -12,4 +12,9 @@ import io.github.graphglue.data.execution.NodeQueryParser
 class LazyLoadingContext(
     val nodeQueryParser: NodeQueryParser,
     val nodeQueryEngine: NodeQueryEngine
-)
+) {
+    /**
+     * used to access node definitions
+     */
+    val nodeDefinitionCollection = nodeQueryParser.nodeDefinitionCollection
+}

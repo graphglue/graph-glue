@@ -1,9 +1,6 @@
 package io.github.graphglue.definition
 
-import graphql.schema.GraphQLFieldDefinition
-import io.github.graphglue.connection.generateConnectionFieldDefinition
 import io.github.graphglue.definition.extensions.firstTypeArgument
-import io.github.graphglue.graphql.schema.SchemaTransformationContext
 import io.github.graphglue.model.Direction
 import io.github.graphglue.model.Node
 import kotlin.reflect.KClass
@@ -34,10 +31,4 @@ class ManyRelationshipDefinition(
     direction,
     parentKClass,
     allowedAuthorizations
-) {
-    override fun generateFieldDefinition(transformationContext: SchemaTransformationContext): GraphQLFieldDefinition {
-        @Suppress("UNCHECKED_CAST") val returnNodeType =
-            property.returnType.firstTypeArgument.jvmErasure as KClass<out Node>
-        return generateConnectionFieldDefinition(returnNodeType, graphQLName, graphQLDescription, transformationContext)
-    }
-}
+)

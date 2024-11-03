@@ -1,11 +1,8 @@
 package io.github.graphglue.model.property
 
-import graphql.execution.DataFetcherResult
-import io.github.graphglue.data.execution.DEFAULT_PART_ID
-import io.github.graphglue.data.execution.NodeQuery
-import io.github.graphglue.data.execution.NodeQueryParser
 import io.github.graphglue.data.execution.NodeQueryResult
 import io.github.graphglue.data.repositories.RelationshipDiff
+import io.github.graphglue.definition.FieldDefinition
 import io.github.graphglue.definition.NodeDefinition
 import io.github.graphglue.definition.NodeDefinitionCollection
 import io.github.graphglue.definition.RelationshipDefinition
@@ -21,12 +18,12 @@ import kotlin.reflect.full.createType
  * Property for the one side of a relation
  * Depending on the type of `property` may be an optional property
  *
- * @param parent see [BasePropertyDelegate.parent]
- * @param property see [BasePropertyDelegate.property]
+ * @param parent see [BaseNodePropertyDelegate.parent]
+ * @param property see [BaseNodePropertyDelegate.property]
  */
 class NodePropertyDelegate<T : Node?>(
     parent: Node, property: KProperty1<*, *>
-) : BasePropertyDelegate<T, NodePropertyDelegate<T>.NodeProperty>(parent, property) {
+) : BaseNodePropertyDelegate<T, NodePropertyDelegate<T>.NodeProperty>(parent, property) {
 
     /**
      * The [NodeSetProperty] returned to the user
@@ -58,13 +55,16 @@ class NodePropertyDelegate<T : Node?>(
             return type.isMarkedNullable || type.classifier is KTypeParameter
         }
 
-    override fun registerQueryResult(nodeQueryResult: NodeQueryResult<T>) {
-        super.registerQueryResult(nodeQueryResult)
-        if (!isLoaded && nodeQueryResult.options.isAllQuery) {
-            if (nodeQueryResult.nodes.size > 1) {
+    override fun registerQueryResult(
+        fieldDefinition: FieldDefinition,
+        queryResult: NodeQueryResult<T & Any>
+    ) {
+        if (!isLoaded && queryResult.options.isAllQuery) {
+            super.registerQueryResult(fieldDefinition, queryResult)
+            if (queryResult.nodes.size > 1) {
                 throw IllegalArgumentException("Too many nodes for one side of relation $propertyName")
             }
-            currentNode = nodeQueryResult.nodes.firstOrNull()
+            currentNode = queryResult.nodes.firstOrNull()
             persistedNode = currentNode
             isLoaded = true
         }
@@ -100,13 +100,6 @@ class NodePropertyDelegate<T : Node?>(
         return listOfNotNull(currentNode)
     }
 
-    override fun constructGraphQLResult(
-        result: NodeQueryResult<T>, localContext: NodeQuery?, nodeQueryParser: NodeQueryParser
-    ): DataFetcherResult<*> {
-        return DataFetcherResult.newResult<T>().data(result.nodes.firstOrNull())
-            .localContext(localContext?.parts?.get(DEFAULT_PART_ID)).build()
-    }
-
     /**
      * Ensures that this property is loaded
      *
@@ -115,11 +108,9 @@ class NodePropertyDelegate<T : Node?>(
      */
     private suspend fun ensureLoaded(cache: NodeCache?, loader: (LazyLoadingSubqueryGenerator<T>.() -> Unit)?) {
         if (!isLoaded) {
-            val (result, _) = parent.loadNodesOfRelationship(property, loader)
-            if (result.nodes.size > 1) {
-                throw IllegalArgumentException("Too many nodes for one side of relation $propertyName")
+            if (parent.isPersisted) {
+                parent.loadNodesOfRelationship(property, loader)
             }
-            currentNode = result.nodes.firstOrNull()
             persistedNode = currentNode
             isLoaded = true
         }

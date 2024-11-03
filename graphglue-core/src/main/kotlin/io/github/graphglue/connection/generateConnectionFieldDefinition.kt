@@ -84,7 +84,7 @@ private fun generateConnectionGraphQLType(
                 .type(GraphQLNonNull(GraphQLTypeReference("PageInfo")))
         }.build()
 
-        transformer.registerFunctionDataFetcher(type, "nodes", Connection::class)
+        transformer.registerPropertyDataFetcher(type, "nodes", Connection::class)
         transformer.registerFunctionDataFetcher(type, "edges", Connection::class)
         transformer.registerFunctionDataFetcher(type, "totalCount", Connection::class)
         transformer.registerPropertyDataFetcher(type, "pageInfo", Connection::class)
@@ -110,7 +110,7 @@ private fun generateEdgeGraphQLType(nodeName: String, transformer: SchemaTransfo
             it.name("cursor").description("A cursor used in pagination.").type(GraphQLNonNull(Scalars.GraphQLString))
         }.build()
 
-        transformer.registerFunctionDataFetcher(type, "node", Edge::class)
+        transformer.registerPropertyDataFetcher(type, "node", Edge::class)
         transformer.registerFunctionDataFetcher(type, "cursor", Edge::class)
         type
     }

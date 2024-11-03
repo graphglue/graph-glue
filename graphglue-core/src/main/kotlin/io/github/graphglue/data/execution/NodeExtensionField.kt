@@ -1,7 +1,6 @@
 package io.github.graphglue.data.execution
 
 import graphql.schema.DataFetchingEnvironment
-import graphql.schema.SelectedField
 import io.github.graphglue.definition.ExtensionFieldDefinition
 import io.github.graphglue.definition.NodeDefinition
 
@@ -10,18 +9,18 @@ import io.github.graphglue.definition.NodeDefinition
  *
  * @param definition defines the extension field and provides the generator for the expression
  * @param dfe the data fetching environment required to generate the expression
- * @param field the selected field
+ * @param arguments the arguments provided for this field
  * @param onlyOnTypes a list of parent types on which this should be evaluated
- * @param resultKey used to identify the result
+ * @param resultKeyPath path to the key which fetches this field
  */
 class NodeExtensionField(
-    val definition: ExtensionFieldDefinition,
+    definition: ExtensionFieldDefinition,
     val dfe: DataFetchingEnvironment,
-    val field: SelectedField,
-    onlyOnTypes: List<NodeDefinition>,
-    resultKey: String,
-) : NodeQueryPartEntry(onlyOnTypes, resultKey) {
+    val arguments: Map<String, Any>,
+    onlyOnTypes: List<NodeDefinition>?,
+    resultKeyPath: String,
+) : NodeQueryEntry<ExtensionFieldDefinition>(onlyOnTypes, resultKeyPath, definition) {
 
-    override val cost: Int get() = definition.cost
+    override val cost: Int get() = fieldDefinition.cost
 
 }

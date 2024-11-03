@@ -3,6 +3,7 @@ package io.github.graphglue.graphql.extensions
 import org.springframework.core.annotation.AnnotatedElementUtils
 import org.springframework.core.annotation.AnnotationUtils
 import kotlin.reflect.KClass
+import kotlin.reflect.KProperty1
 
 /**
  * Uses [AnnotationUtils.findAnnotation] to find an annotation of type [A]
@@ -34,4 +35,14 @@ inline fun <reified A : Annotation> KClass<*>.springFindRepeatableAnnotations():
  */
 inline fun <reified A : Annotation> KClass<*>.springGetRepeatableAnnotations(): Collection<A> {
     return AnnotatedElementUtils.getMergedRepeatableAnnotations(this.java, A::class.java)
+}
+
+/**
+ * Finds a property by name
+ *
+ * @param property the name of the property
+ * @return the found property
+ */
+fun KClass<*>.findProperty(property: String): KProperty1<*, *> {
+    return this.members.filterIsInstance<KProperty1<*, *>>().first { it.name == property }
 }

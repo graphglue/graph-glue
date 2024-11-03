@@ -2,10 +2,7 @@ package io.github.graphglue.connection.model
 
 import com.expediagroup.graphql.generator.annotations.GraphQLIgnore
 import com.fasterxml.jackson.databind.ObjectMapper
-import graphql.execution.DataFetcherResult
-import graphql.schema.DataFetchingEnvironment
 import io.github.graphglue.connection.order.Order
-import io.github.graphglue.graphql.extensions.getDataFetcherResult
 import io.github.graphglue.model.Node
 import org.springframework.beans.factory.annotation.Autowired
 
@@ -19,18 +16,7 @@ import org.springframework.beans.factory.annotation.Autowired
  * @param node the [Node] at the start of the edge
  * @param order necessary for Cursor generation
  */
-class Edge<T : Node>(private val node: T, private val order: Order<T>) {
-
-    /**
-     * Returns the node of the edge and sets the local context necessary to use caching
-     *
-     * @param dataFetchingEnvironment defines how the query fetches data
-     * @return the node and the local context necessary for caching
-     */
-    fun node(dataFetchingEnvironment: DataFetchingEnvironment): DataFetcherResult<T> {
-        val stepInfo = dataFetchingEnvironment.executionStepInfo
-        return dataFetchingEnvironment.getDataFetcherResult(node, "${stepInfo.parent.resultKey}/${stepInfo.resultKey}")
-    }
+class Edge<T : Node>(val node: T, private val order: Order<T>) {
 
     /**
      * Generates the cursor associated with the edge

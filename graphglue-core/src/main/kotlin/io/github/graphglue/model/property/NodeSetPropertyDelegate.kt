@@ -1,11 +1,9 @@
 package io.github.graphglue.model.property
 
-import graphql.execution.DataFetcherResult
 import io.github.graphglue.connection.model.Connection
-import io.github.graphglue.data.execution.NodeQuery
-import io.github.graphglue.data.execution.NodeQueryParser
 import io.github.graphglue.data.execution.NodeQueryResult
 import io.github.graphglue.data.repositories.RelationshipDiff
+import io.github.graphglue.definition.FieldDefinition
 import io.github.graphglue.definition.NodeDefinition
 import io.github.graphglue.definition.NodeDefinitionCollection
 import io.github.graphglue.definition.RelationshipDefinition
@@ -19,12 +17,12 @@ import kotlin.reflect.full.createType
  * Property for the many side of a relation
  * Is mapped to a [Connection] in GraphQL
  *
- * @param parent see [BasePropertyDelegate.parent]
- * @param property see [BasePropertyDelegate.property]
+ * @param parent see [BaseNodePropertyDelegate.parent]
+ * @param property see [BaseNodePropertyDelegate.property]
  */
 class NodeSetPropertyDelegate<T : Node>(
     parent: Node, property: KProperty1<*, *>
-) : BasePropertyDelegate<T, NodeSetPropertyDelegate<T>.NodeSetProperty>(parent, property) {
+) : BaseNodePropertyDelegate<T, NodeSetPropertyDelegate<T>.NodeSetProperty>(parent, property) {
 
     /**
      * The [NodeSetProperty] returned to the user
@@ -51,18 +49,14 @@ class NodeSetPropertyDelegate<T : Node>(
      */
     private val isLoaded get() = currentNodes != null
 
-    override fun registerQueryResult(nodeQueryResult: NodeQueryResult<T>) {
-        super.registerQueryResult(nodeQueryResult)
-        if (!isLoaded && nodeQueryResult.options.isAllQuery) {
-            currentNodes = HashSet(nodeQueryResult.nodes)
+    override fun registerQueryResult(
+        fieldDefinition: FieldDefinition,
+        queryResult: NodeQueryResult<T>
+    ) {
+        if (!isLoaded && queryResult.options.isAllQuery) {
+            super.registerQueryResult(fieldDefinition, queryResult)
+            currentNodes = HashSet(queryResult.nodes)
         }
-    }
-
-    override fun constructGraphQLResult(
-        result: NodeQueryResult<T>, localContext: NodeQuery?, nodeQueryParser: NodeQueryParser
-    ): DataFetcherResult<*> {
-        val connection = Connection.fromQueryResult(result, nodeQueryParser.objectMapper)
-        return DataFetcherResult.newResult<Connection<T>>().data(connection).localContext(localContext).build()
     }
 
     override fun getRelationshipDiff(
@@ -87,8 +81,11 @@ class NodeSetPropertyDelegate<T : Node>(
      */
     private suspend fun ensureLoaded(cache: NodeCache?, loader: (LazyLoadingSubqueryGenerator<T>.() -> Unit)?) {
         if (!isLoaded) {
-            val (result, _) = parent.loadNodesOfRelationship(property, loader)
-            currentNodes = result.nodes.toMutableSet()
+            if (parent.isPersisted) {
+                parent.loadNodesOfRelationship(property, loader)
+            } else {
+                currentNodes = mutableSetOf()
+            }
         }
         if (cache != null && nodeCache != cache) {
             nodeCache = cache

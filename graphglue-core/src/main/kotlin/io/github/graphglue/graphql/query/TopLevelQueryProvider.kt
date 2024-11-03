@@ -5,7 +5,10 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import graphql.execution.DataFetcherResult
 import graphql.schema.DataFetchingEnvironment
 import io.github.graphglue.connection.model.Connection
-import io.github.graphglue.data.execution.*
+import io.github.graphglue.data.execution.NodeQueryEngine
+import io.github.graphglue.data.execution.NodeQueryParser
+import io.github.graphglue.data.execution.NodeQueryResult
+import io.github.graphglue.data.execution.SearchQueryResult
 import io.github.graphglue.definition.NodeDefinition
 import io.github.graphglue.graphql.extensions.requiredPermission
 import io.github.graphglue.model.Node
@@ -59,7 +62,7 @@ class TopLevelQueryProvider<T : Node>(private val nodeDefinition: NodeDefinition
      * @param nodeQueryParser used to parse the query
      * @param dataFetchingEnvironment necessary to generate the node query, used for caching
      * @param nodeQueryEngine used to execute the query
-     * @return the result with the correct local context
+     * @return the result
      */
     @Suppress("UNCHECKED_CAST")
     suspend fun getSearchQuery(
@@ -68,7 +71,7 @@ class TopLevelQueryProvider<T : Node>(private val nodeDefinition: NodeDefinition
         dataFetchingEnvironment: DataFetchingEnvironment,
         @Autowired @GraphQLIgnore
         nodeQueryEngine: NodeQueryEngine
-    ): DataFetcherResult<List<T>> {
+    ): List<T> {
         val searchQuery = nodeQueryParser.generateSearchQuery(
             nodeDefinition,
             dataFetchingEnvironment,
@@ -76,10 +79,7 @@ class TopLevelQueryProvider<T : Node>(private val nodeDefinition: NodeDefinition
         )
 
         val queryResult = nodeQueryEngine.execute(searchQuery) as SearchQueryResult<T>
-        return DataFetcherResult.newResult<List<T>>()
-            .data(queryResult.nodes)
-            .localContext(searchQuery.parts[DEFAULT_PART_ID])
-            .build()
+        return queryResult.nodes
     }
 
 }

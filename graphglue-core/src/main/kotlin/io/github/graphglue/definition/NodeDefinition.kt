@@ -2,10 +2,7 @@ package io.github.graphglue.definition
 
 import io.github.graphglue.authorization.MergedAuthorization
 import io.github.graphglue.definition.extensions.firstTypeArgument
-import io.github.graphglue.graphql.extensions.getSimpleName
-import io.github.graphglue.graphql.extensions.springFindAnnotation
-import io.github.graphglue.graphql.extensions.springFindRepeatableAnnotations
-import io.github.graphglue.graphql.extensions.springGetRepeatableAnnotations
+import io.github.graphglue.graphql.extensions.*
 import io.github.graphglue.model.*
 import io.github.graphglue.model.property.NODE_PROPERTY_TYPE
 import io.github.graphglue.model.property.NODE_SET_PROPERTY_TYPE
@@ -21,10 +18,11 @@ import kotlin.reflect.KProperty1
 import kotlin.reflect.KTypeParameter
 import kotlin.reflect.full.*
 import kotlin.reflect.jvm.javaField
+import kotlin.reflect.jvm.jvmErasure
 
 /**
  * Definition of a [Node]
- * Used to find relationships, get the priamry label, create a Cypher-DSL return expressions
+ * Used to find relationships, get the primary label, create a Cypher-DSL return expressions
  *
  * @param nodeType the class associated with the definition
  * @param persistentEntity defines Neo4j's view on the node
@@ -46,12 +44,6 @@ class NodeDefinition(
     val mergedAuthorizations: Map<String, MergedAuthorization> = generateMergedAuthorizations()
 
     /**
-     * All [ExtensionFieldDefinition]s
-     */
-    val extensionFieldDefinitions =
-        generateExtensionFieldDefinitions(extensionFieldDefinitions).associateBy { it.graphQLName }
-
-    /**
      * All one [RelationshipDefinition]s
      */
     private val oneRelationshipDefinitions: List<OneRelationshipDefinition> = generateOneRelationshipDefinitions()
@@ -62,10 +54,30 @@ class NodeDefinition(
     private val manyRelationshipDefinitions: List<ManyRelationshipDefinition> = generateManyRelationshipDefinitions()
 
     /**
-     * Map of all relationship definitions by GraphQL name
+     * List of all relationship definitions by GraphQL name
      */
-    val relationshipDefinitions =
-        (oneRelationshipDefinitions + manyRelationshipDefinitions).associateBy { it.graphQLName }
+    val relationshipDefinitions = oneRelationshipDefinitions + manyRelationshipDefinitions
+
+    /**
+     * All [FieldDefinition]s of this [NodeDefinition]
+     */
+    val fieldDefinitions =
+        generateExtensionFieldDefinitions(extensionFieldDefinitions) + oneRelationshipDefinitions.map {
+            OneRelationshipFieldDefinition(it)
+        } + manyRelationshipDefinitions.map {
+            ManyRelationshipFieldDefinition(it)
+        } + generateAggregatedRelationshipFieldDefinitions()
+
+    /**
+     * Map of all field definitions by property
+     */
+    private val fieldDefinitionByProperty =
+        fieldDefinitions.filter { it.property != null }.associateBy { it.property!! }
+
+    /**
+     * Map of all field definitions by GraphQL name
+     */
+    private val fieldDefinitionByGraphQLName = fieldDefinitions.associateBy { it.graphQLName }
 
     /**
      * map of all relationship definitions by defining property
@@ -79,19 +91,6 @@ class NodeDefinition(
      */
     private val relationshipDefinitionByInverse: MutableMap<RelationshipDefinition, RelationshipDefinition?> =
         mutableMapOf()
-
-    /**
-     * Set of all extension fields GraphQL names
-     * Can be used to check if a field is an extension field
-     */
-    val extensionFieldGraphQLNames =
-        this.extensionFieldDefinitions.values.map(ExtensionFieldDefinition::graphQLName).toSet()
-
-    /**
-     * Set of all relationship GraphQL names
-     * Can be used to check if a field is a relationship
-     */
-    val relationshipGraphQLNames = relationshipDefinitions.values.map(RelationshipDefinition::graphQLName).toSet()
 
     /**
      * Expression which can be used when creating a query using Cypher-DSL
@@ -159,17 +158,14 @@ class NodeDefinition(
      * @return the merged [Authorization]
      */
     private fun mergeAuthorizations(authorizations: Collection<Authorization>) =
-        authorizations.groupBy { it.name }
-            .mapValues { (name, authorizations) ->
-                val authorization = MergedAuthorization(
-                    name,
-                    authorizations.flatMap { it.allow.toList() }.toSet(),
-                    authorizations.flatMap { it.allowFromRelated.toList() }.toSet(),
-                    authorizations.flatMap { it.disallow.toList() }.toSet(),
-                    authorizations.any { it.allowAll }
-                )
-                authorization
-            }
+        authorizations.groupBy { it.name }.mapValues { (name, authorizations) ->
+            val authorization = MergedAuthorization(name,
+                authorizations.flatMap { it.allow.toList() }.toSet(),
+                authorizations.flatMap { it.allowFromRelated.toList() }.toSet(),
+                authorizations.flatMap { it.disallow.toList() }.toSet(),
+                authorizations.any { it.allowAll })
+            authorization
+        }
 
 
     /**
@@ -182,6 +178,53 @@ class NodeDefinition(
         val allExtensionFields = nodeType.springFindRepeatableAnnotations<ExtensionField>()
         return allExtensionFields.mapNotNull {
             extensionFieldGenerators[it.beanName]
+        }
+    }
+
+    /**
+     * Generates the [AggregatedRelationshipFieldDefinition]s for this [NodeDefinition]
+     *
+     * @return the list of generated [AggregatedRelationshipFieldDefinition]s
+     */
+    private fun generateAggregatedRelationshipFieldDefinitions(): List<AggregatedRelationshipFieldDefinition> {
+        val allAggregatedRelationships = nodeType.springFindRepeatableAnnotations<AggregatedNodeRelationship>()
+        return allAggregatedRelationships.map { relationship ->
+            val properties = mutableListOf<PropertyWithOwner>()
+            properties += PropertyWithOwner(nodeType.findProperty(relationship.property), nodeType)
+            for (property in relationship.path) {
+                val currentKClass = getRelationPropertyType(properties.last().property)
+                val propertyOwner = if (property.subclass == Node::class) {
+                    currentKClass
+                } else {
+                    val selectedKClass = property.subclass
+                    if (!selectedKClass.isSubclassOf(currentKClass)) {
+                        throw NodeSchemaException("Class $selectedKClass is not a subclass of the property type class $currentKClass of the previous property in the path")
+                    }
+                    selectedKClass
+                }
+                properties += PropertyWithOwner(propertyOwner.findProperty(property.property), propertyOwner)
+            }
+            AggregatedRelationshipFieldDefinition(
+                relationship.name, relationship.description, properties
+            )
+        }
+    }
+
+    /**
+     * Gets the node type of a NodeProperty or NodeSetProperty
+     *
+     * @param property the property to get the node type of
+     * @return the node type of the property
+     */
+    @Suppress("UNCHECKED_CAST")
+    private fun getRelationPropertyType(property: KProperty1<*, *>): KClass<out Node> {
+        if (property.returnType.isSubtypeOf(NODE_PROPERTY_TYPE) || property.returnType.isSubtypeOf(
+                NODE_SET_PROPERTY_TYPE
+            )
+        ) {
+            return property.returnType.firstTypeArgument.jvmErasure as KClass<out Node>
+        } else {
+            throw NodeSchemaException("Property used in aggregated relationship is not a NodeProperty or NodeSetProperty: $property")
         }
     }
 
@@ -202,11 +245,7 @@ class NodeDefinition(
             val annotation = it.findAnnotation<NodeRelationship>()
                 ?: throw NodeSchemaException("Property of type Node is not annotated with NodeRelationship: $it")
             OneRelationshipDefinition(
-                it,
-                annotation.type,
-                annotation.direction,
-                nodeType,
-                generateRelationshipAuthorizationNames(it)
+                it, annotation.type, annotation.direction, nodeType, generateRelationshipAuthorizationNames(it)
             )
         }
     }
@@ -224,11 +263,7 @@ class NodeDefinition(
             val annotation = it.findAnnotation<NodeRelationship>()
                 ?: throw NodeSchemaException("Property of type Node is not annotated with NodeRelationship: $it")
             ManyRelationshipDefinition(
-                it,
-                annotation.type,
-                annotation.direction,
-                nodeType,
-                generateRelationshipAuthorizationNames(it)
+                it, annotation.type, annotation.direction, nodeType, generateRelationshipAuthorizationNames(it)
             )
         }
     }
@@ -279,6 +314,26 @@ class NodeDefinition(
     }
 
     /**
+     * Gets the [FieldDefinition] of a property
+     *
+     * @param property the property to get the field of
+     * @return the found [FieldDefinition]
+     */
+    fun getFieldDefinitionOfProperty(property: KProperty1<*, *>): FieldDefinition {
+        return fieldDefinitionByProperty[property]!!
+    }
+
+    /**
+     * Gets the [FieldDefinition] by the GraphQL name of the field
+     *
+     * @param graphqlName the name of the field in the GraphQL schema
+     * @return the found [FieldDefinition] or null if none was found
+     */
+    fun getFieldDefinitionOrNull(graphqlName: String): FieldDefinition? {
+        return fieldDefinitionByGraphQLName[graphqlName]
+    }
+
+    /**
      * Generates a new CypherDSL node with the necessary labels
      */
     fun node(): org.neo4j.cypherdsl.core.Node {
@@ -290,7 +345,7 @@ class NodeDefinition(
      */
     fun getRelationshipDefinitionByInverse(inverse: RelationshipDefinition): RelationshipDefinition? {
         return relationshipDefinitionByInverse.computeIfAbsent(inverse) {
-            relationshipDefinitions.values.firstOrNull {
+            relationshipDefinitions.firstOrNull {
                 it.type == inverse.type && it.direction != inverse.direction && it.nodeKClass.isSuperclassOf(inverse.parentKClass)
             }
         }

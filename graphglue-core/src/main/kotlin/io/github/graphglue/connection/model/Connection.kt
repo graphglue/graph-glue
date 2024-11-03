@@ -1,11 +1,8 @@
 package io.github.graphglue.connection.model
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import graphql.execution.DataFetcherResult
-import graphql.schema.DataFetchingEnvironment
 import io.github.graphglue.connection.order.Order
 import io.github.graphglue.data.execution.NodeQueryResult
-import io.github.graphglue.graphql.extensions.getDataFetcherResult
 import io.github.graphglue.model.Node
 
 /**
@@ -18,21 +15,11 @@ import io.github.graphglue.model.Node
  * @param order defines how the items are ordered in the connection, necessary for cursor definition
  */
 class Connection<T : Node>(
-    private val nodes: List<T>,
+    val nodes: List<T>,
     val pageInfo: PageInfo,
     private val totalCount: Int?,
     private val order: Order<T>
 ) {
-
-    /**
-     * Returns the nodes and sets the local context necessary to use caching
-     *
-     * @param dataFetchingEnvironment defines how the query fetches data
-     * @return all nodes and the local context necessary for caching
-     */
-    fun nodes(dataFetchingEnvironment: DataFetchingEnvironment): DataFetcherResult<List<T>> {
-        return dataFetchingEnvironment.getDataFetcherResult(nodes, dataFetchingEnvironment.executionStepInfo.resultKey)
-    }
 
     /**
      * Returns the nodes associated with a cursor

@@ -4,10 +4,8 @@ import com.expediagroup.graphql.generator.annotations.GraphQLDescription
 import com.expediagroup.graphql.generator.annotations.GraphQLIgnore
 import com.expediagroup.graphql.generator.scalars.ID
 import com.expediagroup.graphql.server.operations.Query
-import graphql.execution.DataFetcherResult
 import graphql.schema.DataFetchingEnvironment
 import io.github.graphglue.data.execution.CypherConditionGenerator
-import io.github.graphglue.data.execution.DEFAULT_PART_ID
 import io.github.graphglue.data.execution.NodeQueryEngine
 import io.github.graphglue.data.execution.NodeQueryParser
 import io.github.graphglue.definition.NodeDefinition
@@ -37,7 +35,7 @@ class GraphglueQuery(private val nodeDefinition: NodeDefinition) : Query {
         @Autowired @GraphQLIgnore nodeQueryParser: NodeQueryParser,
         dataFetchingEnvironment: DataFetchingEnvironment,
         @Autowired @GraphQLIgnore nodeQueryEngine: NodeQueryEngine
-    ): DataFetcherResult<Node?> {
+    ): Node? {
         val idConditionGenerator = CypherConditionGenerator {
             it.property("id").isEqualTo(Cypher.anonParameter(id.value))
         }
@@ -49,7 +47,6 @@ class GraphglueQuery(private val nodeDefinition: NodeDefinition) : Query {
         )
 
         val queryResult = nodeQueryEngine.execute(nodeQuery)
-        return DataFetcherResult.newResult<Node?>().data(queryResult.nodes.firstOrNull())
-            .localContext(nodeQuery.parts[DEFAULT_PART_ID]).build()
+        return queryResult.nodes.firstOrNull()
     }
 }

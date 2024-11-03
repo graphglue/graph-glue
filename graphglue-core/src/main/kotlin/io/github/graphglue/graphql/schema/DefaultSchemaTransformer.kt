@@ -10,18 +10,13 @@ import io.github.graphglue.connection.filter.definition.SubFilterGenerator
 import io.github.graphglue.connection.generateConnectionFieldDefinition
 import io.github.graphglue.connection.generateSearchFieldDefinition
 import io.github.graphglue.connection.order.OrderPart
-import io.github.graphglue.definition.ExtensionFieldDefinition
-import io.github.graphglue.definition.NodeDefinition
-import io.github.graphglue.definition.NodeDefinitionCollection
-import io.github.graphglue.definition.RelationshipDefinition
+import io.github.graphglue.definition.*
 import io.github.graphglue.graphql.extensions.getSimpleName
 import io.github.graphglue.graphql.extensions.springFindAnnotation
 import io.github.graphglue.graphql.query.TopLevelQueryProvider
 import io.github.graphglue.model.DomainNode
 import io.github.graphglue.model.Node
-import io.github.graphglue.model.property.BasePropertyDelegate
 import io.github.graphglue.util.CacheMap
-import org.neo4j.cypherdsl.core.Cypher
 import org.neo4j.cypherdsl.core.renderer.Renderer
 import org.springframework.data.neo4j.core.ReactiveNeo4jClient
 import org.springframework.data.neo4j.core.mapping.Neo4jMappingContext
@@ -132,16 +127,12 @@ class DefaultSchemaTransformer(
         type: GraphQLObjectType, nodeDefinition: NodeDefinition, context: SchemaTransformationContext
     ): GraphQLObjectType {
         return type.transform {
-            for (relationshipDefinition in nodeDefinition.relationshipDefinitions.values) {
-                if (relationshipDefinition.isGraphQLVisible) {
-                    val field = relationshipDefinition.generateFieldDefinition(context)
+            for (fieldDefinition in nodeDefinition.fieldDefinitions) {
+                val field = fieldDefinition.generateFieldDefinition(context)
+                if (field != null) {
                     it.field(field)
-                    registerRelationshipDataFetcher(relationshipDefinition, context, nodeDefinition)
+                    registerFieldDataFetcher(fieldDefinition, context, nodeDefinition)
                 }
-            }
-            for (extensionFieldDefinition in nodeDefinition.extensionFieldDefinitions.values) {
-                it.field(extensionFieldDefinition.field)
-                registerExtensionFieldDataFetcher(extensionFieldDefinition, context, nodeDefinition)
             }
             getNodeInterfaces(nodeDefinition).forEach(it::withInterface)
         }
@@ -159,16 +150,12 @@ class DefaultSchemaTransformer(
         type: GraphQLInterfaceType, nodeDefinition: NodeDefinition, context: SchemaTransformationContext
     ): GraphQLInterfaceType {
         return type.transform {
-            for (relationshipDefinition in nodeDefinition.relationshipDefinitions.values) {
-                if (relationshipDefinition.isGraphQLVisible) {
-                    val field = relationshipDefinition.generateFieldDefinition(context)
+            for (fieldDefinition in nodeDefinition.fieldDefinitions) {
+                val field = fieldDefinition.generateFieldDefinition(context)
+                if (field != null) {
                     it.field(field)
-                    registerRelationshipDataFetcher(relationshipDefinition, context, nodeDefinition)
+                    registerFieldDataFetcher(fieldDefinition, context, nodeDefinition)
                 }
-            }
-            for (extensionFieldDefinition in nodeDefinition.extensionFieldDefinitions.values) {
-                it.field(extensionFieldDefinition.field)
-                registerExtensionFieldDataFetcher(extensionFieldDefinition, context, nodeDefinition)
             }
             getNodeInterfaces(nodeDefinition).forEach(it::withInterface)
         }
@@ -189,69 +176,27 @@ class DefaultSchemaTransformer(
     }
 
     /**
-     * Registers a DataFetcher for a [RelationshipDefinition]
-     * Creates a new [DataFetcherFactory] and registers it to the [GraphQLCodeRegistry]
-     * Uses the [Node.propertyLookup] to access the delegate for the property
+     * Registers a DataFetcher for a [FieldDefinition]
      *
-     * @param relationshipDefinition the definition of the relationship to create the data fetcher for
-     * @param context provides the [GraphQLCodeRegistry]
-     * @param nodeDefinition the parent [NodeDefinition] of the relationship
-     */
-    private fun registerRelationshipDataFetcher(
-        relationshipDefinition: RelationshipDefinition,
-        context: SchemaTransformationContext,
-        nodeDefinition: NodeDefinition
-    ) {
-        val kProperty = relationshipDefinition.property
-        val functionDataFetcherFactory =
-            dataFetcherFactoryProvider.functionDataFetcherFactory(null, BasePropertyDelegate::class, BasePropertyDelegate<*, *>::getFromGraphQL)
-        val dataFetcherFactory = DataFetcherFactory { dataFetcherFactoryEnvironment ->
-            val functionDataFetcher = functionDataFetcherFactory.get(dataFetcherFactoryEnvironment)
-            DataFetcher {
-                val node = it.getSource<Node>()!!
-                val environment = DelegateDataFetchingEnvironment(it, node.getProperty<Node>(kProperty))
-                functionDataFetcher.get(environment)
-            }
-        }
-        val coordinates = FieldCoordinates.coordinates(nodeDefinition.name, relationshipDefinition.graphQLName)
-        context.codeRegistry.dataFetcher(coordinates, dataFetcherFactory)
-    }
-
-    /**
-     * Registers a DataFetcher for a [ExtensionFieldDefinition]
-     *
-     * @param extensionFieldDefinition the definition of the extension field to create the data fetcher for
+     * @param fieldDefinition the definition of the field to create the data fetcher for
      * @param context provides the [GraphQLCodeRegistry]
      * @param nodeDefinition the parent [NodeDefinition] of the extension field
      */
-    private fun registerExtensionFieldDataFetcher(
-        extensionFieldDefinition: ExtensionFieldDefinition,
+    private fun registerFieldDataFetcher(
+        fieldDefinition: FieldDefinition,
         context: SchemaTransformationContext,
         nodeDefinition: NodeDefinition
     ) {
-        val dataFetcherFactory = DataFetcherFactory { _ ->
+        val functionDataFetcherFactory =
+            dataFetcherFactoryProvider.functionDataFetcherFactory(null, Node::class, Node::getFromGraphQL)
+        val dataFetcherFactory = DataFetcherFactory { dataFetcherFactoryEnvironment ->
+            val functionDataFetcher = functionDataFetcherFactory.get(dataFetcherFactoryEnvironment)
             DataFetcher {
-                val node = it.getSource<Node>()!!
-                val extensionFields = node.extensionFields
-                if (extensionFields != null) {
-                    return@DataFetcher extensionFields[it.field.resultKey]
-                } else {
-                    val nodeName = Cypher.name("a_node")
-                    val cypherNode = nodeDefinition.node().named(nodeName)
-                        .withProperties(mapOf("id" to Cypher.parameter("a_id", node.rawId!!)))
-                    val expression =
-                        extensionFieldDefinition.generateFetcher(it, it.arguments, cypherNode, nodeDefinition)
-                    val resultName = "a_result"
-                    val statement = Cypher.match(cypherNode).returning(expression.`as`(resultName)).build()
-                    val queryResult = reactiveNeo4jClient.query(renderer.render(statement))
-                        .bindAll(statement.catalog.parameters)
-                    return@DataFetcher queryResult.fetchAs(Any::class.java).mappedBy { _, record ->
-                        extensionFieldDefinition.transformResult(record[resultName])
-                    }.one().toFuture()
-                }
+                val environment = FieldDataFetchingEnvironment(it, fieldDefinition)
+                functionDataFetcher.get(environment)
             }
         }
-        val coordinates = FieldCoordinates.coordinates(nodeDefinition.name, extensionFieldDefinition.graphQLName)
+        val coordinates = FieldCoordinates.coordinates(nodeDefinition.name, fieldDefinition.graphQLName)
         context.codeRegistry.dataFetcher(coordinates, dataFetcherFactory)
     }
 

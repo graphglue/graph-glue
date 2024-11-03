@@ -10,7 +10,7 @@ import io.github.graphglue.data.repositories.GraphglueNeo4jOperations
 import io.github.graphglue.definition.NodeDefinition
 import io.github.graphglue.definition.NodeDefinitionCollection
 import io.github.graphglue.model.Node
-import io.github.graphglue.model.property.BasePropertyDelegate
+import io.github.graphglue.model.property.BaseNodePropertyDelegate
 import org.neo4j.cypherdsl.core.renderer.Renderer
 import org.neo4j.driver.Driver
 import org.neo4j.driver.types.MapAccessor
@@ -128,15 +128,15 @@ class GraphglueDataConfiguration {
     ) = NodeQueryParser(nodeDefinitionCollection, filterDefinitionCollection.orElse(null), objectMapper)
 
     /**
-     * Ensures that [BasePropertyDelegate]s are ignored
+     * Ensures that [BaseNodePropertyDelegate]s are ignored
      *
-     * @return [PersistentPropertyCharacteristicsProvider] which ensures that [BasePropertyDelegate]s are ignored
+     * @return [PersistentPropertyCharacteristicsProvider] which ensures that [BaseNodePropertyDelegate]s are ignored
      */
     @Bean
     @ConditionalOnMissingBean
     fun persistentPropertyCharacteristicsProvider(): PersistentPropertyCharacteristicsProvider {
         return PersistentPropertyCharacteristicsProvider { property, _ ->
-            if (BasePropertyDelegate::class.isSuperclassOf(property.type.kotlin)) {
+            if (BaseNodePropertyDelegate::class.isSuperclassOf(property.type.kotlin)) {
                 PersistentPropertyCharacteristics.treatAsTransient()
             } else {
                 PersistentPropertyCharacteristics.useDefaults()

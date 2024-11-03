@@ -9,15 +9,15 @@ import io.github.graphglue.model.Node
  *
  * @param definition defines which type of [Node] is fetched
  * @param options options for the query, e.g. pagination
- * @param parts subqueries partitioned into parts
+ * @param entries parts of the query to execute with this query
  */
 class SearchQuery(
     definition: NodeDefinition,
     val options: SearchQueryOptions,
-    parts: Map<String, NodeQueryPart>
-) : QueryBase<SearchQuery>(definition, parts) {
+    entries: List<NodeQueryEntry<*>>
+) : QueryBase<SearchQuery>(definition, entries) {
 
-    override fun copyWithParts(parts: Map<String, NodeQueryPart>): SearchQuery {
-        return SearchQuery(definition, options, parts)
+    override fun copyWithEntries(entries: List<NodeQueryEntry<*>>): SearchQuery {
+        return SearchQuery(definition, options, entries)
     }
 }

@@ -11,7 +11,8 @@ import io.github.graphglue.model.Authorization
 import io.github.graphglue.model.Node
 import io.github.graphglue.model.Rule
 import io.github.graphglue.util.iterateGraph
-import org.neo4j.cypherdsl.core.*
+import org.neo4j.cypherdsl.core.Condition
+import org.neo4j.cypherdsl.core.Cypher
 import org.springframework.beans.factory.BeanFactory
 import kotlin.reflect.KClass
 import kotlin.reflect.full.isSubclassOf

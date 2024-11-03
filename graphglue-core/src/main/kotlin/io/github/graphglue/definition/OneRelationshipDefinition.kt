@@ -1,17 +1,11 @@
 package io.github.graphglue.definition
 
-import graphql.schema.GraphQLFieldDefinition
-import graphql.schema.GraphQLNonNull
-import graphql.schema.GraphQLTypeReference
 import io.github.graphglue.definition.extensions.firstTypeArgument
-import io.github.graphglue.graphql.extensions.getSimpleName
-import io.github.graphglue.graphql.schema.SchemaTransformationContext
 import io.github.graphglue.model.Direction
 import io.github.graphglue.model.GraphQLNullable
 import io.github.graphglue.model.Node
 import kotlin.reflect.KClass
 import kotlin.reflect.KProperty1
-import kotlin.reflect.full.hasAnnotation
 import kotlin.reflect.jvm.jvmErasure
 
 /**
@@ -39,18 +33,6 @@ class OneRelationshipDefinition(
     parentKClass,
     allowedAuthorizations
 ) {
-    override fun generateFieldDefinition(transformationContext: SchemaTransformationContext): GraphQLFieldDefinition {
-        val type = property.returnType.firstTypeArgument
-        val graphQLType = GraphQLTypeReference(type.jvmErasure.getSimpleName()).let {
-            if (type.isMarkedNullable || property.hasAnnotation<GraphQLNullable>()) {
-                it
-            } else {
-                GraphQLNonNull(it)
-            }
-        }
-        return GraphQLFieldDefinition.newFieldDefinition().name(graphQLName).description(graphQLDescription)
-            .type(graphQLType).build()
-    }
 
     /**
      * Whether the property is nullable in the database

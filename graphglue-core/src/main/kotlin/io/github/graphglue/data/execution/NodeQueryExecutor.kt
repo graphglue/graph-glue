@@ -5,6 +5,8 @@ import io.github.graphglue.connection.order.OrderDirection
 import io.github.graphglue.definition.NodeDefinition
 import kotlinx.coroutines.reactor.awaitSingle
 import org.neo4j.cypherdsl.core.*
+import org.neo4j.cypherdsl.core.StatementBuilder.OrderableOngoingReadingAndWithWithWhere
+import org.neo4j.cypherdsl.core.StatementBuilder.OrderableOngoingReadingAndWithWithoutWhere
 import org.neo4j.cypherdsl.core.renderer.Renderer
 import org.neo4j.driver.Value
 import org.springframework.data.neo4j.core.ReactiveNeo4jClient
@@ -75,6 +77,7 @@ class NodeQueryExecutor(
     /**
      * Executes the query
      *
+     * @param query defines the query to execute
      * @return the query result including all found nodes
      */
     suspend fun execute(query: NodeQuery): NodeQueryResult<*> {
@@ -88,6 +91,7 @@ class NodeQueryExecutor(
     /**
      * Executes the query
      *
+     * @param query defines the query to execute
      * @return the query result including all found nodes
      */
     suspend fun execute(query: SearchQuery): SearchQueryResult<*> {
@@ -101,14 +105,11 @@ class NodeQueryExecutor(
 
     /**
      * Executes a partial query and registers the results in [nodes]
-     * Partial queries must not contain extension fields
      *
+     * @param query defines the query to execute
      * @param nodes the nodes for which to execute subqueries and where results are registered
      */
     suspend fun executePartial(query: PartialNodeQuery, nodes: Collection<io.github.graphglue.model.Node>) {
-        if (query.parts.values.any { it.extensionFields.entries.isNotEmpty() }) {
-            throw IllegalArgumentException("Partial queries with extension fields are not supported")
-        }
         val (statement, returnName) = createPartialRootNodeQuery(query, nodes)
         nodes.forEach { nodeLookup[it.rawId!!] = it }
         client.query(renderer.render(statement)).bindAll(statement.catalog.parameters)
@@ -121,6 +122,7 @@ class NodeQueryExecutor(
      * Generates a query based on `nodeQuery`
      * Must only be used for the root query
      *
+     * @param query defines the query to execute
      * @return the generated query and result column name
      */
     private fun createRootNodeQuery(query: NodeQuery): StatementWithSymbolicName {
@@ -136,9 +138,9 @@ class NodeQueryExecutor(
         )
         val (mainSubQuery, resultNodes, nodes) = generateMainSubQuery(query, node, allNodesCollected)
         val mainSubQueryBuilder = totalCountBuilder.call(mainSubQuery)
-        val (subPartsBuilder, returnNames) = createPartsSubQueriesRecursive(mainSubQueryBuilder, query, nodes, 1)
+        val (subQueriesBuilder, returnNames) = createEntriesSubQueriesRecursive(mainSubQueryBuilder, query, nodes, 1)
         val (statement, returnName) = createRootReturnStatement(
-            subPartsBuilder, resultNodes, returnNames, totalCount
+            subQueriesBuilder, resultNodes, returnNames, totalCount
         )
         return StatementWithSymbolicName(statement, returnName)
     }
@@ -146,6 +148,7 @@ class NodeQueryExecutor(
     /**
      * Generates a search root query based
      *
+     * @param query defines the query to execute
      * @return the generated query and result column name
      */
     private fun createSearchRootQuery(query: SearchQuery): StatementWithSymbolicName {
@@ -165,16 +168,17 @@ class NodeQueryExecutor(
         }
         val limitedBuilder = skippedBuilder.limit(Cypher.anonParameter(query.options.first))
         val resultNode = generateUniqueName()
-        val resultNodeExpression = generateResultNodeExpression(query.definition, query, nodeAlias, null)
+        val resultNodeExpression =
+            generateResultNodeExpression(query.definition.returnExpression, query, nodeAlias, null)
         val withResultBuilder = limitedBuilder.with(node, resultNodeExpression.`as`(resultNode))
         val resultNodes = generateUniqueName()
         val nodes = generateUniqueName()
         val collectedBuilder = withResultBuilder.with(
             Cypher.collect(resultNode).`as`(resultNodes), Cypher.collect(node).`as`(nodes)
         )
-        val (subPartsBuilder, returnNames) = createPartsSubQueriesRecursive(collectedBuilder, query, nodes, 1)
+        val (subQueriesBuilder, returnNames) = createEntriesSubQueriesRecursive(collectedBuilder, query, nodes, 1)
         val (statement, returnName) = createRootReturnStatement(
-            subPartsBuilder, resultNodes, returnNames, null
+            subQueriesBuilder, resultNodes, returnNames, null
         )
         return StatementWithSymbolicName(statement, returnName)
     }
@@ -184,60 +188,59 @@ class NodeQueryExecutor(
      * Must only be used for the root query
      * Does only include nodes in [nodes] and does only fetch the id of these nodes
      *
+     * @param query defines the query to execute
      * @param nodes the nodes for which to execute subqueries
      * @return the generated query and result column name
      */
     private fun createPartialRootNodeQuery(
         query: PartialNodeQuery, nodes: Collection<io.github.graphglue.model.Node>
     ): StatementWithSymbolicName {
-        val node = query.definition.node().named(generateUniqueName().value)
+        val nodeAlias = generateUniqueName()
+        val node = query.definition.node().named(nodeAlias)
         val builder = Cypher.match(node).where(node.property("id").`in`(Cypher.anonParameter(nodes.map { it.rawId })))
         val resultNodeName = generateUniqueName()
-        val resultNodeMap =
-            Cypher.asExpression(mapOf(NODE_KEY to Cypher.listOf(Cypher.asExpression(mapOf("id" to node.property("id"))))))
-                .`as`(resultNodeName)
+        val resultNodeMap = generateResultNodeExpression(
+            Cypher.asExpression(mapOf("id" to node.property("id"))), query, nodeAlias, null
+        ).`as`(resultNodeName)
         val builderWithResult = builder.with(node, resultNodeMap)
         val allNodesCollected = generateUniqueName()
         val allResultNodesCollected = generateUniqueName()
         val collectedNodesBuilder = builderWithResult.with(
-            Cypher.collect(node).`as`(allNodesCollected),
-            Cypher.collect(resultNodeName).`as`(allResultNodesCollected)
+            Cypher.collect(node).`as`(allNodesCollected), Cypher.collect(resultNodeName).`as`(allResultNodesCollected)
         )
-        val (subPartsBuilder, returnNames) = createPartsSubQueriesRecursive(
+        val (subQueriesBuilder, returnNames) = createEntriesSubQueriesRecursive(
             collectedNodesBuilder, query, allNodesCollected, 1
         )
         val (statement, returnName) = createPartialRootReturnStatement(
-            subPartsBuilder, allResultNodesCollected, returnNames
+            subQueriesBuilder, allResultNodesCollected, returnNames
         )
         return StatementWithSymbolicName(statement, returnName)
     }
 
     /**
-     * Creates SubQueries for each SubQuery in each part of the provided [nodeQuery]
+     * Creates SubQueries for each SubQuery in the provided [nodeQuery]
      * Generates recursively depth first.
      *
      * @param builder the builder to add the SubQuery calls to
-     * @param nodeQuery contains the parts with the SubQueries
+     * @param nodeQuery contains the SubQuery entries
      * @param allNodes name of the collection containing all nodes, should be a nested collection of depth [unwindCount]
      * @param unwindCount nesting depth of [allNodes] collection
      * @return the new statement builder, and a list of all names to return (names of the SubQuery results)
      */
-    private fun createPartsSubQueriesRecursive(
+    private fun createEntriesSubQueriesRecursive(
         builder: StatementBuilder.OngoingReading, nodeQuery: QueryBase<*>, allNodes: SymbolicName, unwindCount: Int
     ): Pair<StatementBuilder.OngoingReading, List<SymbolicName>> {
         var callBuilder = builder
         val returnNames = mutableListOf<SymbolicName>()
-        for (part in nodeQuery.parts.values) {
-            for (subQuery in part.subQueries.entries) {
-                val parentDefinition = nodeQuery.definition
-                val (statement, resultNodes, nodes) = createSubQuery(subQuery, parentDefinition, allNodes, unwindCount)
-                returnNames += resultNodes
-                callBuilder = callBuilder.call(statement)
-                subQueryLookup[subQuery] = resultNodes.value!!
-                val (newBuilder, newReturnNames) = createPartsSubQueriesRecursive(callBuilder, subQuery.query, nodes, 2)
-                callBuilder = newBuilder
-                returnNames += newReturnNames
-            }
+        for (subQuery in nodeQuery.entries.filterIsInstance<NodeSubQuery>()) {
+            val parentDefinition = nodeQuery.definition
+            val (statement, resultNodes, nodes) = createSubQuery(subQuery, parentDefinition, allNodes, unwindCount)
+            returnNames += resultNodes
+            callBuilder = callBuilder.call(statement)
+            subQueryLookup[subQuery] = resultNodes.value!!
+            val (newBuilder, newReturnNames) = createEntriesSubQueriesRecursive(callBuilder, subQuery.query, nodes, 2)
+            callBuilder = newBuilder
+            returnNames += newReturnNames
         }
         return callBuilder to returnNames
     }
@@ -331,7 +334,7 @@ class NodeQueryExecutor(
      */
     private fun applyTotalCountIfRequired(
         options: NodeQueryOptions,
-        builder: StatementBuilder.OrderableOngoingReadingAndWithWithoutWhere,
+        builder: OrderableOngoingReadingAndWithWithoutWhere,
         allNodesCollected: SymbolicName,
         additionalNames: List<SymbolicName>
     ) = if (options.fetchTotalCount) {
@@ -351,7 +354,7 @@ class NodeQueryExecutor(
      * @return the new builder
      */
     private fun applyTotalCount(
-        builder: StatementBuilder.OrderableOngoingReadingAndWithWithoutWhere,
+        builder: OrderableOngoingReadingAndWithWithoutWhere,
         allNodesCollected: SymbolicName,
         additionalNames: List<SymbolicName>,
         totalCount: SymbolicName
@@ -420,7 +423,9 @@ class NodeQueryExecutor(
         orderContext: OrderContext?,
         nodeQuery: NodeQuery
     ): StatementWithResultNodesAndNodes {
-        val resultNodeExpression = generateResultNodeExpression(nodeDefinition, nodeQuery, nodeAlias, orderContext)
+        val resultNodeExpression = generateResultNodeExpression(
+            nodeDefinition.returnExpression, nodeQuery, nodeAlias, orderContext
+        )
         val resultNode = generateUniqueName()
         val orderVariables = orderContext?.variables?.values ?: emptyList()
         val resultBuilder = builder.with(
@@ -443,17 +448,17 @@ class NodeQueryExecutor(
     /**
      * Generates the expression for the result node, including the node itself and extension fields
      *
-     * @param nodeDefinition definition for the currently queried node
+     * @param nodeExpression the expression for the node itself
      * @param nodeQuery the currently converted query
      * @param nodeAlias name of the variable containing the node
      * @param orderContext order to sort by with associated variables
      * @return the generated expression
      */
     private fun generateResultNodeExpression(
-        nodeDefinition: NodeDefinition, nodeQuery: QueryBase<*>, nodeAlias: SymbolicName, orderContext: OrderContext?
+        nodeExpression: Expression, nodeQuery: QueryBase<*>, nodeAlias: SymbolicName, orderContext: OrderContext?
     ): MapExpression {
         val resultNodeMap = mapOf(
-            NODE_KEY to Cypher.listOf(nodeDefinition.returnExpression),
+            NODE_KEY to Cypher.listOf(nodeExpression),
             ORDER_KEY to Cypher.asExpression(orderContext?.variables ?: emptyMap())
         ) + generateExtensionFields(nodeQuery, nodeAlias)
         return Cypher.asExpression(resultNodeMap)
@@ -469,16 +474,14 @@ class NodeQueryExecutor(
      */
     private fun generateExtensionFields(nodeQuery: QueryBase<*>, nodeAlias: SymbolicName): Map<String, Expression> {
         val extensionFields = mutableMapOf<String, Expression>()
-        nodeQuery.parts.values.forEach { part ->
-            part.extensionFields.entries.forEach {
-                val node = nodeQuery.definition.node().named(nodeAlias.value!!)
-                val labelCondition = generateLabelCondition(node, it)
-                val expression = it.definition.generateFetcher(it.dfe, it.field.arguments, node, nodeQuery.definition)
-                val withLabelCheck = Cypher.caseExpression().`when`(labelCondition).then(expression)
-                val fieldName = generateUniqueName().value!!
-                extensionFields[fieldName] = withLabelCheck
-                extensionFieldLookup[it] = fieldName
-            }
+        nodeQuery.entries.filterIsInstance<NodeExtensionField>().forEach {
+            val node = nodeQuery.definition.node().named(nodeAlias.value!!)
+            val labelCondition = generateLabelCondition(node, it)
+            val expression = it.fieldDefinition.generateFetcher(it.dfe, it.arguments, node, nodeQuery.definition)
+            val withLabelCheck = Cypher.caseExpression().`when`(labelCondition).then(expression)
+            val fieldName = generateUniqueName().value!!
+            extensionFields[fieldName] = withLabelCheck
+            extensionFieldLookup[it] = fieldName
         }
         return extensionFields
     }
@@ -493,7 +496,7 @@ class NodeQueryExecutor(
      */
     private fun applyAfterAndBefore(
         options: NodeQueryOptions, nodeAlias: SymbolicName, builder: StatementBuilder.OngoingReading
-    ) : Pair<StatementBuilder. OrderableOngoingReadingAndWithWithoutWhere, OrderContext?> {
+    ): Pair<OrderableOngoingReadingAndWithWithoutWhere, OrderContext?> {
         val orderContext = if (options.orderBy != null) {
             OrderContext(options.orderBy, options.orderBy.fields.associate { it.part.name to generateUniqueName() })
         } else {
@@ -504,7 +507,7 @@ class NodeQueryExecutor(
         } ?: emptyList()
         val builderWithOrderVariables = builder.with(orderVariables + nodeAlias)
         if (options.after != null || options.before != null) {
-            require(orderContext != null) { "Can't use after/before without orderBy"}
+            require(orderContext != null) { "Can't use after/before without orderBy" }
             var filterCondition = Cypher.noCondition()
             if (options.after != null) {
                 filterCondition = filterCondition.and(
@@ -516,7 +519,8 @@ class NodeQueryExecutor(
                     generateCursorFilterExpression(options.before, orderContext, false)
                 )
             }
-            return builderWithOrderVariables.where(filterCondition).with(orderContext.variables.values + nodeAlias) to orderContext
+            return builderWithOrderVariables.where(filterCondition)
+                .with(orderContext.variables.values + nodeAlias) to orderContext
         } else {
             return builderWithOrderVariables to orderContext
         }
@@ -535,9 +539,9 @@ class NodeQueryExecutor(
     private fun applyResultLimiters(
         orderContext: OrderContext?,
         options: NodeQueryOptions,
-        builder: StatementBuilder.OrderableOngoingReadingAndWithWithoutWhere,
+        builder: OrderableOngoingReadingAndWithWithoutWhere,
         nodeAlias: SymbolicName
-    ): StatementBuilder.OrderableOngoingReadingAndWithWithoutWhere {
+    ): OrderableOngoingReadingAndWithWithoutWhere {
         val firstOrLast = options.first ?: options.last
         return if (firstOrLast != null) {
             val orderedBuilder = if (orderContext != null) {
@@ -637,8 +641,9 @@ class NodeQueryExecutor(
         val labelCondition = generateLabelCondition(node, subQuery)
         val nodeQuery = subQuery.query
         val relatedNode = nodeQuery.definition.node().named(generateUniqueName().value)
-        val innerBuilder = Cypher.with(node).with(node).where(labelCondition)
-            .match(subQuery.relationshipDefinition.generateRelationship(node, relatedNode)).with(node, relatedNode)
+        val innerBuilder = applySubQueryMatchWithAuthorizationConditions(
+            Cypher.with(node).with(node).where(labelCondition), node, relatedNode, subQuery.relationshipDefinitions
+        )
         val (innerStatement, innerResultNodes, innerNodes) = createSubNodeQuery(
             nodeQuery, innerBuilder, relatedNode, node
         )
@@ -652,13 +657,50 @@ class NodeQueryExecutor(
     }
 
     /**
+     * Matches the relationships defined in [relationshipDefinitions] and applies authorization conditions
+     *
+     * @param builder the builder to apply the conditions to
+     * @param node the node to generate the conditions for
+     * @param relatedNode the node to which the relationships should be matched
+     * @param relationshipDefinitions the chain of relationships to match
+     * @return the new builder
+     */
+    private fun applySubQueryMatchWithAuthorizationConditions(
+        builder: OrderableOngoingReadingAndWithWithWhere,
+        node: Node,
+        relatedNode: Node,
+        relationshipDefinitions: List<AuthorizedRelationDefinition>
+    ): OrderableOngoingReadingAndWithWithoutWhere {
+        val relationNodes = relationshipDefinitions.dropLast(1).map {
+            it.relatedNodeDefinition.node().named(generateUniqueName())
+        } + relatedNode
+        val definitionsWithNodes = relationshipDefinitions.zip(relationNodes)
+        val authCondition = definitionsWithNodes.mapNotNull { (definition, node) ->
+            definition.authorizationCondition?.generateCondition(node)
+        }.fold(Cypher.isTrue()) { acc, condition ->
+            acc.and(condition)
+        }
+        var relationship: RelationshipPattern =
+            relationshipDefinitions.first().relationshipDefinition.generateRelationship(
+                node, relationNodes.first()
+            )
+        definitionsWithNodes.drop(1).forEach { (definition, node) ->
+            relationship = definition.relationshipDefinition.generateRelationship(relationship, node)
+        }
+        return builder.match(relationship).where(authCondition).withDistinct(node, relatedNode)
+    }
+
+    /**
      * Creates a condition to check that [node] has all labels specified in [entry] onlyOnTypes
      *
      * @param node the [Node] to generate the condition for
      * @param entry defining the labels to check for
      * @return the generated condition
      */
-    private fun generateLabelCondition(node: Node, entry: NodeQueryPartEntry): Condition {
+    private fun generateLabelCondition(node: Node, entry: NodeQueryEntry<*>): Condition {
+        if (entry.onlyOnTypes == null) {
+            return Cypher.isTrue()
+        }
         return entry.onlyOnTypes.fold(Cypher.noCondition()) { condition, nodeDefinition ->
             condition.or(node.hasLabels(nodeDefinition.primaryLabel))
         }
@@ -697,10 +739,7 @@ class NodeQueryExecutor(
      * @return the generated query, the result name and the name of a collection with all raw nodes
      */
     private fun createSubNodeQuery(
-        nodeQuery: NodeQuery,
-        builder: StatementBuilder.OrderableOngoingReadingAndWithWithoutWhere,
-        node: Node,
-        parentNode: Node
+        nodeQuery: NodeQuery, builder: OrderableOngoingReadingAndWithWithoutWhere, node: Node, parentNode: Node
     ): StatementWithResultNodesAndNodes {
         val options = nodeQuery.options
         val filteredBuilder = applyFilterConditions(options.filters, builder, node)
@@ -722,7 +761,7 @@ class NodeQueryExecutor(
      *
      * @param builder ongoing statement builder
      * @param resultNodesCollected name for the variable containing a collection of all result nodes
-     * @param nodesCollected name for the variable containing all raw nodes, used for parts SubQueries
+     * @param nodesCollected name for the variable containing all raw nodes, used for SubQueries
      * @param parentNodeId statement for parent node id, set to `Cypher.literalNull()` if null
      * @param totalCount name for the variable under which totalCount should be saved
      * @return the generated statement, the result name and the name of a collection with all raw nodes
@@ -765,11 +804,11 @@ class NodeQueryExecutor(
         record: org.neo4j.driver.Record, returnNodeName: SymbolicName, nodeQuery: QueryBase<*>
     ): PartialNodeQueryResult {
         val value = record[returnNodeName.value]
-        val partsResults = subQueryLookup.mapValues { (_, name) ->
+        val entriesResults = subQueryLookup.mapValues { (_, name) ->
             val entries = record[name]!!.asList { it }
             entries.associateBy { it[PARENT_NODE_ID_KEY].asString() }
         }
-        return parseQueryResultInternal(value, nodeQuery, partsResults)
+        return parseQueryResultInternal(value, nodeQuery, entriesResults)
     }
 
     /**
@@ -778,14 +817,14 @@ class NodeQueryExecutor(
      *
      * @param value the main result of the query, contains the nodes and the optional totalCount
      * @param nodeQuery the query used to get the results
-     * @param partsResults lookup from sub query and parent node id to related nodes (not parsed yet)
+     * @param entriesResults lookup from sub query and parent node id to related nodes (not parsed yet)
      */
     private fun parseQueryResultInternal(
-        value: Value, nodeQuery: QueryBase<*>, partsResults: Map<NodeSubQuery, Map<String, Value>>
+        value: Value, nodeQuery: QueryBase<*>, entriesResults: Map<NodeSubQuery, Map<String, Value>>
     ): PartialNodeQueryResult {
         val nodesValue = value[NODES_KEY]
         val totalCountValue = value[TOTAL_COUNT_KEY]
-        val nodes = nodesValue.asList { parseNode(it, nodeQuery, partsResults) }
+        val nodes = nodesValue.asList { parseNode(it, nodeQuery, entriesResults) }
         returnedNodesByNodeQuery.getOrPut(nodeQuery) { mutableSetOf() } += nodes
         val totalCount = if (totalCountValue.isNull) null else totalCountValue.asInt()
         return PartialNodeQueryResult(nodes, totalCount)
@@ -797,50 +836,66 @@ class NodeQueryExecutor(
      *
      * @param value the returned value for the node
      * @param nodeQuery the query used to get the results
-     * @param partsResults lookup from sub query and parent node id to related nodes (not parsed yet)
+     * @param entriesResults lookup from sub query and parent node id to related nodes (not parsed yet)
      * @return the parsed node
      */
     private fun parseNode(
-        value: Value, nodeQuery: QueryBase<*>, partsResults: Map<NodeSubQuery, Map<String, Value>>
+        value: Value, nodeQuery: QueryBase<*>, entriesResults: Map<NodeSubQuery, Map<String, Value>>
     ): io.github.graphglue.model.Node {
         val nodeId = value[NODE_KEY][0]["id"].asString()!!
         val node = nodeLookup.computeIfAbsent(nodeId) {
             mappingContext.entityConverter.read(nodeQuery.definition.nodeType.java, value[NODE_KEY])
         }
-        for (subQuery in nodeQuery.parts.flatMap { it.value.subQueries.entries }) {
-            val nodesValue = partsResults[subQuery]!![nodeId]
-            if (nodesValue != null) {
-                val partialQueryResult = parseQueryResultInternal(nodesValue, subQuery.query, partsResults)
-                val subQueryResult = partialQueryResult.toCompleteResult(subQuery.query)
-                val relationshipDefinition = subQuery.relationshipDefinition
-                relationshipDefinition.registerQueryResult(node, subQueryResult)
-            }
-        }
-        if (node.extensionFields == null) {
-            node.extensionFields = mutableMapOf()
-        }
-        val extensionFields = node.extensionFields!!
-        for (extensionField in nodeQuery.parts.flatMap { it.value.extensionFields.entries }) {
-            val name = extensionFieldLookup[extensionField]!!
-            val extensionFieldValue = value[name]
-            if (!extensionFieldValue.isNull) {
-                val transformedExtensionFieldValue = extensionField.definition.transformResult(extensionFieldValue)
-                extensionFields[extensionField.resultKey] = transformedExtensionFieldValue
-            }
-        }
+        parseNodeEntries(nodeQuery, node, entriesResults, value)
         if (node.orderFields == null) {
             node.orderFields = mutableMapOf()
         }
         val orderFields = node.orderFields!!
         val orderValue = value[ORDER_KEY]
         if (!orderValue.isNull) {
-            for ((fieldName, fieldValue) in orderValue.asMap ()) {
+            for ((fieldName, fieldValue) in orderValue.asMap()) {
                 if (fieldName !in orderFields) {
                     orderFields[fieldName] = fieldValue
                 }
             }
         }
         return node
+    }
+
+    /**
+     * Parses the entries of a [node] based on the provided [nodeQuery]
+     *
+     * @param nodeQuery defines the entries to parse
+     * @param node the node of which the entries should be parsed
+     * @param entriesResults lookup from sub query and parent node id to related nodes (not parsed yet)
+     * @param value the return value for the current [node]
+     */
+    private fun parseNodeEntries(
+        nodeQuery: QueryBase<*>,
+        node: io.github.graphglue.model.Node,
+        entriesResults: Map<NodeSubQuery, Map<String, Value>>,
+        value: Value
+    ) {
+        for (entry in nodeQuery.entries) {
+            if (entry is NodeSubQuery && entry.affectsNode(node)) {
+                val entries = entriesResults[entry]!!
+                val subQueryResult = if (node.id in entries) {
+                    val nodesValue = entries[node.id]!!
+                    val partialQueryResult = parseQueryResultInternal(nodesValue, entry.query, entriesResults)
+                    partialQueryResult.toCompleteResult(entry.query)
+                } else {
+                    NodeQueryResult(entry.query.options, emptyList(), 0)
+                }
+                node.registerQueryResult(entry, subQueryResult)
+            }
+            if (entry is NodeExtensionField) {
+                val name = extensionFieldLookup[entry]!!
+                if (value.containsKey(name)) {
+                    val extensionFieldValue = entry.fieldDefinition.transformResult(value[name])
+                    node.registerQueryResult(entry, extensionFieldValue)
+                }
+            }
+        }
     }
 }
 
@@ -857,7 +912,7 @@ private data class StatementWithSymbolicName(val statement: Statement, val symbo
  *
  * @param statement the Cypher DSL statement of the SubQuery
  * @param allResultNodes name for return param with all nodes as result
- * @param allNodes name for return param with all raw nodes for parts SubQueries
+ * @param allNodes name for return param with all raw nodes for entries SubQueries
  */
 private data class StatementWithResultNodesAndNodes(
     val statement: Statement, val allResultNodes: SymbolicName, val allNodes: SymbolicName

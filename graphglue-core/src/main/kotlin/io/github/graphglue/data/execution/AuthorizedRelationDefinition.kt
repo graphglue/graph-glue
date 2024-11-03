@@ -7,7 +7,7 @@ import io.github.graphglue.definition.RelationshipDefinition
  * A RelationshipDefinition with an optional authorization condition
  *
  * @param relationshipDefinition the relationship definition
- * @param relatedNodeDefinition the related node definition
+ * @param relatedNodeDefinition the related node definition, may be of a subclass
  * @param authorizationCondition the authorization condition
  */
 class AuthorizedRelationDefinition(

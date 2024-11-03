@@ -420,11 +420,13 @@ class NodeQueryParser(
     private fun getAuthorizedRelationshipDefinitions(
         relationshipDefinitions: List<RelationshipDefinition>, requiredPermission: Permission?
     ): List<AuthorizedRelationDefinition> {
-        return relationshipDefinitions.map {
+        return relationshipDefinitions.mapIndexed { index, relationshipDefinition ->
+            val nodeKClass =
+                relationshipDefinitions.getOrNull(index + 1)?.parentKClass ?: relationshipDefinition.nodeKClass
             AuthorizedRelationDefinition(
-                it,
-                nodeDefinitionCollection.getNodeDefinition(it.nodeKClass),
-                getAuthorizationConditionWithRelationshipDefinition(requiredPermission, it)
+                relationshipDefinition,
+                nodeDefinitionCollection.getNodeDefinition(nodeKClass),
+                getAuthorizationConditionWithRelationshipDefinition(requiredPermission, relationshipDefinition)
             )
         }
     }

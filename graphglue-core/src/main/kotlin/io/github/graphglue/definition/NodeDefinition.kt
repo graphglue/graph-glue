@@ -189,10 +189,10 @@ class NodeDefinition(
     private fun generateAggregatedRelationshipFieldDefinitions(): List<AggregatedRelationshipFieldDefinition> {
         val allAggregatedRelationships = nodeType.springFindRepeatableAnnotations<AggregatedNodeRelationship>()
         return allAggregatedRelationships.map { relationship ->
-            val properties = mutableListOf<KProperty1<*, *>>()
-            properties += nodeType.findProperty(relationship.property)
+            val properties = mutableListOf<PropertyWithOwner>()
+            properties += PropertyWithOwner(nodeType.findProperty(relationship.property), nodeType)
             for (property in relationship.path) {
-                val currentKClass = getRelationPropertyType(properties.last())
+                val currentKClass = getRelationPropertyType(properties.last().property)
                 val propertyOwner = if (property.subclass == Node::class) {
                     currentKClass
                 } else {
@@ -202,10 +202,10 @@ class NodeDefinition(
                     }
                     selectedKClass
                 }
-                properties += propertyOwner.findProperty(property.property)
+                properties += PropertyWithOwner(propertyOwner.findProperty(property.property), propertyOwner)
             }
             AggregatedRelationshipFieldDefinition(
-                relationship.name, relationship.description, properties, nodeType
+                relationship.name, relationship.description, properties
             )
         }
     }

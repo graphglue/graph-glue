@@ -18,13 +18,11 @@ import kotlin.reflect.KProperty1
  *  @param graphQLName the name of the GraphQL field
  *  @param description the description of the GraphQL field
  *  @param properties properties defining the aggregation path
- *  @param parentKClass the type of node containing this field
  */
 class AggregatedRelationshipFieldDefinition(
     override val graphQLName: String,
     val description: String,
-    val properties: List<KProperty1<*, *>>,
-    val parentKClass: KClass<out Node>,
+    val properties: List<PropertyWithOwner>,
 ) : FieldDefinition(null) {
 
     /**
@@ -42,11 +40,9 @@ class AggregatedRelationshipFieldDefinition(
     private fun getRelationshipDefinitions(nodeDefinitionCollection: NodeDefinitionCollection): List<RelationshipDefinition> {
         if (cachedRelationshipDefinitions == null) {
             val relationshipDefinitions = mutableListOf<RelationshipDefinition>()
-            var currentKClass = parentKClass
-            for (property in properties) {
-                val nodeDefinition = nodeDefinitionCollection.getNodeDefinition(currentKClass)
+            for ((property, owner) in properties) {
+                val nodeDefinition = nodeDefinitionCollection.getNodeDefinition(owner)
                 val relationshipDefinition = nodeDefinition.getRelationshipDefinitionOfProperty(property)
-                currentKClass = relationshipDefinition.nodeKClass
                 relationshipDefinitions += relationshipDefinition
             }
             cachedRelationshipDefinitions = relationshipDefinitions
@@ -76,3 +72,11 @@ class AggregatedRelationshipFieldDefinition(
     }
 
 }
+
+/**
+ * A property with its owning class
+ *
+ * @param property the property
+ * @param owner the class which owns the property
+ */
+data class PropertyWithOwner(val property: KProperty1<*, *>, val owner: KClass<out Node>)

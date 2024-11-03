@@ -51,7 +51,7 @@ class LazyLoadingSubqueryGenerator<T : Node?>(
      * @param subGenerator specifies which nested properties to load
      */
     @JvmName("loadNode")
-    inline fun <reified S : T & Any, V : Node> load(
+    inline fun <reified S : T & Any, V : Node?> load(
         property: KProperty1<S, LazyLoadingDelegate<V, NodePropertyDelegate<V>.NodeProperty>>,
         noinline subGenerator: (LazyLoadingSubqueryGenerator<V>.() -> Unit)? = null
     ) {

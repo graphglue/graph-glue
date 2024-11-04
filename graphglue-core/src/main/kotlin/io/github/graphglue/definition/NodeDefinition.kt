@@ -72,7 +72,7 @@ class NodeDefinition(
      * Map of all field definitions by property
      */
     private val fieldDefinitionByProperty =
-        fieldDefinitions.filter { it.property != null }.associateBy { it.property!! }
+        fieldDefinitions.filter { it.property != null }.associateBy { it.property!!.name }
 
     /**
      * Map of all field definitions by GraphQL name
@@ -320,7 +320,7 @@ class NodeDefinition(
      * @return the found [FieldDefinition]
      */
     fun getFieldDefinitionOfProperty(property: KProperty1<*, *>): FieldDefinition {
-        return fieldDefinitionByProperty[property]!!
+        return fieldDefinitionByProperty[property.name]!!
     }
 
     /**

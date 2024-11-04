@@ -70,6 +70,7 @@ class NodeQueryEngine(
         val newQuery = instance.splitNodeQuery(query)
         val executor = NodeQueryExecutor(client, mappingContext, renderer)
         executor.executePartial(newQuery, nodes)
+        instance.executeAdditionalQueries(executor)
     }
 
     /**

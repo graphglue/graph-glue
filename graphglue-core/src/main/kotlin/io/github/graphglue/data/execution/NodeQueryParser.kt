@@ -215,18 +215,18 @@ class NodeQueryParser(
         /**
          * Generates query entries for all fields in [fields]
          *
-         * @param definition definition for the [Node] to load
          * @param fields fields to create subqueries based of
          * @param context provides the sub-selection set, result path and arguments
          * @return the generated query entries
          */
         private fun generateQueryEntries(
-            definition: NodeDefinition, fields: List<SelectedField>, context: FieldFetchingContext
+            fields: List<SelectedField>, context: FieldFetchingContext
         ): List<NodeQueryEntry<*>> {
             val entries = ArrayList<NodeQueryEntry<*>>()
             for (field in fields) {
-                val fieldDefinition = definition.getFieldDefinitionOrNull(field.name)
                 val onlyOnTypes = nodeDefinitionCollection.getNodeDefinitionsFromGraphQLNames(field.objectTypeNames)
+                val firstPossibleType = onlyOnTypes.first()
+                val fieldDefinition = firstPossibleType.getFieldDefinitionOrNull(field.name)
                 if (fieldDefinition != null) {
                     entries.add(
                         fieldDefinition.createQueryEntry(
@@ -322,13 +322,13 @@ class NodeQueryParser(
             val entries = mutableListOf<NodeQueryEntry<*>>()
             for (nodesField in selectionSet.getFields("nodes")) {
                 val nodesContext = context.ofField(nodesField)
-                entries += generateQueryEntries(nodeDefinition, nodesField.selectionSet.immediateFields, nodesContext)
+                entries += generateQueryEntries(nodesField.selectionSet.immediateFields, nodesContext)
             }
             for (edgesField in selectionSet.getFields("edges")) {
                 val edgesContext = context.ofField(edgesField)
                 for (nodeField in edgesField.selectionSet.getFields("node")) {
                     val nodeContext = edgesContext.ofField(nodeField)
-                    entries += generateQueryEntries(nodeDefinition, nodeField.selectionSet.immediateFields, nodeContext)
+                    entries += generateQueryEntries(nodeField.selectionSet.immediateFields, nodeContext)
                 }
             }
             return NodeQuery(nodeDefinition, subNodeQueryOptions, entries)
@@ -364,9 +364,7 @@ class NodeQueryParser(
                 first = arguments["first"] as Int,
                 skip = arguments["skip"]?.let { it as Int },
             )
-            val entries = generateQueryEntries(
-                nodeDefinition, context.selectionSet.immediateFields, context
-            )
+            val entries = generateQueryEntries(context.selectionSet.immediateFields, context)
             return SearchQuery(nodeDefinition, queryOptions, entries)
         }
 
@@ -388,7 +386,7 @@ class NodeQueryParser(
             val subNodeQueryOptions = NodeQueryOptions(
                 filters = additionalConditions, first = ONE_NODE_QUERY_LIMIT, fetchTotalCount = false, orderBy = null
             )
-            val entries = generateQueryEntries(nodeDefinition, context.selectionSet.immediateFields, context)
+            val entries = generateQueryEntries(context.selectionSet.immediateFields, context)
             return NodeQuery(nodeDefinition, subNodeQueryOptions, entries)
         }
     }

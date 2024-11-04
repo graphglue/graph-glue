@@ -197,15 +197,10 @@ abstract class Node {
             val parentNodeDefinition = nodeDefinitionCollection.getNodeDefinition(this::class)
             val fieldDefinition =
                 parentNodeDefinition.getFieldDefinitionOfProperty(property) as RelationshipFieldDefinition<*>
-            val entries = if (loader != null) {
-                val generator =
-                    LazyLoadingSubqueryGenerator<T>(fieldDefinition, parentNodeDefinition, nodeDefinitionCollection)
-                loader.invoke(generator)
-                listOf(generator.toSubQuery())
-            } else {
-                emptyList()
-            }
-            val query = PartialNodeQuery(parentNodeDefinition, entries)
+            val generator =
+                LazyLoadingSubqueryGenerator<T>(fieldDefinition, parentNodeDefinition, nodeDefinitionCollection)
+            loader?.invoke(generator)
+            val query = PartialNodeQuery(parentNodeDefinition, listOf(generator.toSubQuery()))
             lazyLoadingContext.nodeQueryEngine.execute(query, listOf(this))
         }
     }

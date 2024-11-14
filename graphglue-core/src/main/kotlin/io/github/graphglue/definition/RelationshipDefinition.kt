@@ -90,14 +90,10 @@ abstract class RelationshipDefinition(
      * Gets the diff describing updates of the property
      *
      * @param node the node which contains the property to get the diff from
-     * @param nodeDefinition definition of the related nodes
      * @return the diff describing added and removed nodes
      */
-    internal fun getRelationshipDiff(
-        node: Node,
-        nodeDefinition: NodeDefinition
-    ): RelationshipDiff {
-        return node.getProperty<BaseNodePropertyDelegate<Node, *>>(property).getRelationshipDiff(nodeDefinition)
+    internal fun getRelationshipDiff(node: Node): RelationshipDiff {
+        return node.getProperty<BaseNodePropertyDelegate<Node, *>>(property).getRelationshipDiff()
     }
 
     /**
@@ -108,7 +104,8 @@ abstract class RelationshipDefinition(
         savingNodes: Set<Node>,
         nodeDefinitionCollection: NodeDefinitionCollection
     ) {
-        node.getProperty<BaseNodePropertyDelegate<Node, *>>(property).validate(savingNodes, this, nodeDefinitionCollection)
+        node.getProperty<BaseNodePropertyDelegate<Node, *>>(property)
+            .validate(savingNodes, this, nodeDefinitionCollection)
     }
 
     /**

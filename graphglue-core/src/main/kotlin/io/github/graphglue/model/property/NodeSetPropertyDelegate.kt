@@ -59,9 +59,7 @@ class NodeSetPropertyDelegate<T : Node>(
         }
     }
 
-    override fun getRelationshipDiff(
-        nodeDefinition: NodeDefinition
-    ): RelationshipDiff {
+    override fun getRelationshipDiff(): RelationshipDiff {
         return RelationshipDiff(addedNodes, removedNodes.filter { it.rawId != null })
     }
 

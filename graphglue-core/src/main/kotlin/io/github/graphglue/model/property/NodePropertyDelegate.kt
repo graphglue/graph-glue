@@ -70,9 +70,7 @@ class NodePropertyDelegate<T : Node?>(
         }
     }
 
-    override fun getRelationshipDiff(
-        nodeDefinition: NodeDefinition
-    ): RelationshipDiff {
+    override fun getRelationshipDiff(): RelationshipDiff {
         val current = currentNode
         val nodesToRemove = if (current != persistedNode && persistedNode != null) {
             listOf(persistedNode!!)

@@ -106,10 +106,7 @@ class GraphglueNeo4jOperations(
                 nodeToSave to savedNode
             }
             val nodeIdLookup = savedNodeLookup.mapValues { it.value.rawId!! }
-            Flux.fromIterable(nodeIdLookup.keys).flatMap { nodeToSave ->
-                val nodeDefinition = nodeDefinitionCollection.getNodeDefinition(nodeToSave::class)
-                saveAllRelationships(nodeDefinition, nodeToSave, nodeIdLookup)
-            }.thenMany(Flux.fromIterable(entities).concatMap { entity ->
+            saveAllRelationships(nodeIdLookup).thenMany(Flux.fromIterable(entities).concatMap { entity ->
                 savedNodeLookup[entity].let {
                     if (it === entity) {
                         findById(nodeIdLookup[entity]!!, entity::class.java)
@@ -138,110 +135,94 @@ class GraphglueNeo4jOperations(
     /**
      * Saves all relationships of `nodeToSave`
      *
-     * @param nodeDefinition the [NodeDefinition] associated with `nodeToSave`
-     * @param nodeToSave the [Node] of which lazy loaded relations should be saved
-     * @param nodeIdLookup assigns an id to each [Node], used so that newly created nodes have an id
+     * @param nodesToSave the [Node]s of which lazy loaded relations should be saved, mapped to their id
      * @return an empty [Mono] to wait for the end of the operation
      */
-    private fun saveAllRelationships(
-        nodeDefinition: NodeDefinition, nodeToSave: Node, nodeIdLookup: Map<Node, String>
-    ) = Flux.fromIterable(nodeDefinition.relationshipDefinitions).flatMap { relationshipDefinition ->
-        val relatedNodeDefinition = nodeDefinitionCollection.getNodeDefinition(relationshipDefinition.nodeKClass)
-        val diffToSave = relationshipDefinition.getRelationshipDiff(nodeToSave, relatedNodeDefinition)
-        val deleteMono = Flux.fromIterable(diffToSave.nodesToRemove).flatMap {
-            val nodeId = nodeIdLookup[nodeToSave]!!
-            val relatedNodeId = it.rawId!!
-            val type = relationshipDefinition.type
-            if (relationshipDefinition.direction == Direction.OUTGOING) {
-                deleteRelationship(type, nodeId, relatedNodeId, nodeDefinition, relatedNodeDefinition)
-            } else {
-                deleteRelationship(type, relatedNodeId, nodeId, relatedNodeDefinition, nodeDefinition)
+    private fun saveAllRelationships(nodesToSave: Map<Node, String>): Mono<Void> {
+        val groupedAddedRelationships = mutableMapOf<RelationshipGroupKey, MutableSet<Relationship>>()
+        val groupedRemovedRelationships = mutableMapOf<RelationshipGroupKey, MutableSet<Relationship>>()
+        for (nodeToSave in nodesToSave.keys) {
+            val nodeDefinition = nodeDefinitionCollection.getNodeDefinition(nodeToSave::class)
+            for (relationshipDefinition in nodeDefinition.relationshipDefinitions) {
+                val diffToSave = relationshipDefinition.getRelationshipDiff(nodeToSave)
+                groupedAddedRelationships.addAggregationEntry(
+                    nodeDefinition, relationshipDefinition, nodeToSave, diffToSave.nodesToAdd, nodesToSave
+                )
+                groupedRemovedRelationships.addAggregationEntry(
+                    nodeDefinition, relationshipDefinition, nodeToSave, diffToSave.nodesToRemove, nodesToSave
+                )
             }
-        }.then()
-        val addMono = Flux.fromIterable(diffToSave.nodesToAdd).flatMap {
-            addRelationship(relationshipDefinition, nodeDefinition, nodeToSave, it, nodeIdLookup)
-        }.then()
-        deleteMono.then(addMono)
-    }.then()
+        }
+        return Flux.fromIterable(groupedRemovedRelationships.entries).flatMap { (key, relationships) ->
+            deleteRelationships(key, relationships)
+        }.thenMany(Flux.fromIterable(groupedAddedRelationships.entries).flatMap { (key, relationships) ->
+            addRelationships(key, relationships)
+        }).then()
+    }
 
     /**
-     * Adds a relationship, where the relationship can have any direction.
+     * Groups all [relatedNodes] by their [RelationshipGroupKey] and adds them to the [MutableMap]
      *
-     * @param relationshipDefinition definition for the relationship to create
-     * @param nodeDefinition definition of the start node
-     * @param node the start node, relative to [relationshipDefinition]
-     * @param relatedNode the end node, relative to [relationshipDefinition]
-     * @param nodeIdLookup assigns an id to each [Node], used so that newly created nodes have an id
+     * @param nodeDefinition the [NodeDefinition] of the node
+     * @param relationshipDefinition the [RelationshipDefinition] of the relationship of [node] to all nodes in [relatedNodes]
+     * @param node the start node of the relationships
+     * @param relatedNodes the end nodes of the relationships
+     * @param nodeIdLookup a map from [Node] to their id
      */
-    private fun addRelationship(
-        relationshipDefinition: RelationshipDefinition,
+    private fun MutableMap<RelationshipGroupKey, MutableSet<Relationship>>.addAggregationEntry(
         nodeDefinition: NodeDefinition,
+        relationshipDefinition: RelationshipDefinition,
         node: Node,
-        relatedNode: Node,
+        relatedNodes: Collection<Node>,
         nodeIdLookup: Map<Node, String>
-    ): Mono<Void> {
-        val relatedNodeDefinition = nodeDefinitionCollection.getNodeDefinition(relatedNode::class)
-        val inverseRelationshipDefinition =
-            relatedNodeDefinition.getRelationshipDefinitionByInverse(relationshipDefinition)
-        val nodeId = nodeIdLookup[node] ?: throw IllegalStateException()
-        val relatedNodeId = nodeIdLookup[relatedNode] ?: throw IllegalStateException()
-        return if (relationshipDefinition.direction == Direction.OUTGOING) {
-            addRelationship(
-                relationshipDefinition.type,
-                relationshipDefinition,
-                inverseRelationshipDefinition,
-                nodeId,
-                relatedNodeId,
-                nodeDefinition,
-                relatedNodeDefinition
-            )
-        } else {
-            addRelationship(
-                relationshipDefinition.type,
-                inverseRelationshipDefinition,
-                relationshipDefinition,
-                relatedNodeId,
-                nodeId,
-                relatedNodeDefinition,
-                nodeDefinition
-            )
+    ) {
+        relatedNodes.forEach {
+            val relatedNodeDefinition = nodeDefinitionCollection.getNodeDefinition(it::class)
+            val inverseRelationshipDefinition =
+                relatedNodeDefinition.getRelationshipDefinitionByInverse(relationshipDefinition)
+            if (relationshipDefinition.direction == Direction.OUTGOING) {
+                val key = RelationshipGroupKey(
+                    relationshipDefinition, inverseRelationshipDefinition, nodeDefinition, relatedNodeDefinition
+                )
+                computeIfAbsent(key) { mutableSetOf() }.add(Relationship(nodeIdLookup[node]!!, nodeIdLookup[it]!!))
+            } else {
+                val key = RelationshipGroupKey(
+                    inverseRelationshipDefinition, relationshipDefinition, relatedNodeDefinition, nodeDefinition
+                )
+                computeIfAbsent(key) { mutableSetOf() }.add(Relationship(nodeIdLookup[it]!!, nodeIdLookup[node]!!))
+            }
         }
     }
 
     /**
-     * Adds a relationship, where the [relationshipDefinition] has (if present) direction OUTGOING
-     * and [inverseRelationshipDefinition] has direction INCOMING
-     * If necessary, also adds a reverse relationship with _type for authorization purposes
+     * Adds a group of relationships, where the `key.relationshipDefinition` has (if present) direction OUTGOING
+     * and `key.inverseRelationshipDefinition` has direction INCOMING
+     * If necessary, also adds reverse relationships with _type for authorization purposes
      *
-     * @param type the type for the generated relationship
-     * @param relationshipDefinition if existing, the definition in the direction of the relationship
-     * @param inverseRelationshipDefinition if existing, the definition in the inverse direction of the relationship
-     * @param rootNodeId the id of the start node of the relationship
-     * @param relatedNodeId the id of the end node of the relationship
-     * @param rootNodeDefinition the definition of the root node
-     * @param relatedNodeDefinition the definition of the related node
+     * @param relationships the relationships to add
+     * @param key defines the relationship
      * @return an empty [Mono] to wait for the end of the operation
      */
-    private fun addRelationship(
-        type: String,
-        relationshipDefinition: RelationshipDefinition?,
-        inverseRelationshipDefinition: RelationshipDefinition?,
-        rootNodeId: String,
-        relatedNodeId: String,
-        rootNodeDefinition: NodeDefinition,
-        relatedNodeDefinition: NodeDefinition
+    private fun addRelationships(
+        key: RelationshipGroupKey,
+        relationships: Set<Relationship>,
     ): Mono<Void> {
-        val rootIdParameter = Cypher.anonParameter(rootNodeId)
-        val relatedIdParameter = Cypher.anonParameter(relatedNodeId)
-        val rootNode = rootNodeDefinition.node().named("node1").withProperties(mapOf("id" to rootIdParameter))
-        val relatedNode = relatedNodeDefinition.node().named("node2").withProperties(mapOf("id" to relatedIdParameter))
-        val relationship = rootNode.relationshipTo(relatedNode, type)
+        val (relationshipDefinition, inverseRelationshipDefinition, rootNodeDefinition, relatedNodeDefinition) = key
+        val relationshipsParameter =
+            Cypher.anonParameter((relationships.map { mapOf("from" to it.from, "to" to it.to) }))
+        val relationshipName = Cypher.name("r")
+        val rootNode =
+            rootNodeDefinition.node().named("node1").withProperties(mapOf("id" to relationshipName.property("from")))
+        val relatedNode =
+            relatedNodeDefinition.node().named("node2").withProperties(mapOf("id" to relationshipName.property("to")))
+        val relationship = rootNode.relationshipTo(relatedNode, key.type)
             .withProperties(relationshipDefinition?.allowedAuthorizations?.associateWith { Cypher.literalTrue() }
                 ?: emptyMap())
-        val builder = Cypher.match(rootNode).match(relatedNode).merge(relationship)
+        val builder = Cypher.unwind(relationshipsParameter).`as`(relationshipName).match(rootNode).match(relatedNode)
+            .merge(relationship)
         val statement =
             if (inverseRelationshipDefinition != null && inverseRelationshipDefinition.allowedAuthorizations.isNotEmpty()) {
-                val inverseRelationship = rootNode.relationshipFrom(relatedNode, "_$type")
+                val inverseRelationship = rootNode.relationshipFrom(relatedNode, "_${key.type}")
                     .withProperties(inverseRelationshipDefinition.allowedAuthorizations.associateWith { Cypher.literalTrue() })
                 builder.merge(inverseRelationship)
             } else {
@@ -251,29 +232,27 @@ class GraphglueNeo4jOperations(
     }
 
     /**
-     * Removes a relationship
+     * Deletes a group of relationships
+     * The relationships are defined by the `key.relationshipDefinition` and `key.inverseRelationshipDefinition`
      *
-     * @param type the type of the relationship
-     * @param rootNodeId the id of the [Node] from which the relationship starts
-     * @param relatedNodeId the id of the [Node] where the relationship ends
-     * @param rootNodeDefinition the definition of the node with [rootNodeId]
-     * @param relatedNodeDefinition the definition of the node with [relatedNodeId]
+     * @param key the key defining the relationships
+     * @param relationships the relationships to delete
      * @return an empty [Mono] to wait for the end of the operation
      */
-    private fun deleteRelationship(
-        type: String,
-        rootNodeId: String,
-        relatedNodeId: String,
-        rootNodeDefinition: NodeDefinition,
-        relatedNodeDefinition: NodeDefinition
+    private fun deleteRelationships(
+        key: RelationshipGroupKey, relationships: Set<Relationship>
     ): Mono<Void> {
-        val idParameter = Cypher.anonParameter(rootNodeId)
-        val relatedIdParameter = Cypher.anonParameter(relatedNodeId)
-        val rootNode = rootNodeDefinition.node().named("node1").withProperties(mapOf("id" to idParameter))
-        val relatedNode = relatedNodeDefinition.node().named("node2").withProperties(mapOf("id" to relatedIdParameter))
-        val relationship = rootNode.relationshipTo(relatedNode, type).named("r1")
-        val inverseRelationship = rootNode.relationshipFrom(relatedNode, "_$type").named("r2")
-        val statement = Cypher.match(relationship).optionalMatch(inverseRelationship)
+        val relationshipsParameter =
+            Cypher.anonParameter((relationships.map { mapOf("from" to it.from, "to" to it.to) }))
+        val relationshipName = Cypher.name("r")
+        val rootNode =
+            key.nodeDefinition.node().named("node1").withProperties(mapOf("id" to relationshipName.property("from")))
+        val relatedNode = key.relatedNodeDefinition.node().named("node2")
+            .withProperties(mapOf("id" to relationshipName.property("to")))
+        val relationship = rootNode.relationshipTo(relatedNode, key.type).named("r1")
+        val inverseRelationship = rootNode.relationshipFrom(relatedNode, "_${key.type}").named("r2")
+        val statement = Cypher.unwind(relationshipsParameter).`as`(relationshipName).match(relationship)
+            .optionalMatch(inverseRelationship)
             .delete(relationship.requiredSymbolicName, inverseRelationship.requiredSymbolicName).build()
         return executeStatement(statement)
     }
@@ -285,8 +264,7 @@ class GraphglueNeo4jOperations(
      * @return an empty [Mono] to wait for the end of the operation
      */
     private fun executeStatement(statement: Statement): Mono<Void> {
-        return neo4jClient.query(renderer.render(statement)).bindAll(statement.catalog.parameters).run()
-            .then()
+        return neo4jClient.query(renderer.render(statement)).bindAll(statement.catalog.parameters).run().then()
     }
 
     /**
@@ -322,3 +300,42 @@ class GraphglueNeo4jOperations(
         }
     }
 }
+
+/**
+ * Represents a key for a relationship group
+ *
+ * @param relationshipDefinition the relationship definition
+ * @param inverseRelationshipDefinition the inverse relationship definition
+ * @param nodeDefinition the root node definition
+ * @param relatedNodeDefinition the related node definition
+ */
+private data class RelationshipGroupKey(
+    val relationshipDefinition: RelationshipDefinition?,
+    val inverseRelationshipDefinition: RelationshipDefinition?,
+    val nodeDefinition: NodeDefinition,
+    val relatedNodeDefinition: NodeDefinition
+) {
+    init {
+        require(relationshipDefinition != null || inverseRelationshipDefinition != null) {
+            "At least one of relationshipDefinition or inverseRelationshipDefinition must be set"
+        }
+        require(
+            (relationshipDefinition == null || inverseRelationshipDefinition == null) || (relationshipDefinition.type == inverseRelationshipDefinition.type)
+        ) {
+            "The types of relationshipDefinition and inverseRelationshipDefinition must be equal"
+        }
+    }
+
+    /**
+     * The type of the relationship
+     */
+    val type get() = relationshipDefinition?.type ?: inverseRelationshipDefinition?.type!!
+}
+
+/**
+ * Represents a relationship from one node to another
+ *
+ * @param from the id of the start of the relationship
+ * @param to the id of the end of the relationship
+ */
+private data class Relationship(val from: String, val to: String)

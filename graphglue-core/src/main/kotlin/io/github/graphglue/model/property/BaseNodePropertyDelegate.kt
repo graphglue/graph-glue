@@ -47,12 +47,9 @@ abstract class BaseNodePropertyDelegate<T : Node?, R>(
     /**
      * Gets the diff of added and removed relationships to persist in the database
      *
-     * @param nodeDefinition the definition of the nodes in this property, can be used to get the Label(s) of the node(s)
      * @return the diff which describes how to add and remove relationships
      */
-    internal abstract fun getRelationshipDiff(
-        nodeDefinition: NodeDefinition
-    ): RelationshipDiff
+    internal abstract fun getRelationshipDiff(): RelationshipDiff
 
     /**
      * Gets [Node]s which should be persisted when this [Node] is persisted

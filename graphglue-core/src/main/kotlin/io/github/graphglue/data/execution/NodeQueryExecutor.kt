@@ -137,7 +137,7 @@ class NodeQueryExecutor(
             options, collectedNodesBuilder, allNodesCollected, emptyList()
         )
         val (mainSubQuery, resultNodes, nodes) = generateMainSubQuery(query, node, allNodesCollected)
-        val mainSubQueryBuilder = totalCountBuilder.call(mainSubQuery)
+        val mainSubQueryBuilder = totalCountBuilder.call(mainSubQuery, allNodesCollected)
         val (subQueriesBuilder, returnNames) = createEntriesSubQueriesRecursive(mainSubQueryBuilder, query, nodes, 1)
         val (statement, returnName) = createRootReturnStatement(
             subQueriesBuilder, resultNodes, returnNames, totalCount
@@ -236,7 +236,7 @@ class NodeQueryExecutor(
             val parentDefinition = nodeQuery.definition
             val (statement, resultNodes, nodes) = createSubQuery(subQuery, parentDefinition, allNodes, unwindCount)
             returnNames += resultNodes
-            callBuilder = callBuilder.call(statement)
+            callBuilder = callBuilder.call(statement, allNodes)
             subQueryLookup[subQuery] = resultNodes.value!!
             val (newBuilder, newReturnNames) = createEntriesSubQueriesRecursive(callBuilder, subQuery.query, nodes, 2)
             callBuilder = newBuilder
@@ -382,7 +382,7 @@ class NodeQueryExecutor(
         val options = nodeQuery.options
         val nodeAlias = node.requiredSymbolicName
         val nodeDefinition = nodeQuery.definition
-        val subQueryBuilder = Cypher.with(allNodesCollected).unwind(allNodesCollected).`as`(nodeAlias)
+        val subQueryBuilder = Cypher.unwind(allNodesCollected).`as`(nodeAlias)
         val (afterAndBeforeBuilder, orderContext) = applyAfterAndBefore(options, nodeAlias, subQueryBuilder)
         val limitedBuilder = applyResultLimiters(orderContext, options, afterAndBeforeBuilder, nodeAlias)
         return generateMainSubQueryResultStatement(
@@ -642,7 +642,7 @@ class NodeQueryExecutor(
         val nodeQuery = subQuery.query
         val relatedNode = nodeQuery.definition.node().named(generateUniqueName().value)
         val innerBuilder = applySubQueryMatchWithAuthorizationConditions(
-            Cypher.with(node).with(node).where(labelCondition), node, relatedNode, subQuery.relationshipDefinitions
+            Cypher.with(node).where(labelCondition), node, relatedNode, subQuery.relationshipDefinitions
         )
         val (innerStatement, innerResultNodes, innerNodes) = createSubNodeQuery(
             nodeQuery, innerBuilder, relatedNode, node
@@ -650,7 +650,7 @@ class NodeQueryExecutor(
         val resultNodes = generateUniqueName()
         val nodes = generateUniqueName()
         return StatementWithResultNodesAndNodes(
-            builder.with(node).call(innerStatement).returning(
+            builder.with(node).call(innerStatement, node).returning(
                 Cypher.collect(innerResultNodes).`as`(resultNodes), Cypher.collect(innerNodes).`as`(nodes)
             ).build(), resultNodes, nodes
         )
@@ -749,7 +749,7 @@ class NodeQueryExecutor(
             options, collectedNodesBuilder, allNodesCollected, listOf(parentNode.requiredSymbolicName)
         )
         val (mainSubQuery, resultNodes, nodes) = generateMainSubQuery(nodeQuery, node, allNodesCollected)
-        val mainSubQueryBuilder = totalCountBuilder.call(mainSubQuery)
+        val mainSubQueryBuilder = totalCountBuilder.call(mainSubQuery, allNodesCollected)
         val parentId = parentNode.property("id")
         return createSubReturnStatement(mainSubQueryBuilder, resultNodes, nodes, parentId, totalCount)
     }

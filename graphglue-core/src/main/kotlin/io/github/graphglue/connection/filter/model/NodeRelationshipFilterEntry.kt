@@ -46,7 +46,7 @@ abstract class NodeRelationshipFilterEntry(
      * @param variable the name of the variable based on which the predicate should be build
      * @return the builder for the predicate
      */
-    abstract fun generatePredicate(variable: SymbolicName): Predicates.OngoingListBasedPredicateFunction
+    abstract fun generatePredicate(variable: SymbolicName): OngoingListBasedPredicateFunction
 
 }
 

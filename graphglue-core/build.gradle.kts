@@ -3,3 +3,7 @@ description = "A library to develop annotation-based code-first GraphQL servers 
 plugins {
     kotlin("plugin.spring")
 }
+
+kotlin {
+    jvmToolchain(17)
+}

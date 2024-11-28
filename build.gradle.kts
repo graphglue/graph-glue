@@ -13,8 +13,6 @@ plugins {
 }
 
 allprojects {
-    val javaVersion: String by project
-
     buildscript {
         repositories {
             mavenCentral()
@@ -23,11 +21,10 @@ allprojects {
     repositories {
         mavenCentral()
     }
-    tasks.withType<KotlinCompile> {
-        compilerOptions {
-            jvmTarget.set(JvmTarget.JVM_17)
-        }
-    }
+}
+
+kotlin {
+    jvmToolchain(17)
 }
 
 extra["isReleaseVersion"] = !version.toString().endsWith("SNAPSHOT")

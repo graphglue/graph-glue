@@ -1,6 +1,7 @@
 package io.github.graphglue.connection.filter
 
 import io.github.graphglue.connection.filter.generator.AdditionalFilterNodeFilterGenerator
+import io.github.graphglue.connection.filter.generator.MetaNodeFilterGenerator
 import io.github.graphglue.connection.filter.generator.PropertiesNodeFilterGenerator
 import io.github.graphglue.connection.filter.generator.SubtypeNodeFilterGenerator
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
@@ -20,7 +21,7 @@ class GraphglueFilterConfiguration {
      */
     @Bean
     @ConditionalOnMissingBean
-    fun propertiesNodeFilterGenerator(): NodeFilterGenerator = PropertiesNodeFilterGenerator()
+    fun propertiesNodeFilterGenerator() = PropertiesNodeFilterGenerator()
 
     /**
      * Provides the [NodeFilterGenerator] which generates filter entries for additional filter annotations
@@ -29,7 +30,7 @@ class GraphglueFilterConfiguration {
      */
     @Bean
     @ConditionalOnMissingBean
-    fun additionalFilterNodeFilterGenerator(): NodeFilterGenerator = AdditionalFilterNodeFilterGenerator()
+    fun additionalFilterNodeFilterGenerator() = AdditionalFilterNodeFilterGenerator()
 
     /**
      * Provides the [NodeFilterGenerator] which generates filter entries for subtypes
@@ -38,6 +39,15 @@ class GraphglueFilterConfiguration {
      */
     @Bean
     @ConditionalOnMissingBean
-    fun subtypeNodeFilterGenerator(): NodeFilterGenerator = SubtypeNodeFilterGenerator()
+    fun subtypeNodeFilterGenerator() = SubtypeNodeFilterGenerator()
+
+    /**
+     * Provides the [NodeFilterGenerator] which generates filter entries for aggregated filters
+     *
+     * @return the [NodeFilterGenerator] which generates filter entries for aggregated filters
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    fun metaNodeFilterGenerator() = MetaNodeFilterGenerator()
 
 }

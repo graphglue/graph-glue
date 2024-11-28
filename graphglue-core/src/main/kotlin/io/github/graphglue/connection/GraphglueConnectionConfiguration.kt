@@ -1,6 +1,7 @@
 package io.github.graphglue.connection
 
 import com.expediagroup.graphql.generator.scalars.ID
+import io.github.graphglue.connection.filter.GraphglueFilterConfiguration
 import io.github.graphglue.connection.filter.TypeFilterDefinitionEntry
 import io.github.graphglue.connection.filter.definition.NodePropertyFilterDefinition
 import io.github.graphglue.connection.filter.definition.NodeSetPropertyFilterDefinition
@@ -14,6 +15,7 @@ import io.github.graphglue.model.property.NodePropertyDelegate
 import io.github.graphglue.model.property.NodeSetPropertyDelegate
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
+import org.springframework.context.annotation.Import
 import kotlin.reflect.full.createType
 
 /**
@@ -23,6 +25,7 @@ import kotlin.reflect.full.createType
  * and for properties backed by [NodePropertyDelegate] and [NodeSetPropertyDelegate]
  */
 @Configuration
+@Import(GraphglueFilterConfiguration::class)
 class GraphglueConnectionConfiguration {
 
     /**

@@ -7,6 +7,10 @@ plugins {
     kotlin("plugin.spring")
 }
 
+kotlin {
+    jvmToolchain(17)
+}
+
 dependencies {
     api(project(path = ":graphglue-core"))
     api("org.springframework.boot", "spring-boot-starter-webflux", springBootVersion)

@@ -18,7 +18,7 @@ import io.github.graphglue.util.CacheMap
 class SubtypeNodeFilterDefinition(
     val nodeDefinition: NodeDefinition,
     val nodeFilterDefinition: FilterDefinition<out Node>
-) : FilterEntryDefinition("on${nodeDefinition.name}", "Filter for nodes of type ${nodeDefinition.name}") {
+) : FilterEntryDefinition("is${nodeDefinition.name}And", "Filter for nodes of type ${nodeDefinition.name}") {
 
     override fun parseEntry(value: Any?, permission: Permission?): FilterEntry {
         return SubtypeNodeFilter(

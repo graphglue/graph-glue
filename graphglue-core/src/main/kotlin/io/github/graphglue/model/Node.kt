@@ -54,6 +54,7 @@ abstract class Node {
      * Flag to indicate if this node has been saved in the database
      * If true, this node must not be saved again
      */
+    @Transient
     internal var isSaved: Boolean = false
 
     /**

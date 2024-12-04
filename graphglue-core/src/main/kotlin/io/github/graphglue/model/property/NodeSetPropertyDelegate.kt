@@ -60,7 +60,7 @@ class NodeSetPropertyDelegate<T : Node>(
     }
 
     override fun getRelationshipDiff(): RelationshipDiff {
-        return RelationshipDiff(addedNodes, removedNodes.filter { it.rawId != null })
+        return RelationshipDiff(addedNodes, removedNodes.filter { it.id != null })
     }
 
     override fun getRelatedNodesToSave(): Collection<Node> {
@@ -85,6 +85,7 @@ class NodeSetPropertyDelegate<T : Node>(
                 currentNodes = mutableSetOf()
             }
         }
+        assert(isLoaded) { "Failed to load $property of $parent" }
         if (cache != null && nodeCache != cache) {
             nodeCache = cache
             currentNodes = currentNodes!!.mapNotNull(cache::getOrAdd).toMutableSet()

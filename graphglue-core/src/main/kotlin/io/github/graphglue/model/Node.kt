@@ -51,12 +51,18 @@ abstract class Node {
     internal var id: String? = null
 
     /**
+     * Flag to indicate if this node has been saved in the database
+     * If true, this node must not be saved again
+     */
+    internal var isSaved: Boolean = false
+
+    /**
      * Readonly wrapper for the id
      * If `null`, the node has not been persisted in the database yet
      */
     @GraphQLIgnore
     val rawId
-        get() = id
+        get() = if (isPersisted) id else null
 
     /**
      * The id of the node as seen in the GraphQL API
@@ -78,7 +84,7 @@ abstract class Node {
      */
     @GraphQLIgnore
     val isPersisted: Boolean
-        get() = id != null
+        get() = id != null && lazyLoadingContext != null
 
     /**
      * Lookup for all node properties
@@ -223,7 +229,7 @@ abstract class Node {
         } else if (this === other) {
             true
         } else {
-            this.rawId != null && this.rawId == other.rawId
+            this.id != null && this.id == other.id
         }
     }
 

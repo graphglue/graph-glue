@@ -111,7 +111,7 @@ class NodeQueryExecutor(
      */
     suspend fun executePartial(query: PartialNodeQuery, nodes: Collection<io.github.graphglue.model.Node>) {
         val (statement, returnName) = createPartialRootNodeQuery(query, nodes)
-        nodes.forEach { nodeLookup[it.rawId!!] = it }
+        nodes.forEach { nodeLookup[it.id!!] = it }
         client.query(renderer.render(statement)).bindAll(statement.catalog.parameters)
             .fetchAs(PartialNodeQueryResult::class.java).mappedBy { _, record ->
                 parseQueryResultInternal(record, returnName, query)

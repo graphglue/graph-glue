@@ -29,7 +29,7 @@ class AuthorizationChecker(
         val nodeDefinition = collection.getNodeDefinition(node::class)
         val conditionGenerator = collection.generateAuthorizationCondition(nodeDefinition, permission)
         val cypherNode = nodeDefinition.node().named("a_node")
-            .withProperties(mapOf("id" to Cypher.parameter("a_id", node.rawId!!)))
+            .withProperties(mapOf("id" to Cypher.parameter("a_id", node.id!!)))
         val condition = conditionGenerator.generateCondition(cypherNode)
         val statement = Cypher.match(cypherNode).where(condition)
             .returning(Cypher.count(Cypher.asterisk()).gt(Cypher.literalOf<Int>(0))).build()

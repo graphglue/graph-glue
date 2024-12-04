@@ -149,7 +149,7 @@ class NodePropertyDelegate<T : Node?>(
         nodeDefinitionCollection: NodeDefinitionCollection
     ) {
         if (!supportsNull) {
-            val neverSetInitialRelationship = currentNode == null && parent.rawId == null
+            val neverSetInitialRelationship = currentNode == null && !parent.isPersisted
             val removedRequiredRelationship = currentNode == null && persistedNode != null
             if (neverSetInitialRelationship || removedRequiredRelationship) {
                 val setByOtherSide = savingNodes.filter { relationshipDefinition.nodeKClass.isInstance(it) }.any {

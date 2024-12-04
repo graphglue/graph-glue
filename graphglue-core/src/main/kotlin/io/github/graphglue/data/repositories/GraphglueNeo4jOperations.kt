@@ -96,22 +96,25 @@ class GraphglueNeo4jOperations(
         return Flux.fromIterable(nodesToSave).flatMap { nodeToSave ->
             delegate.save(nodeToSave).onErrorMap {
                 if (it is OptimisticLockingFailureException) {
-                    OptimisticLockingFailureException("The node ${nodeToSave::class.simpleName} with id ${nodeToSave.rawId} was modified by another transaction")
+                    OptimisticLockingFailureException("The node ${nodeToSave::class.simpleName} with id ${nodeToSave.id} was modified by another transaction")
                 } else {
                     it
                 }
-            }.map { nodeToSave to it }
+            }.map {
+                nodeToSave.isSaved = true
+                nodeToSave to it
+            }
         }.collectList().flatMapMany { saveResult ->
             val savedNodeLookup = saveResult.associate { (nodeToSave, savedNode) ->
                 nodeToSave to savedNode
             }
-            val nodeIdLookup = savedNodeLookup.mapValues { it.value.rawId!! }
+            val nodeIdLookup = savedNodeLookup.mapValues { it.value.id!! }
             saveAllRelationships(nodeIdLookup).thenMany(Flux.fromIterable(entities).concatMap { entity ->
                 savedNodeLookup[entity].let {
-                    if (it === entity) {
-                        findById(nodeIdLookup[entity]!!, entity::class.java)
+                    if (it?.isPersisted == true) {
+                        Mono.just(it)
                     } else {
-                        Mono.just(it!!)
+                        findById(nodeIdLookup[entity]!!, entity::class.java)
                     }
                 }
             })
@@ -125,6 +128,9 @@ class GraphglueNeo4jOperations(
      */
     private fun validateNodes(nodes: Set<Node>) {
         for (node in nodes) {
+            if (node.isSaved) {
+                throw IllegalStateException("Node ${node::class.simpleName} with id ${node.id} has already been saved")
+            }
             val nodeDefinition = nodeDefinitionCollection.getNodeDefinition(node::class)
             for (relationshipDefinition in nodeDefinition.relationshipDefinitions) {
                 relationshipDefinition.validate(node, nodes, nodeDefinitionCollection)
@@ -167,7 +173,7 @@ class GraphglueNeo4jOperations(
      * @param relationshipDefinition the [RelationshipDefinition] of the relationship of [node] to all nodes in [relatedNodes]
      * @param node the start node of the relationships
      * @param relatedNodes the end nodes of the relationships
-     * @param nodeIdLookup a map from [Node] to their id
+     * @param nodeIdLookup a map from [Node] to their id for saved nodes
      */
     private fun MutableMap<RelationshipGroupKey, MutableSet<Relationship>>.addAggregationEntry(
         nodeDefinition: NodeDefinition,
@@ -180,16 +186,18 @@ class GraphglueNeo4jOperations(
             val relatedNodeDefinition = nodeDefinitionCollection.getNodeDefinition(it::class)
             val inverseRelationshipDefinition =
                 relatedNodeDefinition.getRelationshipDefinitionByInverse(relationshipDefinition)
+            val nodeId = node.id ?: nodeIdLookup[node]!!
+            val relatedNodeId = it.id ?: nodeIdLookup[it]!!
             if (relationshipDefinition.direction == Direction.OUTGOING) {
                 val key = RelationshipGroupKey(
                     relationshipDefinition, inverseRelationshipDefinition, nodeDefinition, relatedNodeDefinition
                 )
-                computeIfAbsent(key) { mutableSetOf() }.add(Relationship(nodeIdLookup[node]!!, nodeIdLookup[it]!!))
+                computeIfAbsent(key) { mutableSetOf() }.add(Relationship(nodeId, relatedNodeId))
             } else {
                 val key = RelationshipGroupKey(
                     inverseRelationshipDefinition, relationshipDefinition, relatedNodeDefinition, nodeDefinition
                 )
-                computeIfAbsent(key) { mutableSetOf() }.add(Relationship(nodeIdLookup[it]!!, nodeIdLookup[node]!!))
+                computeIfAbsent(key) { mutableSetOf() }.add(Relationship(relatedNodeId, nodeId))
             }
         }
     }

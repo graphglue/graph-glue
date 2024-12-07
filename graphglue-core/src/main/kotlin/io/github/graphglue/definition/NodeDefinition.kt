@@ -110,6 +110,14 @@ class NodeDefinition(
     val primaryLabel: String get() = persistentEntity.primaryLabel
 
     /**
+     * The label expression of the [Node]
+     */
+    val labelExpression: LabelExpression
+        get() = persistentEntity.additionalLabels.fold(LabelExpression(persistentEntity.primaryLabel)) { acc, label ->
+            acc.and(LabelExpression(label))
+        }
+
+    /**
      * GraphQL type name
      */
     val name get() = nodeType.getSimpleName()
@@ -339,9 +347,7 @@ class NodeDefinition(
      * Generates a new CypherDSL node with the necessary labels
      */
     fun node(): org.neo4j.cypherdsl.core.Node {
-        return Cypher.node(persistentEntity.additionalLabels.fold(LabelExpression(persistentEntity.primaryLabel)) { acc, label ->
-            acc.and(LabelExpression(label))
-        })
+        return Cypher.node(labelExpression)
     }
 
     /**

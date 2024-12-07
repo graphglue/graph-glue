@@ -439,9 +439,9 @@ class NodeQueryExecutor(
             resultBuilder.orderBy(generateOrderFields(orderContext))
         } else {
             resultBuilder
-        }.with(
+        }.returning(
             Cypher.collect(resultNode).`as`(collectedResultNodes), Cypher.collect(nodeAlias).`as`(collectedNodes)
-        ).returning(collectedResultNodes, collectedNodes).build()
+        ).build()
         return StatementWithResultNodesAndNodes(statement, collectedResultNodes, collectedNodes)
     }
 

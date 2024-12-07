@@ -9,6 +9,7 @@ import io.github.graphglue.model.property.NODE_SET_PROPERTY_TYPE
 import io.github.graphglue.model.property.NodePropertyDelegate
 import org.neo4j.cypherdsl.core.Cypher
 import org.neo4j.cypherdsl.core.Expression
+import org.neo4j.cypherdsl.core.LabelExpression
 import org.neo4j.cypherdsl.core.SymbolicName
 import org.springframework.data.neo4j.core.mapping.Constants
 import org.springframework.data.neo4j.core.mapping.CypherGenerator
@@ -159,7 +160,8 @@ class NodeDefinition(
      */
     private fun mergeAuthorizations(authorizations: Collection<Authorization>) =
         authorizations.groupBy { it.name }.mapValues { (name, authorizations) ->
-            val authorization = MergedAuthorization(name,
+            val authorization = MergedAuthorization(
+                name,
                 authorizations.flatMap { it.allow.toList() }.toSet(),
                 authorizations.flatMap { it.allowFromRelated.toList() }.toSet(),
                 authorizations.flatMap { it.disallow.toList() }.toSet(),
@@ -337,7 +339,9 @@ class NodeDefinition(
      * Generates a new CypherDSL node with the necessary labels
      */
     fun node(): org.neo4j.cypherdsl.core.Node {
-        return Cypher.node(persistentEntity.primaryLabel, persistentEntity.additionalLabels)
+        return Cypher.node(persistentEntity.additionalLabels.fold(LabelExpression(persistentEntity.primaryLabel)) { acc, label ->
+            acc.and(LabelExpression(label))
+        })
     }
 
     /**

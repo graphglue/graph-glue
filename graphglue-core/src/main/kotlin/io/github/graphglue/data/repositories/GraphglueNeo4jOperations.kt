@@ -1,5 +1,6 @@
 package io.github.graphglue.data.repositories
 
+import io.github.graphglue.GraphglueCoreConfigurationProperties
 import io.github.graphglue.definition.NodeDefinition
 import io.github.graphglue.definition.NodeDefinitionCollection
 import io.github.graphglue.definition.RelationshipDefinition
@@ -27,7 +28,8 @@ class GraphglueNeo4jOperations(
     private val delegate: ReactiveNeo4jOperations,
     private val neo4jClient: ReactiveNeo4jClient,
     private val beanFactory: BeanFactory,
-    private val renderer: Renderer
+    private val renderer: Renderer,
+    private val configurationProperties: GraphglueCoreConfigurationProperties
 ) : ReactiveNeo4jOperations by delegate {
     /**
      * used to get [NodeDefinition] by type
@@ -128,7 +130,7 @@ class GraphglueNeo4jOperations(
      */
     private fun validateNodes(nodes: Set<Node>) {
         for (node in nodes) {
-            if (node.isSaved) {
+            if (node.isSaved && configurationProperties.enableDuplicateSafePrevention) {
                 throw IllegalStateException("Node ${node::class.simpleName} with id ${node.id} has already been saved")
             }
             val nodeDefinition = nodeDefinitionCollection.getNodeDefinition(node::class)

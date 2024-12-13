@@ -10,11 +10,12 @@ GraphGlue itself provides the following configuration properties:
 
 |Name|Default value|Description|
 |--|--|--|
+|graphglue.includeSkipField|`false`|if `true`, connections support the non-standard `skip` field|
 |graphglue.graphiql.enabled|`true`|If true, a GraphiQL instance will be provided|
 |graphglue.graphiql.endpoint|`"graphiql"`|The endpoint where the GraphiQL instance is provided|
 |graphglue.core.maxQueryCost|`10`|The max cost of a query before it is split into partial queries|
 |graphglue.core.useNeo4jPlugin|`false`|If true, authorization checks use the io.github.graphglue.authorizationPath custom procedure to improve efficiency. This procedure must be provided via a database plugin|
-
+|graphglue.core.enableDuplicateSafePrevention|`true`|If true, saving a node twice will throw an exception. This is the recommended setting, in particular when using optimistic locking|
 :::info
 
 Additionally, it is necessary to configure both [GraphQL Kotlin](https://opensource.expediagroup.com/graphql-kotlin/docs/server/spring-server/spring-properties) and [Spring Data Neo4j](https://docs.spring.io/spring-data/neo4j/docs/current/reference/html/#getting-started) correctly.

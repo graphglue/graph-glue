@@ -100,6 +100,7 @@ class GraphglueDataConfiguration {
      * @param neo4jClient client used to execute queries
      * @param beanFactory used to get the [NodeDefinitionCollection]
      * @param renderer used to render Cypher queries
+     * @param configurationProperties properties to configure the neo4j operations
      * @return the created [GraphglueNeo4jOperations] which supports save of lazy loaded relations
      */
     @Bean(GRAPHGLUE_NEO4J_OPERATIONS_BEAN_NAME)
@@ -107,8 +108,9 @@ class GraphglueDataConfiguration {
         neo4jTemplate: ReactiveNeo4jTemplate,
         neo4jClient: ReactiveNeo4jClient,
         beanFactory: BeanFactory,
-        renderer: Renderer
-    ) = GraphglueNeo4jOperations(neo4jTemplate, neo4jClient, beanFactory, renderer)
+        renderer: Renderer,
+        configurationProperties: GraphglueCoreConfigurationProperties
+    ) = GraphglueNeo4jOperations(neo4jTemplate, neo4jClient, beanFactory, renderer, configurationProperties)
 
     /**
      * Parser for incoming GraphQL queries

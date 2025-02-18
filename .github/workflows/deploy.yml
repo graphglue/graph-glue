@@ -30,7 +30,7 @@ jobs:
       - name: Modify Dokka output
         uses: graphglue/dokka-html-mdx-transform@v1.7.20
         with:
-          src: "build/dokka/htmlMultiModule"
+          src: "build/dokka/html"
           modules: |
             graphglue-core
             graphglue

@@ -1,7 +1,4 @@
-import org.jetbrains.dokka.gradle.DokkaTask
-import org.jetbrains.dokka.gradle.DokkaTaskPartial
-import org.jetbrains.kotlin.gradle.dsl.JvmTarget
-import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+import org.jetbrains.dokka.gradle.engine.parameters.VisibilityModifier
 
 plugins {
 	kotlin("jvm")
@@ -55,21 +52,11 @@ subprojects {
     }
 
     tasks {
-        fun configureDokka(builder: Action<org.jetbrains.dokka.gradle.GradleDokkaSourceSetBuilder>) {
-            val dokkaJavadoc by getting(DokkaTask::class) {
-                dokkaSourceSets {
-                    configureEach(builder)
-                }
-            }
-            val dokkaHtmlPartial by getting(DokkaTaskPartial::class) {
-                dokkaSourceSets {
-                    configureEach(builder)
-                }
-            }
-        }
 
-        configureDokka {
-            includeNonPublic.set(true)
+        dokka {
+            dokkaSourceSets.main {
+                documentedVisibilities.set(VisibilityModifier.values().asIterable())
+            }
         }
 
         val jarComponent = project.components.getByName("java")
@@ -77,11 +64,9 @@ subprojects {
             archiveClassifier.set("sources")
             from(sourceSets.main.get().allSource)
         }
-        val dokka = named("dokkaJavadoc", DokkaTask::class)
         val javadocJar by registering(Jar::class) {
             archiveClassifier.set("javadoc")
-            from(dokkaJavadoc.flatMap { it.outputDirectory })
-            dependsOn(dokka)
+            from(dokkaGeneratePublicationHtml.flatMap { it.outputDirectory })
         }
 
         publishing {
@@ -150,6 +135,12 @@ subprojects {
             })
             sign(publishing.publications["mavenJava"])
         }
+    }
+}
+
+dokka {
+    dependencies {
+        subprojects.forEach { dokka(it) }
     }
 }
 

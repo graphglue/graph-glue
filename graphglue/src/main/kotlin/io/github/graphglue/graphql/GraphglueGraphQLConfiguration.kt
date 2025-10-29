@@ -30,6 +30,7 @@ import io.github.graphglue.graphql.query.GraphglueQuery
 import io.github.graphglue.graphql.schema.DefaultSchemaTransformer
 import io.github.graphglue.model.Node
 import io.github.graphglue.model.NodeRelationship
+import io.github.graphglue.model.property.BaseNodePropertyDelegate
 import io.github.graphglue.util.CacheMap
 import org.neo4j.cypherdsl.core.renderer.Renderer
 import org.slf4j.LoggerFactory
@@ -170,13 +171,13 @@ class GraphglueGraphQLConfiguration {
         schema.filterDefinitionCollection
 
     /**
-     * [SchemaGeneratorHooks] which handles rewiring of [BasePropertyDelegate] backed files,
+     * [SchemaGeneratorHooks] which handles rewiring of [BaseNodePropertyDelegate] backed files,
      * collects all [Node] types and generates [NodeDefinition]s for it, and collects queries
      * for [Node] types
      *
      * @param delegate delegate used as fallback for all functions, used to provide better extensibility
      */
-    inner class GraphglueSchemaGeneratorHooks(private val delegate: SchemaGeneratorHooks) :
+    class GraphglueSchemaGeneratorHooks(private val delegate: SchemaGeneratorHooks) :
         SchemaGeneratorHooks by delegate {
 
         /**

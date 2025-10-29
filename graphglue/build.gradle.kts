@@ -13,6 +13,6 @@ kotlin {
 
 dependencies {
     api(project(path = ":graphglue-core"))
-    api("org.springframework.boot", "spring-boot-starter-webflux", springBootVersion)
-    api("com.expediagroup", "graphql-kotlin-spring-server", graphqlKotlinVersion)
+    api("org.springframework.boot:spring-boot-starter-webflux:$springBootVersion")
+    api("com.expediagroup:graphql-kotlin-spring-server:$graphqlKotlinVersion")
 }

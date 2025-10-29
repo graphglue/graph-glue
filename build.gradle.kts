@@ -40,11 +40,11 @@ subprojects {
     apply(plugin = "signing")
 
     dependencies {
-        api("org.springframework.boot", "spring-boot-starter-json", springBootVersion)
-        api("com.expediagroup", "graphql-kotlin-server", graphqlKotlinVersion)
-        api("org.springframework.boot", "spring-boot-starter-data-neo4j", springBootVersion)
-        api("org.jetbrains.kotlinx", "kotlinx-coroutines-reactor", kotlinxCoroutinesReactorVersion)
-        api("org.jetbrains.kotlin", "kotlin-reflect") {
+        api("org.springframework.boot:spring-boot-starter-json:$springBootVersion")
+        api("com.expediagroup:graphql-kotlin-server:$graphqlKotlinVersion")
+        api("org.springframework.boot:spring-boot-starter-data-neo4j:$springBootVersion")
+        api("org.jetbrains.kotlinx:kotlinx-coroutines-reactor:$kotlinxCoroutinesReactorVersion")
+        api("org.jetbrains.kotlin:kotlin-reflect") {
             version {
                 strictly(kotlinVersion)
             }
@@ -55,7 +55,7 @@ subprojects {
 
         dokka {
             dokkaSourceSets.main {
-                documentedVisibilities.set(VisibilityModifier.values().asIterable())
+                documentedVisibilities.set(VisibilityModifier.entries.asIterable())
             }
         }
 
@@ -151,8 +151,8 @@ tasks {
     nexusPublishing {
         repositories {
             sonatype {
-                nexusUrl.set(uri("https://s01.oss.sonatype.org/service/local/"))
-                snapshotRepositoryUrl.set(uri("https://s01.oss.sonatype.org/content/repositories/snapshots/"))
+                nexusUrl.set(uri("https://ossrh-staging-api.central.sonatype.com/service/local/"))
+                snapshotRepositoryUrl.set(uri("https://central.sonatype.com/repository/maven-snapshots/"))
             }
         }
     }

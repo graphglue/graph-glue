@@ -1,12 +1,13 @@
 # Dependencies
 /node_modules
 
-# Production
-/build
+# VitePress
+/.vitepress/cache
+/.vitepress/dist
 
-# Generated files
-.docusaurus
-.cache-loader
+# Generated from the Dokka output by `npm run api`
+/.vitepress/dokka
+/docs/api
 
 # Misc
 .DS_Store
@@ -18,6 +19,3 @@
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-
-# generated api
-docs/api/

@@ -1,0 +1,23 @@
+[versions]
+kotlin = "2.4.10"
+springBoot = "4.1.0"
+graphqlKotlin = "10.2.0"
+kotlinxCoroutines = "1.11.0"
+dokka = "2.2.0"
+nmcp = "1.6.1"
+
+[libraries]
+kotlin-reflect = { module = "org.jetbrains.kotlin:kotlin-reflect", version.ref = "kotlin" }
+kotlinx-coroutines-reactor = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-reactor", version.ref = "kotlinxCoroutines" }
+graphqlKotlin-server = { module = "com.expediagroup:graphql-kotlin-server", version.ref = "graphqlKotlin" }
+graphqlKotlin-spring-server = { module = "com.expediagroup:graphql-kotlin-spring-server", version.ref = "graphqlKotlin" }
+springBoot-starter-json = { module = "org.springframework.boot:spring-boot-starter-json", version.ref = "springBoot" }
+springBoot-starter-data-neo4j = { module = "org.springframework.boot:spring-boot-starter-data-neo4j", version.ref = "springBoot" }
+springBoot-starter-webflux = { module = "org.springframework.boot:spring-boot-starter-webflux", version.ref = "springBoot" }
+
+[plugins]
+kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
+kotlin-spring = { id = "org.jetbrains.kotlin.plugin.spring", version.ref = "kotlin" }
+dokka = { id = "org.jetbrains.dokka", version.ref = "dokka" }
+nmcp = { id = "com.gradleup.nmcp", version.ref = "nmcp" }
+nmcpAggregation = { id = "com.gradleup.nmcp.aggregation", version.ref = "nmcp" }

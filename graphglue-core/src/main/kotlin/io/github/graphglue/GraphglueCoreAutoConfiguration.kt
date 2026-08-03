@@ -7,8 +7,8 @@ import io.github.graphglue.definition.GraphglueDefinitionConfiguration
 import io.github.graphglue.model.GraphglueModelConfiguration
 import org.springframework.boot.autoconfigure.AutoConfiguration
 import org.springframework.boot.autoconfigure.AutoConfigureAfter
-import org.springframework.boot.autoconfigure.data.neo4j.Neo4jReactiveDataAutoConfiguration
-import org.springframework.boot.autoconfigure.neo4j.Neo4jAutoConfiguration
+import org.springframework.boot.data.neo4j.autoconfigure.DataNeo4jReactiveAutoConfiguration
+import org.springframework.boot.neo4j.autoconfigure.Neo4jAutoConfiguration
 import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Import
 
@@ -26,6 +26,6 @@ import org.springframework.context.annotation.Import
 )
 @EnableConfigurationProperties(GraphglueCoreConfigurationProperties::class)
 @AutoConfigureAfter(
-    value = [Neo4jAutoConfiguration::class, Neo4jReactiveDataAutoConfiguration::class]
+    value = [Neo4jAutoConfiguration::class, DataNeo4jReactiveAutoConfiguration::class]
 )
 class GraphglueCoreAutoConfiguration

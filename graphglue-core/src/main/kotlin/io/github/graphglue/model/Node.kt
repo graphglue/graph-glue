@@ -4,9 +4,10 @@ import com.expediagroup.graphql.generator.annotations.GraphQLDescription
 import com.expediagroup.graphql.generator.annotations.GraphQLIgnore
 import com.expediagroup.graphql.generator.annotations.GraphQLName
 import com.expediagroup.graphql.generator.scalars.ID
-import com.fasterxml.jackson.databind.ObjectMapper
+import tools.jackson.databind.ObjectMapper
 import graphql.schema.DataFetchingEnvironment
 import io.github.graphglue.data.LazyLoadingContext
+import io.github.graphglue.data.LazyLoadingContextConverter
 import io.github.graphglue.data.execution.FieldFetchingContext
 import io.github.graphglue.data.execution.NodeQueryEntry
 import io.github.graphglue.data.execution.NodeQueryParser
@@ -20,6 +21,7 @@ import io.github.graphglue.model.property.NodeSetPropertyDelegate
 import io.github.graphglue.model.property.PropertyDelegate
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.data.annotation.Transient
+import org.springframework.data.neo4j.core.convert.ConvertWith
 import org.springframework.data.neo4j.core.schema.GeneratedValue
 import org.springframework.data.neo4j.core.schema.Id
 import kotlin.properties.PropertyDelegateProvider
@@ -76,8 +78,12 @@ abstract class Node {
 
     /**
      * Context necessary for lazy-loading
+     *
+     * The [ConvertWith] is required to keep Spring Data Neo4j from treating this property as an
+     * association and mapping [LazyLoadingContext] as an entity, see [LazyLoadingContextConverter].
      */
     @Transient
+    @ConvertWith(converter = LazyLoadingContextConverter::class)
     internal var lazyLoadingContext: LazyLoadingContext? = null
 
     /**

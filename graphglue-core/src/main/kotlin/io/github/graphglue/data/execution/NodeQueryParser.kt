@@ -1,6 +1,6 @@
 package io.github.graphglue.data.execution
 
-import com.fasterxml.jackson.databind.ObjectMapper
+import tools.jackson.databind.ObjectMapper
 import graphql.schema.DataFetchingEnvironment
 import graphql.schema.SelectedField
 import io.github.graphglue.authorization.Permission

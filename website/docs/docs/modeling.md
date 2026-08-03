@@ -1,22 +1,20 @@
 ---
-sidebar_position: 2
+title: Modeling
 ---
 
 # Modeling
 
-:::info
-
+::: info
 As this library is based on GraphQL Kotlin and Spring Data Neo4j, the modeling is mostly a merge of their approaches.
 Almost all of their features still work when using this library. For more information on their features, please have a look at
 [GraphQL Kotlin](https://opensource.expediagroup.com/graphql-kotlin/docs/schema-generator/schema-generator-getting-started) and
-[Spring Data Neo4j](https://docs.spring.io/spring-data/neo4j/docs/current/reference/html/#mapping)
-
+[Spring Data Neo4j](https://docs.spring.io/spring-data/neo4j/docs/current/reference/html/#mapping).
 :::
 
 ## Overview
 
 Consider a simple domain model, consisting of movies, actors and directors:
-Each movie has exactly one director, and any amount of actors.
+each movie has exactly one director, and any amount of actors.
 Given is the code for the `Movie` node:
 
 ```kotlin
@@ -26,66 +24,61 @@ class Movie(
     @OrderProperty @FilterProperty val name: String,  // (3)
     internal val releaseYear: Int                     // (4)
 ) : Node() {                                          // (5)
-    
+
     @NodeRelationship("DIRECTOR", Direction.OUTGOING) // (6)
     val director by NodeProperty<Director>()
-    
+
     @NodeRelationship("ACTOR", Direction.OUTGOING)    // (7)
     val actors by NodeSetProperty<Actor>()
-    
+
     fun actorsCount() = actors.size                   // (8)
 }
 ```
 
 1. Necessary annotation for all `Node` classes. If the `name` parameter is provided, a connection-like query with the name `name` is exposed.
-1. Specifies the `READ` permission for this Node, for more info, see [Authorization](./authorization)
-1. Property which is exposed in the GraphQL schema. As it is annotated with both `@OrderProperty` and `@FilterProperty`, connections of type `Movie` can both be filtered and ordered by this property.
-1. Internal property NOT exposed in the GraphQL schema.
-1. Each class needs to extend `Node` in order to use any GraphGlue specific features.
-1. An outgoing relation of type `Director`, each movie has exactly one director.
-1. An outgoing relation of type `Set<Actor>`. In the GraphQL schema, it is exposed as `ActorConnection`
-1. Function exposed as field in the GraphQL schema.
+2. Specifies the `READ` permission for this Node, for more info, see [Authorization](./authorization).
+3. Property which is exposed in the GraphQL schema. As it is annotated with both `@OrderProperty` and `@FilterProperty`, connections of type `Movie` can both be filtered and ordered by this property.
+4. Internal property NOT exposed in the GraphQL schema.
+5. Each class needs to extend `Node` in order to use any GraphGlue specific features.
+6. An outgoing relation of type `Director`, each movie has exactly one director.
+7. An outgoing relation of type `Set<Actor>`. In the GraphQL schema, it is exposed as `ActorConnection`.
+8. Function exposed as field in the GraphQL schema.
 
-## Class Definition
+## Class definition
 
 Each node class both has to be annotated with `@DomainNode` and extend `io.github.graphglue.model.Node`.
 If any of those conditions is missing, GraphGlue-specific features might not work.
 
-:::tip
-
-This does not mean that you never should use classes which fullfill neither of those criteries.
+::: tip
+This does not mean that you should never use classes which fulfill neither of those criteria.
 For example, a non-node class can be used as type for properties with a struct-like type: it is still persisted in the database as node, however, in the GraphQL schema, it does not implement `Node`, meaning it is not possible to retrieve it via the `node` query.
-
 :::
 
 The Node class also defines an id. In Kotlin, it is possible to access the id using the `rawId` String property.
-It is not possible to manually assign an id, as a id is automatically generated when the node is first saved.
+It is not possible to manually assign an id, as an id is automatically generated when the node is first saved.
 However, the generation can be customized by providing a bean with the name `io.github.graphglue.model.NODE_ID_GENERATOR_BEAN` and the type `IdGenerator<String>`.
-By default, a random UUID is generated. 
+By default, a random UUID is generated.
 
 ## Properties
 
 Properties are both used to expose fields in the GraphQL schema, and save properties on the node in the database.
 By default, both Spring Data Neo4j and GraphQL Kotlin use the name of the property as name, however, the name in the GraphQL schema can be changed by annotating it with `@GraphQLName("name")`, the name of the property in the database can be changed by annotating it with `@Property("name")`.
 
-:::caution
-
+::: warning
 Spring Data Neo4j and GraphQL Kotlin use different visibilities.
 While properties backed by a field (this includes delegated properties) are saved in the database, GraphQL Kotlin only exposes `public` properties not annotated with `@GraphQLIgnore`.
-
 :::
 
-:::tip
-
+::: tip
 GraphGlue automatically adds all injected `GraphQLType`s to the generated schema.
 This allows for injecting custom scalars, and then using the name in `@GraphQLType` annotations.
-
 :::
 
-The used type must both be supported by GraphQL Kotlin and Spring Data Neo4j, however, both libaries provide extension mechanisms which allow you to support additional types.
+The used type must both be supported by GraphQL Kotlin and Spring Data Neo4j, however, both libraries provide extension mechanisms which allow you to support additional types.
 
 ## Functions
-Like properties, functions can be used to expose field in the GraphQL schema.
+
+Like properties, functions can be used to expose fields in the GraphQL schema.
 
 ## Relationships
 
@@ -94,15 +87,17 @@ Both support many-to-many, many-to-one and one-to-one relationships by combining
 Both bidirectional (defining both ends) and unidirectional (defining only one end) relationships are supported.
 Note that for bidirectional relationships, both sides must use the same type of relationship, it is not possible to combine GraphGlue with Spring Data Neo4j relationship sides.
 
-###  GraphGlue relationships
+### GraphGlue relationships
 
-Declaration of one-sides of relationships
+Declaration of one-sides of relationships:
+
 ```kotlin
 @NodeRelationship(label, direction)
 val propertyName by NodeProperty<NodeType>()
 ```
 
-Declaration of many-sides of relationships
+Declaration of many-sides of relationships:
+
 ```kotlin
 @NodeRelationship(label, direction)
 val propertyName by NodeSetProperty<NodeType>()
@@ -113,87 +108,55 @@ Relations are always directional, due to being directional in Neo4j.
 When modeling a bidirectional relationship, one side needs to use `Direction.INCOMING`, while the other needs to use `Direction.OUTGOING`.
 The direction is considered an implementation detail and not exposed in the GraphQL API.
 
-:::caution
-
+::: warning
 To actually get the content of a property, you have to use the call operator on the property (e.g. `node.manyProperty().add(addedNode)`).
-This is necessary, as lazy loading is done asynchronous, and properties cannot be marked currently with `suspend`.
+This is necessary, as lazy loading is done asynchronously, and properties cannot currently be marked with `suspend`.
 Therefore, on invoking, the property is - if necessary - loaded from the database.
-
 :::
 
-On save, all relationships are saved. Save cascades down added entities, but removed ones.
-Example: If the one side has initially the value `node1`, which then is replaced with `node2`, when saving, `node2` is saved (as it was "added"), while `node1` is not.
-
+On save, all relationships are saved. Save cascades down added entities, but not removed ones.
+Example: if the one side has initially the value `node1`, which then is replaced with `node2`, when saving, `node2` is saved (as it was "added"), while `node1` is not.
 
 ### Spring Data Neo4j relationships
 
-Declaration of one-sides of relationships
+Declaration of one-sides of relationships:
+
 ```kotlin
 @Relationship(label, direction)
 val propertyName: NodeType
 ```
 
-Declaration of many-sides of relationships
+Declaration of many-sides of relationships:
+
 ```kotlin
 @Relationship(label, direction)
 val propertyName: List<NodeType>
 ```
 
-For more information, see [Connecting nodes: @Relationship](https://docs.spring.io/spring-data/neo4j/docs/current/reference/html/#mapping.annotations.relationship)
+For more information, see [Connecting nodes: @Relationship](https://docs.spring.io/spring-data/neo4j/docs/current/reference/html/#mapping.annotations.relationship).
 
 ### Comparison
 
-<table>
-    <thead>
-        <tr>
-            <th></th>
-            <th>GraphGlue</th>
-            <th>Spring Data Neo4j </th>
-        </tr>
-    </thead>
-    <tbody>
-        <tr>
-            <th>GraphQL representation</th>
-            <th>One sides are represented by their appropriate type. Many sides are represented by connection types, supporting pagination, filtering and ordering</th>
-            <th>One sides are represented by their appropriate type. Many sides are represented as GraphQL list, without pagination, filtering or ordering support</th>
-        </tr>
-        <tr>
-            <th>Lazy loading</th>
-            <th>
-                Only lazy loading is supported. Relations are automatically loaded when accessed. 
-                Note: when fetching data for GraphQL, the whole subtree is loaded at once using one Cypher query, preventing the n+1 problem.
-                Lazy loading is done asynchronous.
-            </th>
-            <th>
-                No lazy loading is supported, all relationships are eagerly loaded, which can result in large subgraphs being loaded. To prevent this, you may use 
-                <a href="https://docs.spring.io/spring-data/neo4j/docs/current/reference/html/#projections" rel="noopener noreferer"> Projections</a>
-            </th>
-        </tr>
-        <tr>
-            <th>Matching of opposite sides</th>
-            <th colSpan="2">Opposite sides are matched if the `label` is the same, but the `direction` the opposite.</th>
-        </tr>
-    </tbody>
-</table>
+|  | GraphGlue | Spring Data Neo4j |
+| --- | --- | --- |
+| **GraphQL representation** | One sides are represented by their appropriate type. Many sides are represented by connection types, supporting pagination, filtering and ordering. | One sides are represented by their appropriate type. Many sides are represented as GraphQL list, without pagination, filtering or ordering support. |
+| **Lazy loading** | Only lazy loading is supported. Relations are automatically loaded when accessed. Note: when fetching data for GraphQL, the whole subtree is loaded at once using one Cypher query, preventing the n+1 problem. Lazy loading is done asynchronously. | No lazy loading is supported, all relationships are eagerly loaded, which can result in large subgraphs being loaded. To prevent this, you may use [projections](https://docs.spring.io/spring-data/neo4j/docs/current/reference/html/#projections). |
+| **Matching of opposite sides** | Opposite sides are matched if the `label` is the same, but the `direction` the opposite. | Opposite sides are matched if the `label` is the same, but the `direction` the opposite. |
 
 ## Inheritance
 
 Currently, only inheriting from abstract classes is supported.
 Specifically, inheriting from `open`, non-`abstract` classes is only supported if it is marked with `@GraphQLIgnore`.
-Inheriting from interfaces is possible, however none of the GraphGlue annotations (`@DomainNode`, `@Authorization`, `@AdditionalFilter`, `@AdditionalOrder`) is supported there, however, it can e.g. be used to share common `@GraphQLDescriptions`.
+Inheriting from interfaces is possible, however none of the GraphGlue annotations (`@DomainNode`, `@Authorization`, `@AdditionalFilter`, `@AdditionalOrder`) is supported there, however, it can e.g. be used to share common `@GraphQLDescription`s.
 
-:::note
-
+::: info
 The `@DomainNode` annotation is not inherited and has to be present on all node types.
-
 :::
 
-## Ordering & Filtering
+## Ordering & filtering
 
-:::info
-
-For more information on how to use ordering and filtering in GraphQL, see [Connections](./connections)
-
+::: info
+For more information on how to use ordering and filtering in GraphQL, see [Connections](./connections).
 :::
 
 ### Ordering
@@ -204,12 +167,10 @@ As those might not be unique, the `id` is used to create a strict total order.
 By default, all data types which are [comparable in Cypher](https://neo4j.com/docs/cypher-manual/current/syntax/operators/#cypher-ordering) are supported.
 Furthermore, `NodeProperty<*>` backed properties allow ordering by all orderable properties of the related node type, excluding `NodeProperty<*>` backed properties.
 
-:::caution
-
+::: danger
 Ordering on `NodeProperty<*>` does **NOT** take the authorization system into account.
 By making such a property orderable, it is possible to leak information about non-visible nodes.
 Only use when access to the related node is automatically granted!
-
 :::
 
 #### Additional orders
@@ -223,6 +184,7 @@ A Spring bean with the specified name and type `OrderPart` has to be provided.
 Filters are generated for specific node types.
 These filters are generated by concatenating property-based filter fields and additional filter fields.
 Then, for each type, a meta filter is created, which allows joining filters by and, or and not:
+
 ```graphql
 input TypeNodeFilterInput {
     # filter fields
@@ -235,11 +197,13 @@ input TypeFilterInput {
     node: TypeNodeFilterInput
 }
 ```
+
 Exactly one of the specified fields has to be provided.
 
 #### Filters for properties
 
 Properties can be annotated with `@FilterProperty` to allow filtering by a specific property. By default, this is supported for properties with the following types:
+
 - `String`
 - `Int`
 - `Double` (Float in GraphQL)
@@ -248,16 +212,17 @@ Properties can be annotated with `@FilterProperty` to allow filtering by a speci
 - `by NodeProperty<*>`
 - `by NodeSetProperty<*>`
 
-Input fields of filters are always optional. All the present fields are then joined by `&&`.  
-The input fields of the filter depends on the type: For `Boolean` and `ID`, only `eq` and `in` are available.
+Input fields of filters are always optional. All the present fields are then joined by `&&`.
+The input fields of the filter depend on the type: for `Boolean` and `ID`, only `eq` and `in` are available.
 For all comparable types (`Int`, `Double` and `String`), `lt`, `lte`, `gt` and `gte` are additionally available.
 Finally, for `String`, `startsWith`, `endsWith`, `contains` and `matches` are also available.
 
 For `NodeProperty<*>` backed properties, the meta filter for the specific type is used.
-For `NodeSetProperty<*>` backed properties, the filter fields include  `all`, `some` and `none`, each can be set to a type specific meta filter.
+For `NodeSetProperty<*>` backed properties, the filter fields include `all`, `some` and `none`, each can be set to a type specific meta filter.
 
 It is possible to support additional property types, by providing Spring beans of type `TypeFilterDefinitionEntry`.
 Here an example for the Kotlin `Float` type:
+
 ```kotlin
 @Bean
 fun floatFilter() =
@@ -267,17 +232,16 @@ fun floatFilter() =
         )
     }
 ```
+
 Note that `TypeFilterDefinitionEntry` are free to not create a filter definition by returning `null` in the callback.
-This is e.g. be used for filters for `Node(Set)Property<*>` if the property has a generic type.
+This is e.g. used for filters for `Node(Set)Property<*>` if the property has a generic type.
 
-:::info
-
-Filter on `NodeProperty<*>` and `NodeSetProperty<*>` take the authorization system into account.
-Conceptually, first the related nodes are filtered by the `Permission` to only include nodes the Permission grants access to, then,
-the filter is evaluated. 
-This prevents an information leak by filtering, however, at the cost of higher complexity. 
+::: info
+Filters on `NodeProperty<*>` and `NodeSetProperty<*>` take the authorization system into account.
+Conceptually, first the related nodes are filtered by the `Permission` to only include nodes the Permission grants access to, then
+the filter is evaluated.
+This prevents an information leak by filtering, however, at the cost of higher complexity.
 Therefore, use `@FilterProperty` on properties which may include non-visible nodes with caution.
-
 :::
 
 #### Additional filters
@@ -288,6 +252,6 @@ A Spring bean with the specified name and type `FilterEntryDefinition` has to be
 
 #### Node filter generators
 
-Bean of type `NodeFilterGenerator` can be used to generate additional filter entries for any Node filters.
-In contrast to [Additional filters](#additional-filters), node filter generators allow for dynamically generating the entries
+Beans of type `NodeFilterGenerator` can be used to generate additional filter entries for any Node filters.
+In contrast to [additional filters](#additional-filters), node filter generators allow for dynamically generating the entries
 based on the provided `NodeDefinition`, which allows e.g. implementing custom meta-filters (like xor).

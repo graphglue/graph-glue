@@ -61,7 +61,7 @@ class GraphglueNeo4jOperations(
      * @return the saved instances.
      */
     @Suppress("UNCHECKED_CAST")
-    override fun <T : Any?> saveAll(instances: MutableIterable<T>): Flux<T> {
+    override fun <T : Any> saveAll(instances: Iterable<T>): Flux<T> {
         val (nodes, others) = instances.partition { it is Node }
         return Flux.concat(
             delegate.saveAll(others), saveNodes(nodes as Collection<Node>) as Flux<T>
@@ -71,14 +71,14 @@ class GraphglueNeo4jOperations(
     /**
      * Save via projections is not supported
      */
-    override fun <T : Any?, R : Any?> saveAs(instance: T, resultType: Class<R>): Mono<R> {
+    override fun <T : Any, R : Any> saveAs(instance: T, resultType: Class<R>): Mono<R> {
         throw UnsupportedOperationException("Projections are not supported")
     }
 
     /**
      * Save via projections is not supported
      */
-    override fun <T : Any?, R : Any?> saveAllAs(instances: MutableIterable<T>, resultType: Class<R>): Flux<R> {
+    override fun <T : Any, R : Any> saveAllAs(instances: Iterable<T>, resultType: Class<R>): Flux<R> {
         throw UnsupportedOperationException("Projections are not supported")
     }
 

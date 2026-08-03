@@ -1,6 +1,6 @@
 package io.github.graphglue.data
 
-import com.fasterxml.jackson.databind.ObjectMapper
+import tools.jackson.databind.ObjectMapper
 import io.github.graphglue.GraphglueCoreConfigurationProperties
 import io.github.graphglue.connection.filter.definition.FilterDefinition
 import io.github.graphglue.connection.filter.definition.FilterDefinitionCollection
@@ -10,7 +10,6 @@ import io.github.graphglue.data.repositories.GraphglueNeo4jOperations
 import io.github.graphglue.definition.NodeDefinition
 import io.github.graphglue.definition.NodeDefinitionCollection
 import io.github.graphglue.model.Node
-import io.github.graphglue.model.property.BaseNodePropertyDelegate
 import org.neo4j.cypherdsl.core.renderer.Renderer
 import org.neo4j.driver.Driver
 import org.neo4j.driver.types.MapAccessor
@@ -21,12 +20,9 @@ import org.springframework.context.annotation.Configuration
 import org.springframework.data.neo4j.core.*
 import org.springframework.data.neo4j.core.mapping.Neo4jMappingContext
 import org.springframework.data.neo4j.core.mapping.Neo4jPersistentEntity
-import org.springframework.data.neo4j.core.mapping.PersistentPropertyCharacteristics
-import org.springframework.data.neo4j.core.mapping.PersistentPropertyCharacteristicsProvider
 import org.springframework.data.neo4j.core.mapping.callback.AfterConvertCallback
 import org.springframework.data.neo4j.repository.config.Neo4jRepositoryConfigurationExtension
 import java.util.*
-import kotlin.reflect.full.isSuperclassOf
 import org.neo4j.cypherdsl.core.renderer.Configuration as CypherDslConfiguration
 
 /**
@@ -126,23 +122,6 @@ class GraphglueDataConfiguration {
         filterDefinitionCollection: Optional<FilterDefinitionCollection>,
         objectMapper: ObjectMapper
     ) = NodeQueryParser(nodeDefinitionCollection, filterDefinitionCollection.orElse(null), objectMapper)
-
-    /**
-     * Ensures that [BaseNodePropertyDelegate]s are ignored
-     *
-     * @return [PersistentPropertyCharacteristicsProvider] which ensures that [BaseNodePropertyDelegate]s are ignored
-     */
-    @Bean
-    @ConditionalOnMissingBean
-    fun persistentPropertyCharacteristicsProvider(): PersistentPropertyCharacteristicsProvider {
-        return PersistentPropertyCharacteristicsProvider { property, _ ->
-            if (BaseNodePropertyDelegate::class.isSuperclassOf(property.type.kotlin)) {
-                PersistentPropertyCharacteristics.treatAsTransient()
-            } else {
-                PersistentPropertyCharacteristics.useDefaults()
-            }
-        }
-    }
 
     /**
      * Creates the [Neo4jClient]

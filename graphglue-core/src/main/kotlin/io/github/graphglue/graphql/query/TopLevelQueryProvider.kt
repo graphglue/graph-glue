@@ -1,7 +1,7 @@
 package io.github.graphglue.graphql.query
 
 import com.expediagroup.graphql.generator.annotations.GraphQLIgnore
-import com.fasterxml.jackson.databind.ObjectMapper
+import tools.jackson.databind.ObjectMapper
 import graphql.execution.DataFetcherResult
 import graphql.schema.DataFetchingEnvironment
 import io.github.graphglue.connection.model.Connection

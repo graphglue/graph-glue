@@ -16,6 +16,6 @@ class SubtypeNodeFilter(
 ) : FilterEntry(subtypeFilterDefinition) {
     override fun generateCondition(node: Node): Condition {
         val nodeDefinition = subtypeFilterDefinition.nodeDefinition
-        return node.hasLabels(nodeDefinition.labelExpression).and(filter.generateCondition(node))
+        return node.hasLabels(nodeDefinition.labels).and(filter.generateCondition(node))
     }
 }

@@ -1,43 +1,19 @@
 {
-  "name": "website",
+  "name": "graphglue-website",
   "version": "0.0.0",
   "private": true,
+  "type": "module",
   "scripts": {
-    "docusaurus": "docusaurus",
-    "start": "docusaurus start",
-    "build": "docusaurus build",
-    "swizzle": "docusaurus swizzle",
-    "deploy": "docusaurus deploy",
-    "clear": "docusaurus clear",
-    "serve": "docusaurus serve",
-    "write-translations": "docusaurus write-translations",
-    "write-heading-ids": "docusaurus write-heading-ids",
-    "typecheck": "tsc"
-  },
-  "dependencies": {
-    "@docusaurus/core": "^3.3.2",
-    "@docusaurus/preset-classic": "^3.3.2",
-    "@graphglue/dokka-docusaurus": "^3.0.0",
-    "@mdx-js/react": "^3.0.1",
-    "prism-react-renderer": "^2.3.1",
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0"
+    "api": "node scripts/docs.mjs api",
+    "dev": "node scripts/docs.mjs dev",
+    "build": "node scripts/docs.mjs build",
+    "preview": "vitepress preview .",
+    "vitepress:dev": "vitepress dev .",
+    "vitepress:build": "vitepress build ."
   },
   "devDependencies": {
-    "@docusaurus/module-type-aliases": "^3.3.2",
-    "@tsconfig/docusaurus": "^2.0.3",
-    "typescript": "^5.4.5"
-  },
-  "browserslist": {
-    "production": [
-      ">0.5%",
-      "not dead",
-      "not op_mini all"
-    ],
-    "development": [
-      "last 1 chrome version",
-      "last 1 firefox version",
-      "last 1 safari version"
-    ]
+    "@graphglue/dokka-vitepress": "^1.0.0",
+    "vitepress": "2.0.0-alpha.19",
+    "vue": "^3.5.13"
   }
 }

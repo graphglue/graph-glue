@@ -2,10 +2,7 @@ package io.github.graphglue.connection.filter.model
 
 import io.github.graphglue.connection.filter.definition.SubtypeNodeFilterDefinition
 import org.neo4j.cypherdsl.core.Condition
-import org.neo4j.cypherdsl.core.LabelExpression
 import org.neo4j.cypherdsl.core.Node
-import org.neo4j.cypherdsl.core.SymbolicName
-import org.neo4j.cypherdsl.core.ast.Visitor
 
 /**
  * Filter entry for a specific subtype for a node
@@ -19,20 +16,6 @@ class SubtypeNodeFilter(
 ) : FilterEntry(subtypeFilterDefinition) {
     override fun generateCondition(node: Node): Condition {
         val nodeDefinition = subtypeFilterDefinition.nodeDefinition
-        return LabelExpressionCondition(
-            node.requiredSymbolicName, nodeDefinition.labelExpression
-        ).and(filter.generateCondition(node))
-    }
-}
-
-/**
- * Condition wrapper for a label expression
- */
-private class LabelExpressionCondition(val nodeName: SymbolicName, val labelExpression: LabelExpression) : Condition {
-    override fun accept(visitor: Visitor) {
-        visitor.enter(this)
-        nodeName.accept(visitor)
-        labelExpression.accept(visitor)
-        visitor.leave(this)
+        return node.hasLabels(nodeDefinition.labels).and(filter.generateCondition(node))
     }
 }

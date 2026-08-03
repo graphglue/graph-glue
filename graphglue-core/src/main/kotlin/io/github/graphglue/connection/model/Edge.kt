@@ -1,7 +1,7 @@
 package io.github.graphglue.connection.model
 
 import com.expediagroup.graphql.generator.annotations.GraphQLIgnore
-import com.fasterxml.jackson.databind.ObjectMapper
+import tools.jackson.databind.ObjectMapper
 import io.github.graphglue.connection.order.Order
 import io.github.graphglue.model.Node
 import org.springframework.beans.factory.annotation.Autowired

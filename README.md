@@ -76,6 +76,18 @@ Deploy to the local maven repository
 ./gradlew publishToMavenLocal
 ```
 
+## Building the documentation locally
+
+The website, including the generated API reference, can be built and served with:
+
+```sh
+cd website
+npm run setup && npm install
+npm run dev
+```
+
+See [website/README.md](website/README.md) for the prerequisites and the individual steps.
+
 ## LICENSE
 
 GraphGlue is provided under the Apache License Version 2.0 

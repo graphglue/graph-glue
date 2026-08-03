@@ -1,5 +1,6 @@
 package io.github.graphglue.graphql.schema
 
+import graphql.schema.DataFetcher
 import graphql.schema.DataFetcherFactory
 import graphql.schema.FieldCoordinates
 import graphql.schema.GraphQLCodeRegistry

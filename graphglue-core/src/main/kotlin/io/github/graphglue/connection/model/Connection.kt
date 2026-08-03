@@ -1,6 +1,6 @@
 package io.github.graphglue.connection.model
 
-import com.fasterxml.jackson.databind.ObjectMapper
+import tools.jackson.databind.ObjectMapper
 import io.github.graphglue.connection.order.Order
 import io.github.graphglue.data.execution.NodeQueryResult
 import io.github.graphglue.model.Node

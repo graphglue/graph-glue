@@ -7,8 +7,8 @@ import org.neo4j.cypherdsl.core.Node
 /**
  * Simple [FilterEntry] where the condition generation is only defined by the definition, and a provided value
  *
- * @param T type of the value used for the condition
  * @param simpleDefinition definition used to generate the condition
+ * @param value the value used to generate the condition
  */
 class SimpleFilterEntry(private val simpleDefinition: SimpleFilterEntryDefinition, val value: Any) :
     FilterEntry(simpleDefinition) {

@@ -1,0 +1,78 @@
+name: Publish to Maven Central
+
+on:
+  release:
+    types: [published]
+  # Allows re-running a failed upload without cutting a new release.
+  workflow_dispatch:
+
+concurrency:
+  group: publish-maven-central
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Publish to Maven Central
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          # 17 is what the Kotlin toolchain asks for, 21 runs Gradle itself.
+          java-version: |
+            17
+            21
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+      - name: Determine deployment
+        id: deployment
+        run: |
+          version="$(./gradlew -q properties --property version | sed -n 's/^version: //p')"
+          echo "Project version: $version"
+          case "$version" in
+            "")
+              echo "::error::Could not determine the project version."
+              exit 1
+              ;;
+            *-SNAPSHOT) snapshot=true ;;
+            *) snapshot=false ;;
+          esac
+          # The version is maintained by hand in gradle.properties, so make sure the
+          # release that triggered this run actually refers to it.
+          if [ "${{ github.event_name }}" = "release" ]; then
+            tag="${{ github.event.release.tag_name }}"
+            if [ "$tag" != "$version" ] && [ "$tag" != "v$version" ]; then
+              echo "::error::Release tag '$tag' does not match project version '$version'."
+              exit 1
+            fi
+            # Snapshots are cut as pre-releases, releases as full releases.
+            if [ "${{ github.event.release.prerelease }}" != "$snapshot" ]; then
+              if [ "$snapshot" = true ]; then
+                echo "::error::'$version' is a snapshot; mark the release as a pre-release to publish it."
+              else
+                echo "::error::Pre-releases publish snapshots, but '$version' is not a -SNAPSHOT version."
+              fi
+              exit 1
+            fi
+          fi
+          if [ "$snapshot" = true ]; then
+            echo "task=publishAggregationToCentralPortalSnapshots" >> "$GITHUB_OUTPUT"
+          else
+            echo "task=publishAggregationToCentralPortal" >> "$GITHUB_OUTPUT"
+          fi
+          echo "snapshot=$snapshot" >> "$GITHUB_OUTPUT"
+      - name: Build
+        run: ./gradlew build
+      - name: Publish to Maven Central
+        # A release uploads the aggregated deployment bundle, which `publishingType =
+        # "USER_MANAGED"` leaves to be released manually from the Central Portal. A snapshot
+        # goes live immediately and simply overwrites the previous one.
+        run: ./gradlew ${{ steps.deployment.outputs.task }}
+        env:
+          MAVEN_CENTRAL_USERNAME: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
+          MAVEN_CENTRAL_PASSWORD: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
+          SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
+          SIGNING_PASSWORD: ${{ secrets.SIGNING_PASSWORD }}

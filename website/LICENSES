@@ -1,7 +1,16 @@
+============================== Kotlin/dokka ==============================
+https://github.com/Kotlin/dokka
+files (generated at build time by @graphglue/dokka-vitepress, not checked in):
+- .vitepress/dokka/dokka.css        derived from Dokka's stylesheets
+- .vitepress/dokka/images/*         Dokka's declaration icons
+- .vitepress/dokka/ui-kit/fonts/*   the Inter and JetBrains Mono subsets Dokka ships
+
+Licensed under the Apache License, Version 2.0, reproduced below.
+
 ============================== JetBrains/intellij-community ==============================
 https://github.com/JetBrains/intellij-community
 files:
-- static/img/package.svg
+- docs/public/img/package.svg
 
                                  Apache License
                            Version 2.0, January 2004

@@ -1,5 +1,7 @@
 package io.github.graphglue.model
 
+import io.github.graphglue.model.property.NodePropertyDelegate
+import io.github.graphglue.model.property.NodeSetPropertyDelegate
 
 /**
  * Used to mark manually handled node relationships

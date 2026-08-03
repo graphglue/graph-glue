@@ -9,7 +9,7 @@ import io.github.graphglue.model.property.NODE_SET_PROPERTY_TYPE
 import io.github.graphglue.model.property.NodePropertyDelegate
 import org.neo4j.cypherdsl.core.Cypher
 import org.neo4j.cypherdsl.core.Expression
-import org.neo4j.cypherdsl.core.LabelExpression
+import org.neo4j.cypherdsl.core.Labels
 import org.neo4j.cypherdsl.core.SymbolicName
 import org.springframework.data.neo4j.core.mapping.Constants
 import org.springframework.data.neo4j.core.mapping.CypherGenerator
@@ -110,11 +110,11 @@ class NodeDefinition(
     val primaryLabel: String get() = persistentEntity.primaryLabel
 
     /**
-     * The label expression of the [Node]
+     * The labels of the [Node]
      */
-    val labelExpression: LabelExpression
-        get() = persistentEntity.additionalLabels.fold(LabelExpression(persistentEntity.primaryLabel)) { acc, label ->
-            acc.and(LabelExpression(label))
+    val labels: Labels
+        get() = persistentEntity.additionalLabels.fold(Cypher.exactlyLabel(persistentEntity.primaryLabel)) { acc, label ->
+            acc.and(Cypher.exactlyLabel(label))
         }
 
     /**
@@ -347,7 +347,7 @@ class NodeDefinition(
      * Generates a new CypherDSL node with the necessary labels
      */
     fun node(): org.neo4j.cypherdsl.core.Node {
-        return Cypher.node(labelExpression)
+        return Cypher.node(labels)
     }
 
     /**

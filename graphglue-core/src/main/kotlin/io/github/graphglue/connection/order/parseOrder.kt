@@ -9,11 +9,11 @@ package io.github.graphglue.connection.order
 fun parseOrder(value: Any): Order<*> {
     val fields = (value as List<*>).map {
         it as Map<*, *>
-        val directionName = it["direction"] as String?
-        val direction = if (directionName != null) {
-            OrderDirection.valueOf(directionName)
-        } else {
-            OrderDirection.ASC
+        val direction = when (val directionValue = it["direction"]) {
+            null -> OrderDirection.ASC
+            is OrderDirection -> directionValue
+            is String -> OrderDirection.valueOf(directionValue)
+            else -> throw IllegalArgumentException("Unsupported order direction: $directionValue")
         }
         OrderField(it["field"] as OrderPart<*>? ?: IdOrderPart, direction)
     }

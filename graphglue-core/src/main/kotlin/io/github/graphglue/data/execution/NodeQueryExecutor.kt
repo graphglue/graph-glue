@@ -458,7 +458,7 @@ class NodeQueryExecutor(
         nodeExpression: Expression, nodeQuery: QueryBase<*>, nodeAlias: SymbolicName, orderContext: OrderContext?
     ): MapExpression {
         val resultNodeMap = mapOf(
-            NODE_KEY to nodeExpression,
+            NODE_KEY to Cypher.listOf(nodeExpression),
             ORDER_KEY to Cypher.asExpression(orderContext?.variables ?: emptyMap())
         ) + generateExtensionFields(nodeQuery, nodeAlias)
         return Cypher.asExpression(resultNodeMap)
@@ -842,7 +842,7 @@ class NodeQueryExecutor(
     private fun parseNode(
         value: Value, nodeQuery: QueryBase<*>, entriesResults: Map<NodeSubQuery, Map<String, Value>>
     ): io.github.graphglue.model.Node {
-        val nodeId = value[NODE_KEY]["id"].asString()!!
+        val nodeId = value[NODE_KEY][0]["id"].asString()!!
         val node = nodeLookup.computeIfAbsent(nodeId) {
             mappingContext.entityConverter.read(nodeQuery.definition.nodeType.java, value[NODE_KEY])
         }

@@ -15,14 +15,14 @@ GraphGlue is a library to develop annotation-based code-first GraphQL servers us
 ::: code-group
 
 ```kotlin [Gradle Kotlin]
-implementation("io.github.graphglue", "graphglue", "7.2.4")
+implementation("io.github.graphglue", "graphglue", "8.0.0")
 ```
 
 ```xml [Maven]
 <dependency>
     <groupId>io.github.graphglue</groupId>
     <artifactId>graphglue</artifactId>
-    <version>7.2.4</version>
+    <version>8.0.0</version>
 </dependency>
 ```
 
@@ -36,14 +36,14 @@ This has no dependency on `com.expediagroup:graphql-kotlin-spring-server`, howev
 ::: code-group
 
 ```kotlin [Gradle Kotlin]
-implementation("io.github.graphglue", "graphglue-core", "7.2.4")
+implementation("io.github.graphglue", "graphglue-core", "8.0.0")
 ```
 
 ```xml [Maven]
 <dependency>
     <groupId>io.github.graphglue</groupId>
     <artifactId>graphglue-core</artifactId>
-    <version>7.2.4</version>
+    <version>8.0.0</version>
 </dependency>
 ```
 
